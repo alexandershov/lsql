@@ -7,10 +7,17 @@ QUERY_RE = re.compile(r"^SELECT (?P<columns>.+?)(?P<from_clause> FROM '(?P<direc
 
 
 class Stat(object):
+    ATTRS = ['name', 'size', 'ctime']
+
     def __init__(self, path):
         self.path = path
         self.name = os.path.basename(path)
         self.__stat = os.stat(path)
+
+    def get_value(self, name):
+        if name not in Stat.ATTRS:
+            raise ValueError('unknown attr: {!r}'.format(name))
+        return getattr(self, name)
 
     def __getattr__(self, name):
         return getattr(self.__stat, 'st_' + name)
@@ -21,7 +28,10 @@ def run_query(query):
     match = QUERY_RE.match(query)
     if match is None:
         raise ValueError('bad query: {!r}'.format(query))
-    columns = [column.strip() for column in match.group('columns').split(',')]
+    if match.group('columns') == '*':
+        columns = Stat.ATTRS
+    else:
+        columns = [column.strip() for column in match.group('columns').split(',')]
     from_clause = match.group('from_clause')
     if not from_clause:
         directory = '.'
@@ -32,7 +42,7 @@ def run_query(query):
         for name in filenames:
             path = os.path.join(dirpath, name)
             stat = Stat(path)
-            fields = [str(getattr(stat, column)) for column in columns]
+            fields = [str(stat.get_value(column)) for column in columns]
             print('\t'.join(fields))
 
 
