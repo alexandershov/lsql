@@ -28,7 +28,7 @@ class Stat(object):
 
 
 # TODO: use ply for parsing
-def run_query(query):
+def run_query(query, directory):
     match = QUERY_RE.match(query)
     if match is None:
         raise ValueError('bad query: {!r}'.format(query))
@@ -37,9 +37,9 @@ def run_query(query):
     else:
         columns = [column.strip() for column in match.group('columns').split(',')]
     from_clause = match.group('from_clause')
-    if not from_clause:
-        directory = '.'
-    else:
+    if from_clause:
+        if directory:
+            raise ValueError("You can't specify FROM and directory as cmd arg")
         directory = match.group('directory')
     print('\t'.join(columns))
     for dirpath, dirnames, filenames in os.walk(directory):
@@ -53,5 +53,6 @@ def run_query(query):
 def main():
     parser = argparse.ArgumentParser(prog='lsql', description='Search for files with SQL')
     parser.add_argument('query', help='sql query to execute, e.g "select name')
+    parser.add_argument('directory', help='directory to search in', nargs='?')
     args = parser.parse_args()
-    run_query(args.query)
+    run_query(args.query, args.directory)
