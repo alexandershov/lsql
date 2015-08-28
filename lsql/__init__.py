@@ -1,4 +1,7 @@
+from collections import OrderedDict
+from itertools import count, izip
 import argparse
+
 import os
 import re
 
@@ -7,7 +10,8 @@ QUERY_RE = re.compile(r"^SELECT (?P<columns>.+?)(?P<from_clause> FROM '(?P<direc
 
 
 class Stat(object):
-    ATTRS = ['name', 'size', 'ctime']
+    # name -> priority
+    ATTRS = OrderedDict(izip(['name', 'size', 'ctime'], count()))
 
     def __init__(self, path):
         self.path = path
@@ -29,7 +33,7 @@ def run_query(query):
     if match is None:
         raise ValueError('bad query: {!r}'.format(query))
     if match.group('columns') == '*':
-        columns = Stat.ATTRS
+        columns = list(Stat.ATTRS)
     else:
         columns = [column.strip() for column in match.group('columns').split(',')]
     from_clause = match.group('from_clause')
