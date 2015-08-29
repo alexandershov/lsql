@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from itertools import count, izip
 import argparse
 
 import os
@@ -10,8 +9,7 @@ QUERY_RE = re.compile(r"^SELECT (?P<columns>.+?)(?P<from_clause> FROM '(?P<direc
 
 
 class Stat(object):
-    # name -> priority
-    ATTRS = OrderedDict(izip(['name', 'size', 'ctime'], count()))
+    ATTRS = OrderedDict.fromkeys(['name', 'size', 'ctime'])
 
     def __init__(self, path):
         self.path = path
@@ -39,7 +37,8 @@ def run_query(query, directory):
     from_clause = match.group('from_clause')
     if from_clause:
         if directory:
-            raise ValueError("You can't specify FROM and directory as cmd arg")
+            raise ValueError("You can't specify both FROM clause and "
+                             "directory as command line argument")
         directory = match.group('directory')
     print('\t'.join(columns))
     for dirpath, dirnames, filenames in os.walk(directory):
