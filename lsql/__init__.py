@@ -29,7 +29,7 @@ class Stat(object):
 
 def run_query(query, directory):
     grammar = get_grammar()
-    tokens = grammar.parseString(query)
+    tokens = grammar.parseString(query, parseAll=True)
     if tokens.columns == '*':
         columns = list(Stat.ATTRS)
     else:
