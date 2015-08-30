@@ -12,8 +12,11 @@ class Stat(object):
 
     def __init__(self, path):
         self.path = path
-        self.name = os.path.basename(path)
         self.__stat = os.stat(path)
+
+    @property
+    def name(self):
+        return os.path.basename(self.path)
 
     @property
     def owner(self):
