@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from pwd import getpwuid
 import argparse
 
 from pyparsing import alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word
@@ -7,12 +8,16 @@ import os
 
 
 class Stat(object):
-    ATTRS = OrderedDict.fromkeys(['name', 'size', 'ctime'])
+    ATTRS = OrderedDict.fromkeys(['name', 'size', 'owner', 'ctime'])
 
     def __init__(self, path):
         self.path = path
         self.name = os.path.basename(path)
         self.__stat = os.stat(path)
+
+    @property
+    def owner(self):
+        return getpwuid(self.__stat.st_uid).pw_name
 
     def get_value(self, name):
         if name not in Stat.ATTRS:
