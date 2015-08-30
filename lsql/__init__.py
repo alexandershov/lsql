@@ -8,7 +8,7 @@ import os
 
 
 class Stat(object):
-    ATTRS = OrderedDict.fromkeys(['name', 'size', 'owner', 'ctime'])
+    ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime'])
 
     def __init__(self, path):
         self.path = path
