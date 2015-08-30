@@ -39,6 +39,8 @@ def run_query(query, directory):
         raise ValueError("You can't specify both FROM clause and "
                          "directory as command line argument")
     directory = directory or tokens.directory or '.'
+    if not os.path.isdir(directory):
+        raise ValueError('{!r} is not a directory'.format(directory))
     print('\t'.join(columns))
     for dirpath, dirnames, filenames in os.walk(directory):
         for name in filenames:
