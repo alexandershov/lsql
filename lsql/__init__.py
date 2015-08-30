@@ -4,10 +4,6 @@ import argparse
 from pyparsing import alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word
 
 import os
-import re
-
-QUERY_RE = re.compile(r"^SELECT (?P<columns>.+?)(?P<from_clause> FROM '(?P<directory>[^']+)')?$",
-                      re.I)
 
 
 class Stat(object):
@@ -48,9 +44,9 @@ def run_query(query, directory):
 
 
 def get_grammar():
-    columns = Group(delimitedList(Word(alphas))) | '*'
+    columns = (Group(delimitedList(Word(alphas))) | '*').setResultsName('columns')
     from_clause = CaselessKeyword('FROM') + QuotedString("'").setResultsName('directory')
-    return (CaselessKeyword('SELECT') + columns.setResultsName('columns')
+    return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause))
 
 
