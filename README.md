@@ -1,8 +1,14 @@
 ## What is it?
+Query your file system with SQL (Work in progress)
 
-Query your file system with SQL
+## Install
+```shell
+git clone https://github.com/alexandershov/lsql
+cd lsql && pip install .
+```
 
-
-Work in progress
-
-## 
+## Use 
+```shell
+lsql "SELECT name, size FROM '/tmp'"
+lsql "SELECT name, size" /tmp
+```
