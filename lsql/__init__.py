@@ -39,7 +39,7 @@ class Stat(object):
 
     def __init__(self, path):
         self.path = path
-        self.__stat = os.stat(path)
+        self.__stat = os.lstat(path)
 
     @property
     def name(self):
