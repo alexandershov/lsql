@@ -2,7 +2,8 @@ from collections import OrderedDict
 from pwd import getpwuid
 import argparse
 
-from pyparsing import alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word
+from pyparsing import alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word, \
+    CharsNotIn, White
 
 import os
 
@@ -55,7 +56,9 @@ def run_query(query, directory):
 
 def get_grammar():
     columns = (Group(delimitedList(Word(alphas))) | '*').setResultsName('columns')
-    from_clause = CaselessKeyword('FROM') + QuotedString("'").setResultsName('directory')
+    directory = White() + CharsNotIn('" ').setResultsName('directory')
+    from_clause = (CaselessKeyword('FROM')
+                   + (QuotedString('"').setResultsName('directory') | directory))
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause))
 
