@@ -20,6 +20,10 @@ OPERATOR_MAPPING = {
     '>=': operator.ge,
 }
 
+# must be tuple, because is used as argument to str.endswith
+SIZE_SUFFIXES = ('kb', 'mb', 'gb')
+
+
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime'])
@@ -45,7 +49,17 @@ class Stat(object):
         return getattr(self.__stat, 'st_' + name)
 
 
+def eval_size_literal(literal):
+    assert literal.endswith(SIZE_SUFFIXES)
+    for power, suffix in enumerate(SIZE_SUFFIXES, start=1):
+        if literal.endswith(suffix):
+            return int(literal[:-len(suffix)]) * (1024 ** power)
+    raise ValueError("can't be here")
+
+
 def eval_literal(literal):
+    if literal.endswith(SIZE_SUFFIXES):
+        return eval_size_literal(literal)
     return int(literal)
 
 
@@ -81,7 +95,7 @@ def run_query(query, directory):
 
 def get_grammar():
     column = Word(alphas)
-    bin_op = oneOf('= < <= > >=')
+    bin_op = oneOf('= < <= > >=', caseless=True)
     int_literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True)))
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
