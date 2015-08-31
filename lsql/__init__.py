@@ -4,13 +4,25 @@ from collections import OrderedDict
 from pwd import getpwuid
 import argparse
 import operator
+import re
 
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
-    CharsNotIn, White, nums, Combine, oneOf,
+    CharsNotIn, White, nums, Combine, oneOf, sglQuotedString,
 )
 
 import os
+
+
+# must be a tuple, because is used as argument to str.endswith
+SIZE_SUFFIXES = ('kb', 'mb', 'gb')
+
+
+def like(string, pattern):
+    pattern = re.escape(pattern)
+    pattern = pattern.replace(r'\%', '.*').replace(r'\_', '.')
+    return re.match(pattern + '$', string)
+
 
 OPERATOR_MAPPING = {
     '=': operator.eq,
@@ -18,11 +30,8 @@ OPERATOR_MAPPING = {
     '<=': operator.le,
     '>': operator.gt,
     '>=': operator.ge,
+    'like': like,
 }
-
-# must be tuple, because is used as argument to str.endswith
-SIZE_SUFFIXES = ('kb', 'mb', 'gb')
-
 
 
 class Stat(object):
@@ -58,6 +67,8 @@ def eval_size_literal(literal):
 
 
 def eval_literal(literal):
+    if literal.startswith("'"):
+        return literal[1:-1]
     if literal.endswith(SIZE_SUFFIXES):
         return eval_size_literal(literal)
     return int(literal)
@@ -65,8 +76,9 @@ def eval_literal(literal):
 
 def eval_condition(condition, stat):
     column, op, literal = condition
-    if OPERATOR_MAPPING[op](stat.get_value(column), eval_literal(literal)):
+    if OPERATOR_MAPPING[op.lower()](stat.get_value(column), eval_literal(literal)):
         return True
+    return False
 
 
 def run_query(query, directory):
@@ -76,7 +88,6 @@ def run_query(query, directory):
         columns = list(Stat.ATTRS)
     else:
         columns = list(tokens.columns)
-
     if tokens.directory and directory:
         raise ValueError("You can't specify both FROM clause and "
                          "directory as command line argument")
@@ -88,21 +99,21 @@ def run_query(query, directory):
         for name in filenames:
             path = os.path.join(dirpath, name)
             stat = Stat(path)
-            if tokens.condition and eval_condition(tokens.condition, stat):
+            if not tokens.condition or eval_condition(tokens.condition, stat):
                 fields = [str(stat.get_value(column)) for column in columns]
                 print('\t'.join(fields))
 
 
 def get_grammar():
     column = Word(alphas)
-    bin_op = oneOf('= < <= > >=', caseless=True)
-    int_literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True)))
+    bin_op = oneOf('= < <= > >= LIKE', caseless=True)
+    literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True))) | sglQuotedString
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
     where_clause = (CaselessKeyword('WHERE')
-                    + (column + bin_op + int_literal).setResultsName('condition'))
+                    + (column + bin_op + literal).setResultsName('condition'))
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause))
