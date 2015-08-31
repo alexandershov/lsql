@@ -1,11 +1,24 @@
+from __future__ import division, print_function
+
 from collections import OrderedDict
 from pwd import getpwuid
 import argparse
+import operator
 
-from pyparsing import alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word, \
-    CharsNotIn, White
+from pyparsing import (
+    alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
+    CharsNotIn, White, nums, Combine, oneOf,
+)
 
 import os
+
+OPERATOR_MAPPING = {
+    '=': operator.eq,
+    '<': operator.lt,
+    '<=': operator.le,
+    '>': operator.gt,
+    '>=': operator.ge,
+}
 
 
 class Stat(object):
@@ -32,6 +45,16 @@ class Stat(object):
         return getattr(self.__stat, 'st_' + name)
 
 
+def eval_literal(literal):
+    return int(literal)
+
+
+def eval_condition(condition, stat):
+    column, op, literal = condition
+    if OPERATOR_MAPPING[op](stat.get_value(column), eval_literal(literal)):
+        return True
+
+
 def run_query(query, directory):
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
@@ -39,6 +62,7 @@ def run_query(query, directory):
         columns = list(Stat.ATTRS)
     else:
         columns = list(tokens.columns)
+
     if tokens.directory and directory:
         raise ValueError("You can't specify both FROM clause and "
                          "directory as command line argument")
@@ -50,17 +74,24 @@ def run_query(query, directory):
         for name in filenames:
             path = os.path.join(dirpath, name)
             stat = Stat(path)
-            fields = [str(stat.get_value(column)) for column in columns]
-            print('\t'.join(fields))
+            if tokens.condition and eval_condition(tokens.condition, stat):
+                fields = [str(stat.get_value(column)) for column in columns]
+                print('\t'.join(fields))
 
 
 def get_grammar():
-    columns = (Group(delimitedList(Word(alphas))) | '*').setResultsName('columns')
+    column = Word(alphas)
+    bin_op = oneOf('= < <= > >=')
+    int_literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True)))
+    columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
+    where_clause = (CaselessKeyword('WHERE')
+                    + (column + bin_op + int_literal).setResultsName('condition'))
     return (CaselessKeyword('SELECT') + columns
-            + Optional(from_clause))
+            + Optional(from_clause)
+            + Optional(where_clause))
 
 
 def main():
