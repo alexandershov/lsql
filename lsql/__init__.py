@@ -77,6 +77,10 @@ def eval_value(value, stat):
 
 
 def eval_condition(condition, stat):
+    return all(eval_simple_condition(c, stat) for c in condition)
+
+
+def eval_simple_condition(condition, stat):
     good = True
     if condition[0] == 'NOT':
         condition = condition[1:]
@@ -119,9 +123,9 @@ def get_grammar():
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
     value = column | literal
-    condition = (Optional(CaselessKeyword('NOT'))
-                 + value + bin_op + value).setResultsName('condition')
-    where_clause = CaselessKeyword('WHERE') + condition
+    condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
+    conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
+    where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause))
