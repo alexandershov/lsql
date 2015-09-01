@@ -105,13 +105,22 @@ def run_query(query, directory):
     if not os.path.isdir(directory):
         raise ValueError('{!r} is not a directory'.format(directory))
     print('\t'.join(columns))
+    stats = []
     for dirpath, dirnames, filenames in os.walk(directory):
         for name in filenames:
             path = os.path.join(dirpath, name)
             stat = Stat(path)
             if not tokens.condition or eval_condition(tokens.condition, stat):
-                fields = [str(stat.get_value(column)) for column in columns]
-                print('\t'.join(fields))
+                stats.append(stat)
+    if tokens.order_by:
+        order_by = lambda stat: stat.get_value(tokens.order_by)
+    else:
+        order_by = lambda stat: 0
+    stats = sorted(stats, key=order_by)
+    for stat in stats:
+        fields = [str(stat.get_value(column)) for column in columns]
+        print('\t'.join(fields))
+
 
 
 def get_grammar():
@@ -126,9 +135,11 @@ def get_grammar():
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
+    order_by_clause = CaselessKeyword('ORDER BY') + column.setResultsName('order_by')
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
-            + Optional(where_clause))
+            + Optional(where_clause)
+            + Optional(order_by_clause))
 
 
 def main():
