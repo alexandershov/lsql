@@ -125,10 +125,15 @@ def run_query(query, directory):
         if not tokens.condition or eval_condition(tokens.condition, stat):
             stats.append(stat)
     if tokens.order_by:
-        order_by = lambda stat: eval_value(tokens.order_by, stat)
+        value = tokens.order_by[0]
+        reverse = False
+        if len(tokens.order_by) == 2:
+            reverse = tokens.order_by[-1] == 'DESC'
+        order_by = lambda stat: eval_value(value, stat)
     else:
         order_by = lambda stat: 0
-    stats = sorted(stats, key=order_by)
+        reverse=False
+    stats = sorted(stats, key=order_by, reverse=reverse)
     for stat in stats:
         fields = [str(stat.get_value(column)) for column in columns]
         print('\t'.join(fields))
@@ -148,8 +153,6 @@ def walk_with_depth(path, depth=0):
                 yield x
 
 
-
-
 def get_grammar():
     column = Word(alphas)
     bin_op = oneOf('= < <= > >= LIKE RLIKE', caseless=True)
@@ -164,7 +167,10 @@ def get_grammar():
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
-    order_by_clause = CaselessKeyword('ORDER BY') + value.setResultsName('order_by')
+    order_by_clause = (CaselessKeyword('ORDER BY')
+                       + Group(
+        value + Optional(CaselessKeyword('ASC') | CaselessKeyword('DESC'))).setResultsName(
+        'order_by'))
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause)
