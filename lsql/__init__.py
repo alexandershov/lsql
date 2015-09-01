@@ -171,10 +171,13 @@ def run_query(query, directory):
         raise ValueError('{!r} is not a directory'.format(directory))
     print('\t'.join(columns))
     stats = []
+    limit = int(tokens.limit) or float('inf')
     for path, depth in walk_with_depth(directory):
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
             stats.append(stat)
+        if not tokens.order_by and len(stats) >= limit:
+            break
     if tokens.order_by:
         value = tokens.order_by[0]
         reverse = False
@@ -185,6 +188,8 @@ def run_query(query, directory):
         order_by = lambda stat: 0
         reverse = False
     stats = sorted(stats, key=order_by, reverse=reverse)
+    if len(stats) > limit:
+        stats = stats[:limit]
     for stat in stats:
         fields = [str(stat.get_value(column)) for column in columns]
         print('\t'.join(fields))
@@ -222,10 +227,12 @@ def get_grammar():
                        + Group(
         value + Optional(CaselessKeyword('ASC') | CaselessKeyword('DESC'))).setResultsName(
         'order_by'))
+    limit_clause = CaselessKeyword('LIMIT') + Word(nums).setResultsName('limit')
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause)
-            + Optional(order_by_clause))
+            + Optional(order_by_clause)
+            + Optional(limit_clause))
 
 
 def main():
