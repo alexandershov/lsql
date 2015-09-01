@@ -46,7 +46,7 @@ FUNCTIONS = {
 
 
 class Stat(object):
-    ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime', 'depth'])
+    ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime', 'depth', 'type'])
 
     def __init__(self, path, depth):
         self.path = path
@@ -60,6 +60,19 @@ class Stat(object):
     @property
     def owner(self):
         return getpwuid(self.__stat.st_uid).pw_name
+
+    @property
+    def type(self):
+        if os.path.islink(self.path):
+            return 'link'
+        elif os.path.isdir(self.path):
+            return 'dir'
+        elif os.path.isfile(self.path):
+            return 'file'
+        elif os.path.ismount(self.path):
+            return 'mount'
+        else:
+            return 'unknown'
 
     def get_value(self, name):
         if name not in Stat.ATTRS:
