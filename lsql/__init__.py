@@ -51,6 +51,15 @@ class Timestamp(int):
         return datetime.datetime.utcfromtimestamp(self).isoformat()
 
 
+class Mode(object):
+    def __init__(self, mode):
+        self.mode = mode
+
+    def __str__(self):
+        return oct(self.mode)
+
+
+
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'ctime', 'atime', 'mtime', 'depth',
@@ -73,6 +82,10 @@ class Stat(object):
     @property
     def owner(self):
         return getpwuid(self.__stat.st_uid).pw_name
+
+    @property
+    def mode(self):
+        return Mode(self.__stat.st_mode)
 
     @property
     def ctime(self):
