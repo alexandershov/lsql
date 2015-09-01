@@ -66,17 +66,19 @@ def eval_size_literal(literal):
     raise ValueError("can't be here")
 
 
-def eval_literal(literal):
-    if literal.startswith("'"):
-        return literal[1:-1]
-    if literal.endswith(SIZE_SUFFIXES):
-        return eval_size_literal(literal)
-    return int(literal)
+def eval_value(value, stat):
+    if value.startswith("'"):
+        return value[1:-1]
+    if value.endswith(SIZE_SUFFIXES):
+        return eval_size_literal(value)
+    if value.isdigit():
+        return int(value)
+    return stat.get_value(value)
 
 
 def eval_condition(condition, stat):
-    column, op, literal = condition
-    if OPERATOR_MAPPING[op.lower()](stat.get_value(column), eval_literal(literal)):
+    left, op, right = condition
+    if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
         return True
     return False
 
@@ -112,8 +114,9 @@ def get_grammar():
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
-    where_clause = (CaselessKeyword('WHERE')
-                    + (column + bin_op + literal).setResultsName('condition'))
+    value = column | literal
+    condition = (value + bin_op + value).setResultsName('condition')
+    where_clause = CaselessKeyword('WHERE') + condition
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause))
