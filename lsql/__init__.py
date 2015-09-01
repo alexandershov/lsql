@@ -24,6 +24,10 @@ def like(string, pattern):
     return re.match(pattern + '$', string)
 
 
+def rlike(string, re_pattern):
+    return bool(re.match(re_pattern + '$', string))
+
+
 OPERATOR_MAPPING = {
     '=': operator.eq,
     '<': operator.lt,
@@ -31,6 +35,7 @@ OPERATOR_MAPPING = {
     '>': operator.gt,
     '>=': operator.ge,
     'like': like,
+    'rlike': rlike,
 }
 
 
@@ -125,7 +130,7 @@ def run_query(query, directory):
 
 def get_grammar():
     column = Word(alphas)
-    bin_op = oneOf('= < <= > >= LIKE', caseless=True)
+    bin_op = oneOf('= < <= > >= LIKE RLIKE', caseless=True)
     literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True))) | sglQuotedString
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
