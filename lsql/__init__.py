@@ -47,12 +47,16 @@ FUNCTIONS = {
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'name', 'size', 'owner', 'ctime', 'atime', 'mtime', 'depth', 'type'])
+        'path', 'fullpath', 'name', 'size', 'owner', 'ctime', 'atime', 'mtime', 'depth', 'type'])
 
     def __init__(self, path, depth):
         self.path = path
         self.depth = depth
         self.__stat = os.lstat(path)
+
+    @property
+    def fullpath(self):
+        return os.path.normpath(os.path.join(os.getcwd(), self.path))
 
     @property
     def name(self):
