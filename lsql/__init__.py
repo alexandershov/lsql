@@ -46,10 +46,11 @@ FUNCTIONS = {
 
 
 class Stat(object):
-    ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime'])
+    ATTRS = OrderedDict.fromkeys(['path', 'name', 'size', 'owner', 'ctime', 'depth'])
 
-    def __init__(self, path):
+    def __init__(self, path, depth):
         self.path = path
+        self.depth = depth
         self.__stat = os.lstat(path)
 
     @property
@@ -119,12 +120,10 @@ def run_query(query, directory):
         raise ValueError('{!r} is not a directory'.format(directory))
     print('\t'.join(columns))
     stats = []
-    for dirpath, dirnames, filenames in os.walk(directory):
-        for name in filenames:
-            path = os.path.join(dirpath, name)
-            stat = Stat(path)
-            if not tokens.condition or eval_condition(tokens.condition, stat):
-                stats.append(stat)
+    for path, depth in walk_with_depth(directory):
+        stat = Stat(path, depth)
+        if not tokens.condition or eval_condition(tokens.condition, stat):
+            stats.append(stat)
     if tokens.order_by:
         order_by = lambda stat: eval_value(tokens.order_by, stat)
     else:
@@ -133,6 +132,21 @@ def run_query(query, directory):
     for stat in stats:
         fields = [str(stat.get_value(column)) for column in columns]
         print('\t'.join(fields))
+
+
+def walk_with_depth(path, depth=0):
+    names = os.listdir(path)
+    dirs = []
+    for name in names:
+        full_path = os.path.join(path, name)
+        if os.path.isdir(full_path):
+            dirs.append(full_path)
+        yield full_path, depth
+    for d in dirs:
+        if not os.path.islink(d):
+            for x in walk_with_depth(d, depth + 1):
+                yield x
+
 
 
 
