@@ -77,10 +77,14 @@ def eval_value(value, stat):
 
 
 def eval_condition(condition, stat):
+    good = True
+    if condition[0] == 'NOT':
+        condition = condition[1:]
+        good = False
     left, op, right = condition
     if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
-        return True
-    return False
+        return good
+    return not good
 
 
 def run_query(query, directory):
@@ -115,7 +119,8 @@ def get_grammar():
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
     value = column | literal
-    condition = (value + bin_op + value).setResultsName('condition')
+    condition = (Optional(CaselessKeyword('NOT'))
+                 + value + bin_op + value).setResultsName('condition')
     where_clause = CaselessKeyword('WHERE') + condition
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
