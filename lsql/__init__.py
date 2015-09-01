@@ -9,7 +9,7 @@ import re
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
     CharsNotIn, White, nums, Combine, oneOf, sglQuotedString,
-)
+    Forward, Suppress)
 
 import os
 
@@ -36,6 +36,11 @@ OPERATOR_MAPPING = {
     '>=': operator.ge,
     'like': like,
     'rlike': rlike,
+}
+
+FUNCTIONS = {
+    'lower': lambda s: s.lower(),
+    'upper': lambda s: s.upper(),
 }
 
 
@@ -72,6 +77,8 @@ def eval_size_literal(literal):
 
 
 def eval_value(value, stat):
+    if len(value) == 2:  # function call
+        return FUNCTIONS[value[0]](eval_value(value[1], stat))
     if value.startswith("'"):
         return value[1:-1]
     if value.endswith(SIZE_SUFFIXES):
@@ -136,7 +143,9 @@ def get_grammar():
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
                    + (QuotedString('"').setResultsName('directory') | directory))
-    value = column | literal
+    funcall = Forward()
+    value = funcall | column | literal
+    funcall << Group(Word(alphas) + Suppress('(') + value + Suppress(')'))
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
