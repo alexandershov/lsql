@@ -41,6 +41,7 @@ OPERATOR_MAPPING = {
 FUNCTIONS = {
     'lower': lambda s: s.lower(),
     'upper': lambda s: s.upper(),
+    'length': len,
 }
 
 
