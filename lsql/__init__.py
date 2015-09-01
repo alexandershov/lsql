@@ -125,7 +125,7 @@ def run_query(query, directory):
             if not tokens.condition or eval_condition(tokens.condition, stat):
                 stats.append(stat)
     if tokens.order_by:
-        order_by = lambda stat: stat.get_value(tokens.order_by)
+        order_by = lambda stat: eval_value(tokens.order_by, stat)
     else:
         order_by = lambda stat: 0
     stats = sorted(stats, key=order_by)
@@ -149,7 +149,7 @@ def get_grammar():
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
-    order_by_clause = CaselessKeyword('ORDER BY') + column.setResultsName('order_by')
+    order_by_clause = CaselessKeyword('ORDER BY') + value.setResultsName('order_by')
     return (CaselessKeyword('SELECT') + columns
             + Optional(from_clause)
             + Optional(where_clause)
