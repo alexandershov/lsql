@@ -47,7 +47,9 @@ FUNCTIONS = {
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'fullpath', 'name', 'size', 'owner', 'ctime', 'atime', 'mtime', 'depth', 'type'])
+        'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'ctime', 'atime', 'mtime', 'depth',
+        'type',
+    ])
 
     def __init__(self, path, depth):
         self.path = path
