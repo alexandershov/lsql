@@ -3,6 +3,7 @@ from __future__ import division, print_function
 from collections import OrderedDict
 from pwd import getpwuid
 import argparse
+import datetime
 import operator
 import re
 
@@ -45,6 +46,11 @@ FUNCTIONS = {
 }
 
 
+class Timestamp(int):
+    def __str__(self):
+        return datetime.datetime.utcfromtimestamp(self).isoformat()
+
+
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'ctime', 'atime', 'mtime', 'depth',
@@ -67,6 +73,18 @@ class Stat(object):
     @property
     def owner(self):
         return getpwuid(self.__stat.st_uid).pw_name
+
+    @property
+    def ctime(self):
+        return Timestamp(self.__stat.st_ctime)
+
+    @property
+    def mtime(self):
+        return Timestamp(self.__stat.st_mtime)
+
+    @property
+    def atime(self):
+        return Timestamp(self.__stat.st_atime)
 
     @property
     def type(self):
@@ -152,7 +170,7 @@ def run_query(query, directory):
         order_by = lambda stat: eval_value(value, stat)
     else:
         order_by = lambda stat: 0
-        reverse=False
+        reverse = False
     stats = sorted(stats, key=order_by, reverse=reverse)
     for stat in stats:
         fields = [str(stat.get_value(column)) for column in columns]
