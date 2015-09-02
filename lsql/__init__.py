@@ -14,9 +14,14 @@ from pyparsing import (
 
 import os
 
-
-# must be a tuple, because is used as argument to str.endswith
-SIZE_SUFFIXES = ('kb', 'mb', 'gb')
+SIZE_SUFFIXES = {
+    'k': 1,
+    'kb': 1,
+    'm': 2,
+    'mb': 2,
+    'g': 3,
+    'gb': 3,
+}
 
 
 def like(string, pattern):
@@ -57,7 +62,6 @@ class Mode(object):
 
     def __str__(self):
         return oct(self.mode)
-
 
 
 class Stat(object):
@@ -121,23 +125,27 @@ class Stat(object):
         return getattr(self.__stat, 'st_' + name)
 
 
+SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
+
+
 def eval_size_literal(literal):
-    assert literal.endswith(SIZE_SUFFIXES)
-    for power, suffix in enumerate(SIZE_SUFFIXES, start=1):
-        if literal.endswith(suffix):
-            return int(literal[:-len(suffix)]) * (1024 ** power)
-    raise ValueError("can't be here")
+    match = SIZE_RE.match(literal)
+    if not match:
+        raise ValueError('bad literal: {!r}'.format(literal))
+    value = int(match.group('value'))
+    suffix = match.group('suffix')
+    if suffix:
+        value *= 1024 ** SIZE_SUFFIXES[suffix]
+    return value
 
 
 def eval_value(value, stat):
-    if len(value) == 2:  # function call
+    if len(value) == 2 and value[0] in FUNCTIONS:  # function call
         return FUNCTIONS[value[0]](eval_value(value[1], stat))
     if value.startswith("'"):
         return value[1:-1]
-    if value.endswith(SIZE_SUFFIXES):
+    if value[0].isdigit():
         return eval_size_literal(value)
-    if value.isdigit():
-        return int(value)
     return stat.get_value(value)
 
 
@@ -171,7 +179,7 @@ def run_query(query, directory):
         raise ValueError('{!r} is not a directory'.format(directory))
     print('\t'.join(columns))
     stats = []
-    limit = int(tokens.limit) or float('inf')
+    limit = int(tokens.limit) if tokens.limit else float('inf')
     for path, depth in walk_with_depth(directory):
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
@@ -212,7 +220,7 @@ def walk_with_depth(path, depth=0):
 def get_grammar():
     column = Word(alphas)
     bin_op = oneOf('= < <= > >= LIKE RLIKE', caseless=True)
-    literal = Combine(Word(nums) + Optional(oneOf('kb mb gb', caseless=True))) | sglQuotedString
+    literal = Combine(Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
