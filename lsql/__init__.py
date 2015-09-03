@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 
 from collections import OrderedDict
+from grp import getgrgid
 from pwd import getpwuid
 import argparse
 import datetime
@@ -66,8 +67,8 @@ class Mode(object):
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'ctime', 'atime', 'mtime', 'depth',
-        'type',
+        'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
+        'depth', 'type',
     ])
 
     def __init__(self, path, depth):
@@ -86,6 +87,10 @@ class Stat(object):
     @property
     def owner(self):
         return getpwuid(self.__stat.st_uid).pw_name
+
+    @property
+    def group(self):
+        return getgrgid(self.__stat.st_gid).gr_name
 
     @property
     def mode(self):
@@ -124,7 +129,7 @@ class Stat(object):
     def __getattr__(self, name):
         return getattr(self.__stat, 'st_' + name)
 
-
+# matches strings of form 'digits:suffix'. e.g '30kb'
 SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
 
 
@@ -220,7 +225,8 @@ def walk_with_depth(path, depth=0):
 def get_grammar():
     column = Word(alphas)
     bin_op = oneOf('= < <= > >= LIKE RLIKE', caseless=True)
-    literal = Combine(Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
+    literal = Combine(
+        Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
     directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
