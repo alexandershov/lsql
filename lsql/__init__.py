@@ -182,7 +182,6 @@ def run_query(query, directory):
     directory = directory or tokens.directory or '.'
     if not os.path.isdir(directory):
         raise ValueError('{!r} is not a directory'.format(directory))
-    print('\t'.join(columns))
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
     for path, depth in walk_with_depth(directory):
