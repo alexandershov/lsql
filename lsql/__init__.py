@@ -67,7 +67,7 @@ class Mode(object):
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'fullpath', 'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
+        'path', 'fullpath', 'directory', 'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
         'depth', 'type',
     ])
 
@@ -83,6 +83,10 @@ class Stat(object):
     @property
     def name(self):
         return os.path.basename(self.path)
+
+    @property
+    def directory(self):
+        return os.path.dirname(self.path)
 
     @property
     def owner(self):
