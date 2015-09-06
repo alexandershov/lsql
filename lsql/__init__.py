@@ -67,7 +67,7 @@ class Mode(object):
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'fullpath', 'dir', 'fulldir',
+        'path', 'fullpath', 'dir', 'fulldir', 'extension',
         'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
         'depth', 'type',
     ])
@@ -80,6 +80,13 @@ class Stat(object):
     @property
     def fullpath(self):
         return os.path.normpath(os.path.join(os.getcwd(), self.path))
+
+    @property
+    def extension(self):
+        extension = os.path.splitext(self.path)[1]
+        if extension:
+            extension = extension[1:]  # skip dot
+        return extension
 
     @property
     def name(self):
