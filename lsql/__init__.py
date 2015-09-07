@@ -69,13 +69,17 @@ class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'path', 'fullpath', 'dir', 'fulldir', 'extension',
         'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
-        'depth', 'type', 'device', 'hardlinks', 'inode',
+        'depth', 'type', 'device', 'hardlinks', 'inode', 'size'
     ])
 
     def __init__(self, path, depth):
         self.path = path
         self.depth = depth
         self.__stat = os.lstat(path)
+
+    @property
+    def size(self):
+        return self.__stat.st_size
 
     @property
     def fullpath(self):
@@ -153,9 +157,6 @@ class Stat(object):
         if name not in Stat.ATTRS:
             raise ValueError('unknown attr: {!r}'.format(name))
         return getattr(self, name)
-
-    def __getattr__(self, name):
-        return getattr(self.__stat, 'st_' + name)
 
 # matches strings of form 'digits:suffix'. e.g '30kb'
 SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
