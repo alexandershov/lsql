@@ -69,7 +69,7 @@ class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'path', 'fullpath', 'dir', 'fulldir', 'extension',
         'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
-        'depth', 'type',
+        'depth', 'type', 'device', 'hardlinks', 'inode',
     ])
 
     def __init__(self, path, depth):
@@ -80,6 +80,18 @@ class Stat(object):
     @property
     def fullpath(self):
         return os.path.normpath(os.path.join(os.getcwd(), self.path))
+
+    @property
+    def device(self):
+        return self.__stat.st_dev
+
+    @property
+    def hardlinks(self):
+        return self.__stat.st_nlink
+
+    @property
+    def inode(self):
+        return self.__stat.st_ino
 
     @property
     def extension(self):
