@@ -67,9 +67,10 @@ class Mode(object):
 
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
-        'path', 'fullpath', 'dir', 'fulldir', 'extension',
-        'name', 'size', 'mode', 'owner', 'group', 'ctime', 'atime', 'mtime',
-        'depth', 'type', 'device', 'hardlinks', 'inode', 'size'
+        'fullpath', 'size', 'owner',
+        'path', 'fulldir', 'dir', 'name', 'extension',
+        'mode', 'group', 'atime', 'mtime', 'ctime',
+        'depth', 'type', 'device', 'hardlinks', 'inode',
     ])
 
     def __init__(self, path, depth):
@@ -78,24 +79,28 @@ class Stat(object):
         self.__stat = os.lstat(path)
 
     @property
-    def size(self):
-        return self.__stat.st_size
-
-    @property
     def fullpath(self):
         return os.path.normpath(os.path.join(os.getcwd(), self.path))
 
     @property
-    def device(self):
-        return self.__stat.st_dev
+    def size(self):
+        return self.__stat.st_size
 
     @property
-    def hardlinks(self):
-        return self.__stat.st_nlink
+    def owner(self):
+        return getpwuid(self.__stat.st_uid).pw_name
 
     @property
-    def inode(self):
-        return self.__stat.st_ino
+    def fulldir(self):
+        return os.path.dirname(self.fullpath)
+
+    @property
+    def dir(self):
+        return os.path.dirname(self.path)
+
+    @property
+    def name(self):
+        return os.path.basename(self.path)
 
     @property
     def extension(self):
@@ -105,40 +110,24 @@ class Stat(object):
         return extension
 
     @property
-    def name(self):
-        return os.path.basename(self.path)
-
-    @property
-    def dir(self):
-        return os.path.dirname(self.path)
-
-    @property
-    def fulldir(self):
-        return os.path.dirname(self.fullpath)
-
-    @property
-    def owner(self):
-        return getpwuid(self.__stat.st_uid).pw_name
+    def mode(self):
+        return Mode(self.__stat.st_mode)
 
     @property
     def group(self):
         return getgrgid(self.__stat.st_gid).gr_name
 
     @property
-    def mode(self):
-        return Mode(self.__stat.st_mode)
-
-    @property
-    def ctime(self):
-        return Timestamp(self.__stat.st_ctime)
+    def atime(self):
+        return Timestamp(self.__stat.st_atime)
 
     @property
     def mtime(self):
         return Timestamp(self.__stat.st_mtime)
 
     @property
-    def atime(self):
-        return Timestamp(self.__stat.st_atime)
+    def ctime(self):
+        return Timestamp(self.__stat.st_ctime)
 
     @property
     def type(self):
@@ -152,6 +141,18 @@ class Stat(object):
             return 'mount'
         else:
             return 'unknown'
+
+    @property
+    def device(self):
+        return self.__stat.st_dev
+
+    @property
+    def hardlinks(self):
+        return self.__stat.st_nlink
+
+    @property
+    def inode(self):
+        return self.__stat.st_ino
 
     def get_value(self, name):
         if name not in Stat.ATTRS:
