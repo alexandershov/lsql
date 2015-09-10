@@ -28,7 +28,8 @@ SIZE_SUFFIXES = {
 def like(string, pattern):
     pattern = re.escape(pattern)
     pattern = pattern.replace(r'\%', '.*').replace(r'\_', '.')
-    return re.match(pattern + '$', string)
+    # we need re.DOTALL because string can contain newlines (e.g 'content' column)
+    return re.match(pattern + '$', string, re.DOTALL)
 
 
 def rlike(string, re_pattern):
@@ -73,6 +74,7 @@ class Stat(object):
         'path', 'fulldir', 'dir', 'name', 'extension',
         'mode', 'group', 'atime', 'mtime', 'ctime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
+        'content',
     ])
 
     def __init__(self, path, depth):
@@ -155,6 +157,11 @@ class Stat(object):
     @property
     def inode(self):
         return self.__stat.st_ino
+
+    @property
+    def content(self):
+        with open(self.path, 'rb') as input:
+            return input.read()
 
     def get_value(self, name):
         if name not in Stat.ATTRS:
