@@ -40,6 +40,7 @@ OPERATOR_MAPPING = {
     '<>': operator.ne,
     '!=': operator.ne,
     '=': operator.eq,
+    '==': operator.eq,
     '<': operator.lt,
     '<=': operator.le,
     '>': operator.gt,
@@ -262,7 +263,7 @@ def walk_with_depth(path, depth=0):
 
 def get_grammar():
     column = Word(alphas)
-    bin_op = oneOf('<> != = < <= > >= LIKE RLIKE', caseless=True)
+    bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
     literal = Combine(
         Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
     columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
