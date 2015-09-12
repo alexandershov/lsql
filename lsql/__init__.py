@@ -28,7 +28,7 @@ SIZE_SUFFIXES = {
 def like(string, pattern):
     pattern = re.escape(pattern)
     pattern = pattern.replace(r'\%', '.*').replace(r'\_', '.')
-    # we need re.DOTALL because string can contain newlines (e.g 'content' column)
+    # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
     return re.match(pattern + '$', string, re.DOTALL)
 
 
@@ -73,7 +73,7 @@ class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
         'path', 'fulldir', 'dir', 'name', 'extension',
-        'mode', 'group', 'atime', 'mtime', 'ctime',
+        'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
         'content',
     ])
@@ -133,6 +133,12 @@ class Stat(object):
     @property
     def ctime(self):
         return Timestamp(self.__stat.st_ctime)
+
+    @property
+    def birthtime(self):
+        if not hasattr(self.__stat, 'st_birthtime'):
+            raise ValueError('birthtime is not supported on your platform')
+        return Timestamp(self.__stat.st_birthtime)
 
     @property
     def type(self):
