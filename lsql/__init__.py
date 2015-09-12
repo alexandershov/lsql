@@ -215,7 +215,9 @@ def eval_simple_condition(condition, stat):
     return not good
 
 
-def run_query(query, directory):
+def run_query(args):
+    query = args.query
+    directory = args.directory
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
     if tokens.columns == '*':
@@ -228,6 +230,8 @@ def run_query(query, directory):
     directory = directory or tokens.directory or '.'
     if not os.path.isdir(directory):
         raise ValueError('{!r} is not a directory'.format(directory))
+    if args.header:
+        print('\t'.join(columns))
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
     for path, depth in walk_with_depth(directory):
@@ -295,8 +299,14 @@ def get_grammar():
 
 
 def main():
+    args = parse_args()
+    run_query(args)
+
+
+def parse_args():
     parser = argparse.ArgumentParser(prog='lsql', description='Search for files with SQL')
+    parser.add_argument('-H', '--header', action='store_true',
+                        help='Show header with column names?')
     parser.add_argument('query', help='sql query to execute, e.g "select name')
     parser.add_argument('directory', help='directory to search in', nargs='?')
-    args = parser.parse_args()
-    run_query(args.query, args.directory)
+    return parser.parse_args()
