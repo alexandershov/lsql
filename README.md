@@ -42,6 +42,7 @@ lsql "SELECT path WHERE extension = 'py' AND content like '%import argparse%'"
 Let's say you're in the directory /tmp with two files
 * /tmp/a.txt
 * /tmp/d/b.txt
+
 | Name  | Description  | Example |
 | :---- | :----------- | ----- |
 | fullpath | full path to file | /tmp/a.txt|
