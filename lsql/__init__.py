@@ -167,6 +167,8 @@ class Stat(object):
 
     @property
     def content(self):
+        if self.type == 'dir':
+            return '\n'.join(os.listdir(self.path))
         with open(self.path, 'rb') as input:
             return input.read()
 
