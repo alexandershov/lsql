@@ -28,18 +28,16 @@ NULL = object()
 
 
 def like(string, pattern):
-    if string is NULL:
-        return False
     pattern = re.escape(pattern)
     pattern = pattern.replace(r'\%', '.*').replace(r'\_', '.')
-    # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
-    return re.match(pattern + '$', string, re.DOTALL)
+    return rlike(string, pattern)
 
 
 def rlike(string, re_pattern):
     if string is NULL:
         return False
-    return bool(re.match(re_pattern + '$', string))
+    # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
+    return re.match(re_pattern + '$', string, re.DOTALL)
 
 
 OPERATOR_MAPPING = {
