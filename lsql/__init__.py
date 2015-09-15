@@ -24,8 +24,12 @@ SIZE_SUFFIXES = {
     'gb': 3,
 }
 
+NULL = object()
+
 
 def like(string, pattern):
+    if string is NULL:
+        return False
     pattern = re.escape(pattern)
     pattern = pattern.replace(r'\%', '.*').replace(r'\_', '.')
     # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
@@ -33,6 +37,8 @@ def like(string, pattern):
 
 
 def rlike(string, re_pattern):
+    if string is NULL:
+        return False
     return bool(re.match(re_pattern + '$', string))
 
 
@@ -168,7 +174,7 @@ class Stat(object):
     @property
     def content(self):
         if self.type == 'dir':
-            return '\n'.join(os.listdir(self.path))
+            return NULL
         with open(self.path, 'rb') as input:
             return input.read()
 
