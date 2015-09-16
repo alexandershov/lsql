@@ -93,6 +93,8 @@ class Stat(object):
 
     @property
     def size(self):
+        if self.type == 'dir':
+            return get_dir_size(self.path)
         return self.__stat.st_size
 
     @property
@@ -275,6 +277,14 @@ def walk_with_depth(path, depth=0):
         if not os.path.islink(d):
             for x in walk_with_depth(d, depth + 1):
                 yield x
+
+
+def get_dir_size(path):
+    size = 0
+    for path, _ in walk_with_depth(path):
+        if os.path.isfile(path):
+            size += os.lstat(path).st_size
+    return size
 
 
 def get_grammar():
