@@ -213,14 +213,18 @@ def eval_condition(condition, stat):
 
 
 def eval_simple_condition(condition, stat):
-    good = True
+    toggle = identity
     if condition[0] == 'NOT':
         condition = condition[1:]
-        good = False
+        toggle = operator.not_
     left, op, right = condition
     if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
-        return good
-    return not good
+        return toggle(True)
+    return toggle(False)
+
+
+def identity(x):
+    return x
 
 
 def run_query(args):
