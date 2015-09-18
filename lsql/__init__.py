@@ -15,6 +15,8 @@ from pyparsing import (
 
 import os
 
+CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
+
 SIZE_SUFFIXES = {
     'k': 1,
     'kb': 1,
@@ -40,6 +42,27 @@ def rlike(string, re_pattern):
     return re.match(re_pattern + '$', string, re.DOTALL)
 
 
+def age(ts):
+    d_time = datetime.datetime.utcfromtimestamp(ts)
+    return Interval((d_time - CURRENT_DATE).total_seconds())
+
+
+class Interval(object):
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    def __str__(self):
+        parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
+        human = []
+        seconds = self.seconds
+        for n, name in parts:
+            if seconds:
+                x, seconds = divmod(seconds, n)
+                if x:
+                    human.append('{} {}'.format(x, part))
+        return ' '.join(human)
+
+
 OPERATOR_MAPPING = {
     '<>': operator.ne,
     '!=': operator.ne,
@@ -57,6 +80,7 @@ FUNCTIONS = {
     'lower': lambda s: s.lower(),
     'upper': lambda s: s.upper(),
     'length': len,
+    'age': age
 }
 
 
