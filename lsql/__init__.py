@@ -213,14 +213,14 @@ def eval_condition(condition, stat):
 
 
 def eval_simple_condition(condition, stat):
-    toggle = identity
+    modify = identity
     if condition[0] == 'NOT':
         condition = condition[1:]
-        toggle = operator.not_
+        modify = operator.not_
     left, op, right = condition
     if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
-        return toggle(True)
-    return toggle(False)
+        return modify(True)
+    return modify(False)
 
 
 def identity(x):
