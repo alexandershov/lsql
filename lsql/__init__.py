@@ -44,12 +44,12 @@ def rlike(string, re_pattern):
 
 def age(ts):
     d_time = datetime.datetime.utcfromtimestamp(ts)
-    return Interval((d_time - CURRENT_DATE).total_seconds())
+    return Interval((CURRENT_DATE - d_time).total_seconds())
 
 
 class Interval(object):
     def __init__(self, seconds):
-        self.seconds = seconds
+        self.seconds = int(seconds)
 
     def __str__(self):
         parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
@@ -59,8 +59,8 @@ class Interval(object):
             if seconds:
                 x, seconds = divmod(seconds, n)
                 if x:
-                    human.append('{} {}'.format(x, part))
-        return ' '.join(human)
+                    human.append('{} {}'.format(x, name))
+        return ', '.join(human)
 
 
 OPERATOR_MAPPING = {
@@ -289,7 +289,7 @@ def run_query(args):
     if len(stats) > limit:
         stats = stats[:limit]
     for stat in stats:
-        fields = [str(stat.get_value(column)) for column in columns]
+        fields = [str(eval_value(column, stat)) for column in columns]
         print('\t'.join(fields))
 
 
@@ -317,16 +317,17 @@ def get_dir_size(path):
 
 def get_grammar():
     column = Word(alphas)
-    bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
     literal = Combine(
         Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
-    columns = (Group(delimitedList(column)) | '*').setResultsName('columns')
-    directory = White() + CharsNotIn('" ').setResultsName('directory')
-    from_clause = (CaselessKeyword('FROM')
-                   + (QuotedString('"').setResultsName('directory') | directory))
     funcall = Forward()
     value = funcall | column | literal
     funcall << Group(Word(alphas) + Suppress('(') + value + Suppress(')'))
+    bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
+
+    columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
+    directory = White() + CharsNotIn('" ').setResultsName('directory')
+    from_clause = (CaselessKeyword('FROM')
+                   + (QuotedString('"').setResultsName('directory') | directory))
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
