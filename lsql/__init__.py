@@ -63,6 +63,10 @@ class Interval(object):
         return ', '.join(human)
 
 
+def btrim(string, chars=None):
+    return string.strip(chars)
+
+
 OPERATOR_MAPPING = {
     '<>': operator.ne,
     '!=': operator.ne,
@@ -80,13 +84,14 @@ FUNCTIONS = {
     'lower': lambda s: s.lower(),
     'upper': lambda s: s.upper(),
     'length': len,
-    'age': age
+    'age': age,
+    'btrim': btrim,
 }
 
 
 class Timestamp(int):
     def __str__(self):
-        return datetime.datetime.utcfromtimestamp(self).isoformat()
+        return datetime.datetime.fromtimestamp(self).isoformat()
 
 
 class Mode(object):
@@ -224,7 +229,8 @@ def eval_size_literal(literal):
 
 def eval_value(value, stat):
     if len(value) == 2 and value[0] in FUNCTIONS:  # function call
-        return FUNCTIONS[value[0]](eval_value(value[1], stat))
+        args = [eval_value(x, stat) for x in value[1]]
+        return FUNCTIONS[value[0]](*args)
     if value.startswith("'"):
         return value[1:-1]
     if value[0].isdigit():
@@ -321,7 +327,7 @@ def get_grammar():
         Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
-    funcall << Group(Word(alphas) + Suppress('(') + value + Suppress(')'))
+    funcall << Group(Word(alphas) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
     bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
 
     columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
