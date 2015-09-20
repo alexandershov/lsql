@@ -108,7 +108,7 @@ class Stat(object):
         'path', 'fulldir', 'dir', 'name', 'extension',
         'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
-        'content',
+        'content', 'lines',
     ])
 
     def __init__(self, path, depth):
@@ -206,6 +206,10 @@ class Stat(object):
             return NULL
         with open(self.path, 'rb') as input:
             return input.read()
+
+    @property
+    def lines(self):
+        return self.content.splitlines()
 
     def get_value(self, name):
         if name not in Stat.ATTRS:
