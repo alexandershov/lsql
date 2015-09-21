@@ -39,7 +39,10 @@ def rlike(string, re_pattern):
     if string is NULL:
         return False
     # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
-    return re.match(re_pattern + '$', string, re.DOTALL)
+    regex = re.compile(re_pattern + '$', re.DOTALL)
+    if not isinstance(string, list):
+        string = [string]
+    return any(regex.match(line) for line in string)
 
 
 def age(ts):
