@@ -264,9 +264,7 @@ def identity(x):
     return x
 
 
-def run_query(args):
-    query = args.query
-    directory = args.directory
+def run_query(query, directory=None, header=False):
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
     if tokens.columns == '*':
@@ -279,8 +277,8 @@ def run_query(args):
     directory = directory or tokens.directory or '.'
     if not os.path.isdir(directory):
         raise ValueError('{!r} is not a directory'.format(directory))
-    if args.header:
-        print('\t'.join(columns))
+    if header:
+        yield columns
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
     for path, depth in walk_with_depth(directory):
@@ -303,7 +301,7 @@ def run_query(args):
         stats = stats[:limit]
     for stat in stats:
         fields = [str(eval_value(column, stat)) for column in columns]
-        print('\t'.join(fields))
+        yield fields
 
 
 def walk_with_depth(path, depth=0):
@@ -358,7 +356,8 @@ def get_grammar():
 
 def main():
     args = parse_args()
-    run_query(args)
+    for row in run_query(args.query, args.directory, args.header):
+        print('\t'.join(row))
 
 
 def parse_args():
