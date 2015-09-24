@@ -1,5 +1,3 @@
-from __future__ import division, print_function
-
 import os
 
 import lsql
@@ -13,3 +11,6 @@ def test_simple():
     assert names == [['README.md'], ['small.py']]
 
 
+def test_where():
+    names = list(lsql.run_query("SELECT name FROM {} WHERE extension = 'py' ORDER BY name".format(DIR)))
+    assert names == [['small.py']]
