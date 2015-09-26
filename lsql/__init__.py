@@ -235,9 +235,9 @@ def eval_size_literal(literal):
 
 
 def eval_value(value, stat):
-    if len(value) == 2 and value[0] in FUNCTIONS:  # function call
+    if len(value) == 2 and value[0].lower() in FUNCTIONS:  # function call
         args = [eval_value(x, stat) for x in value[1]]
-        return FUNCTIONS[value[0]](*args)
+        return FUNCTIONS[value[0].lower()](*args)
     if value.startswith("'"):
         return value[1:-1]
     if value[0].isdigit():

@@ -30,6 +30,11 @@ def test_like():
                  'SELECT name', "WHERE content LIKE '%_ery%'")
 
 
+def test_and():
+    assert_query([['small.py']],
+                 'SELECT name', "WHERE LOWER(name) LIKE '%a%' AND extension = 'py'")
+
+
 def assert_query(expected_results,
                  before_from,
                  after_from='',
