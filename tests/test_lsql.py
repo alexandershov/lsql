@@ -21,6 +21,15 @@ def test_where():
                  'SELECT name', "WHERE extension = 'py' ORDER BY name")
 
 
+def test_like():
+    assert_query([['README.md']],
+                 'SELECT name', "WHERE content LIKE '%nice!%'")
+    assert_query([],
+                 'SELECT name', "WHERE content LIKE '%very%'")
+    assert_query([['README.md']],
+                 'SELECT name', "WHERE content LIKE '%_ery%'")
+
+
 def assert_query(expected_results,
                  before_from,
                  after_from='',
