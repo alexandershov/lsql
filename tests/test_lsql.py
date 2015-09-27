@@ -38,6 +38,13 @@ def test_and():
                  'SELECT name', "WHERE LOWER(name) LIKE '%a%' AND extension = 'py'")
 
 
+def test_len():
+    assert_query(
+        [PY],
+        'SELECT name', 'WHERE LENGTH(lines) = 4'
+    )
+
+
 def assert_query(expected_results,
                  before_from,
                  after_from='',
