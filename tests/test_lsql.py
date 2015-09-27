@@ -3,6 +3,8 @@ import os
 import lsql
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
+
+SELECT_CLAUSE = 'SELECT name'
 FROM_CLAUSE = 'FROM {}'.format(DIR)
 
 MD = ['README.md']
@@ -10,43 +12,56 @@ PY = ['small.py']
 
 
 def test_simple():
-    assert_query_unordered([MD, PY],
-                           'SELECT name')
+    assert_query_unordered([MD, PY])
 
 
 def test_order():
-    assert_query([MD, PY],
-                 'SELECT name', 'ORDER BY name')
+    assert_query(
+        [MD, PY],
+        after_from='ORDER BY name',
+    )
 
 
 def test_where():
-    assert_query([PY],
-                 'SELECT name', "WHERE extension = 'py' ORDER BY name")
+    assert_query(
+        [PY],
+        after_from="WHERE extension = 'py' ORDER BY name"
+    )
 
 
 def test_like():
-    assert_query([MD],
-                 'SELECT name', "WHERE content LIKE '%nice!%'")
-    assert_query([],
-                 'SELECT name', "WHERE content LIKE '%very%'")
-    assert_query([MD],
-                 'SELECT name', "WHERE content LIKE '%_ery%'")
+    assert_query(
+        [MD],
+        after_from="WHERE content LIKE '%nice!%'"
+    )
+
+    assert_query(
+        [],
+        after_from="WHERE content LIKE '%very%'"
+    )
+
+    assert_query(
+        [MD],
+        after_from="WHERE content LIKE '%_ery%'"
+    )
 
 
 def test_and():
-    assert_query([PY],
-                 'SELECT name', "WHERE LOWER(name) LIKE '%a%' AND extension = 'py'")
+    assert_query(
+        [PY],
+        after_from="WHERE LOWER(name) LIKE '%a%' AND extension = 'py'"
+    )
 
 
 def test_len():
     assert_query(
         [PY],
-        'SELECT name', 'WHERE LENGTH(lines) = 4'
+        after_from='WHERE LENGTH(lines) = 4'
     )
 
 
 def assert_query(expected_results,
-                 before_from,
+                 before_from=SELECT_CLAUSE,
                  after_from='',
                  from_clause=FROM_CLAUSE):
     results = get_results(before_from, after_from, from_clause)
@@ -54,14 +69,14 @@ def assert_query(expected_results,
 
 
 def assert_query_unordered(expected_results,
-                           before_from,
+                           before_from=SELECT_CLAUSE,
                            after_from='',
                            from_clause=FROM_CLAUSE):
     results = get_results(before_from, after_from, from_clause)
     assert_same_items(results, expected_results)
 
 
-def get_results(before_from, after_from='', from_clause=FROM_CLAUSE):
+def get_results(before_from=SELECT_CLAUSE, after_from='', from_clause=FROM_CLAUSE):
     return list(lsql.run_query(' '.join([before_from, from_clause, after_from])))
 
 
