@@ -5,33 +5,36 @@ import lsql
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 FROM_CLAUSE = 'FROM {}'.format(DIR)
 
+MD = ['README.md']
+PY = ['small.py']
+
 
 def test_simple():
-    assert_query_unordered([['README.md'], ['small.py']],
+    assert_query_unordered([MD, PY],
                            'SELECT name')
 
 
 def test_order():
-    assert_query([['README.md'], ['small.py']],
+    assert_query([MD, PY],
                  'SELECT name', 'ORDER BY name')
 
 
 def test_where():
-    assert_query([['small.py']],
+    assert_query([PY],
                  'SELECT name', "WHERE extension = 'py' ORDER BY name")
 
 
 def test_like():
-    assert_query([['README.md']],
+    assert_query([MD],
                  'SELECT name', "WHERE content LIKE '%nice!%'")
     assert_query([],
                  'SELECT name', "WHERE content LIKE '%very%'")
-    assert_query([['README.md']],
+    assert_query([MD],
                  'SELECT name', "WHERE content LIKE '%_ery%'")
 
 
 def test_and():
-    assert_query([['small.py']],
+    assert_query([PY],
                  'SELECT name', "WHERE LOWER(name) LIKE '%a%' AND extension = 'py'")
 
 
