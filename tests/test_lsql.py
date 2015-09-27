@@ -7,8 +7,8 @@ FROM_CLAUSE = 'FROM {}'.format(DIR)
 
 
 def test_simple():
-    results = get_results('SELECT name')
-    assert_same_items([['README.md'], ['small.py']], results)
+    assert_query_unordered([['README.md'], ['small.py']],
+                           'SELECT name')
 
 
 def test_order():
@@ -41,6 +41,14 @@ def assert_query(expected_results,
                  from_clause=FROM_CLAUSE):
     results = get_results(before_from, after_from, from_clause)
     assert results == expected_results
+
+
+def assert_query_unordered(expected_results,
+                           before_from,
+                           after_from='',
+                           from_clause=FROM_CLAUSE):
+    results = get_results(before_from, after_from, from_clause)
+    assert_same_items(results, expected_results)
 
 
 def get_results(before_from, after_from='', from_clause=FROM_CLAUSE):
