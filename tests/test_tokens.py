@@ -1,6 +1,9 @@
 from __future__ import division, print_function, unicode_literals
 
-from lsql.tokens import tokenize, Name, IntLiteral, StringLiteral, FROM, SELECT, WHERE
+from lsql.tokens import (
+    tokenize, Name, IntLiteral, StringLiteral,
+    FROM, SELECT, WHERE, EQ, GT, GE, LPAREN, PLUS, COMMA, RPAREN,
+)
 
 
 def test_simple():
@@ -10,13 +13,13 @@ def test_simple():
 def test_where():
     assert tokenize("SELECT name WHERE extension = 'py'") == \
            [SELECT, Name('name'), WHERE, Name('extension'),
-            Name('='), StringLiteral('py')]
+            EQ, StringLiteral('py')]
 
 
 def test_number_literal():
     assert tokenize('SELECT name WHERE size > 3kb') == \
            [SELECT, Name('name'), WHERE, Name('size'),
-            Name('>'), IntLiteral('3kb')]
+            GT, IntLiteral('3kb')]
 
 
 def test_from():
@@ -26,10 +29,10 @@ def test_from():
 
 def test_ge():
     assert tokenize('SELECT name WHERE size >= 20') == \
-           [SELECT, Name('name'), WHERE, Name('size'), Name('>='), IntLiteral('20')]
+           [SELECT, Name('name'), WHERE, Name('size'), GE, IntLiteral('20')]
 
 
 def test_funcall():
     assert tokenize('SELECT 1day+age(ctime, CURRENT_DATE)') == \
-           [SELECT, IntLiteral('1day'), Name('+'), Name('age'),
-            Name('('), Name('ctime'), Name(','), Name('CURRENT_DATE'), Name(')')]
+           [SELECT, IntLiteral('1day'), PLUS, Name('age'),
+            LPAREN, Name('ctime'), COMMA, Name('CURRENT_DATE'), RPAREN]

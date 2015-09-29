@@ -23,11 +23,26 @@ class Name(Token, namedtuple('Name', ['name'])):
 SELECT = Name('SELECT')
 WHERE = Name('WHERE')
 FROM = Name('FROM')
+GT = Name('>')
+LT = Name('<')
+EQ = Name('=')
+GE = Name('>=')
+LE = Name('<=')
+CONCAT = Name('||')
+NE_OLD = Name('<>')
+NE_NEW = Name('!=')
+PLUS = Name('+')
+MINUS = Name('-')
+MUL = Name('*')
+DIV = Name('/')
+COMMA = Name(',')
+LPAREN = Name('(')
+RPAREN = Name(')')
 
 KEYWORDS = {
-    'FROM': FROM,
-    'SELECT': SELECT,
-    'WHERE': WHERE,
+    name.name: name for name in
+    [SELECT, WHERE, FROM, GT, LT, EQ, GE, LE, CONCAT, NE_OLD, NE_NEW, PLUS, MINUS, MUL,
+     DIV, COMMA, LPAREN, RPAREN]
 }
 
 
@@ -91,7 +106,7 @@ def tokenize(s):
                 name = name[:-1]
             if not name:
                 raise TokenError('unknown char: {}'.format(c))
-            tokens.append(Name(''.join(name)))
+            tokens.append(KEYWORDS[''.join(name)])
     return tokens
 
 
