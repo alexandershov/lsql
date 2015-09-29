@@ -21,9 +21,15 @@ def test_number_literal():
 
 def test_from():
     assert tokenize('SELECT name FROM ./tmp') == \
-        [SELECT, Name('name'), FROM, StringLiteral('./tmp')]
+           [SELECT, Name('name'), FROM, StringLiteral('./tmp')]
 
 
 def test_ge():
     assert tokenize('SELECT name WHERE size >= 20') == \
-        [SELECT, Name('name'), WHERE, Name('size'), Name('>='), IntLiteral('20')]
+           [SELECT, Name('name'), WHERE, Name('size'), Name('>='), IntLiteral('20')]
+
+
+def test_funcall():
+    assert tokenize('SELECT 1day+age(ctime, CURRENT_DATE)') == \
+           [SELECT, IntLiteral('1day'), Name('+'), Name('age'),
+            Name('('), Name('ctime'), Name(','), Name('CURRENT_DATE'), Name(')')]

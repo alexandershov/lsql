@@ -2,7 +2,6 @@ from __future__ import division, print_function
 
 from collections import namedtuple
 
-
 OPERATORS = {'>', '<', '=', '>=', '<=', '||', '<>', '!=',
              '+', '-', '*', '/',
              ',', '(', ')',
@@ -57,9 +56,9 @@ def tokenize(s):
                 if not c:
                     break
             tokens.append(StringLiteral(''.join(value)))
-        elif c.isalpha():
+        elif is_identifier_start(c):
             name = []
-            while c.isalpha():
+            while is_identifier(c):
                 name.append(c)
                 c = next(chars, '')
             name = ''.join(name)
@@ -69,7 +68,7 @@ def tokenize(s):
                 tokens.append(Name(''.join(name)))
         elif c.isdigit():
             value = []
-            while c.isalnum():
+            while is_identifier(c):
                 value.append(c)
                 c = next(chars, '')
             tokens.append(IntLiteral(''.join(value)))
@@ -94,3 +93,11 @@ def tokenize(s):
                 raise TokenError('unknown char: {}'.format(c))
             tokens.append(Name(''.join(name)))
     return tokens
+
+
+def is_identifier_start(c):
+    return c.isalpha() or c.isdigit()
+
+
+def is_identifier(c):
+    return c.isalpha() or c.isdigit() or c == '_'
