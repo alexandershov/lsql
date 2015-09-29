@@ -1,9 +1,12 @@
 from __future__ import division, print_function
 
 from collections import namedtuple
-from itertools import takewhile
 
-KEYWORDS = {'SELECT', 'WHERE'}
+
+OPERATORS = {'>', '<', '=', '>=', '<=', '||', '<>', '!=',
+             '+', '-', '*', '/',
+             ',', '(', ')',
+             }
 
 
 class TokenError(Exception):
@@ -18,8 +21,20 @@ class Name(Token, namedtuple('Name', ['name'])):
     __slots__ = ()
 
 
+SELECT = Name('SELECT')
+WHERE = Name('WHERE')
+FROM = Name('FROM')
+
+KEYWORDS = {
+    'FROM': FROM,
+    'SELECT': SELECT,
+    'WHERE': WHERE,
+}
+
+
 class StringLiteral(Token, namedtuple('StringLiteral', ['value'])):
     __slots__ = ()
+
 
 class IntLiteral(Token, namedtuple('IntLiteral', ['value'])):
     __slots__ = ()
@@ -47,7 +62,11 @@ def tokenize(s):
             while c.isalpha():
                 name.append(c)
                 c = next(chars, '')
-            tokens.append(Name(''.join(name)))
+            name = ''.join(name)
+            if name.upper() in KEYWORDS:
+                tokens.append(KEYWORDS[name.upper()])
+            else:
+                tokens.append(Name(''.join(name)))
         elif c.isdigit():
             value = []
             while c.isalnum():
@@ -65,6 +84,13 @@ def tokenize(s):
             tokens.append(StringLiteral(''.join(value)))
             c = next(chars, '')
         else:
-            tokens.append(Name(c))
-            c = next(chars, '')
+            name = [c]
+            while (''.join(name) in OPERATORS) and c:
+                c = next(chars, '')
+                name.append(c)
+            if c:
+                name = name[:-1]
+            if not name:
+                raise TokenError('unknown char: {}'.format(c))
+            tokens.append(Name(''.join(name)))
     return tokens

@@ -1,24 +1,29 @@
 from __future__ import division, print_function, unicode_literals
 
-from lsql.tokens import tokenize, Name, IntLiteral, StringLiteral
+from lsql.tokens import tokenize, Name, IntLiteral, StringLiteral, FROM, SELECT, WHERE
 
 
 def test_simple():
-    assert tokenize('SELECT name') == [Name('SELECT'), Name('name')]
+    assert tokenize('SELECT name') == [SELECT, Name('name')]
 
 
 def test_where():
     assert tokenize("SELECT name WHERE extension = 'py'") == \
-           [Name('SELECT'), Name('name'), Name('WHERE'), Name('extension'),
+           [SELECT, Name('name'), WHERE, Name('extension'),
             Name('='), StringLiteral('py')]
 
 
 def test_number_literal():
     assert tokenize('SELECT name WHERE size > 3kb') == \
-           [Name('SELECT'), Name('name'), Name('WHERE'), Name('size'),
+           [SELECT, Name('name'), WHERE, Name('size'),
             Name('>'), IntLiteral('3kb')]
 
 
 def test_from():
     assert tokenize('SELECT name FROM ./tmp') == \
-        [Name('SELECT'), Name('name'), Name('FROM'), StringLiteral('./tmp')]
+        [SELECT, Name('name'), FROM, StringLiteral('./tmp')]
+
+
+def test_ge():
+    assert tokenize('SELECT name WHERE size >= 20') == \
+        [SELECT, Name('name'), WHERE, Name('size'), Name('>='), IntLiteral('20')]
