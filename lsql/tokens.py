@@ -111,8 +111,8 @@ def tokenize(s):
 
 
 def is_identifier_start(c):
-    return c.isalpha() or c.isdigit()
+    return c.isalpha() or c == '_'
 
 
 def is_identifier(c):
-    return c.isalpha() or c.isdigit() or c == '_'
+    return is_identifier_start(c) or c.isdigit()
