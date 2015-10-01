@@ -7,6 +7,7 @@ import argparse
 import datetime
 import operator
 import re
+import errno
 
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
@@ -14,6 +15,7 @@ from pyparsing import (
     Forward, Suppress)
 
 import os
+import sys
 
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
@@ -281,7 +283,8 @@ def run_query(query, directory=None, header=False):
         yield columns
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
-    for path, depth in walk_with_depth(directory):
+    forbidden = []
+    for path, depth in walk_with_depth(directory, forbidden=forbidden):
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
             stats.append(stat)
@@ -302,10 +305,17 @@ def run_query(query, directory=None, header=False):
     for stat in stats:
         fields = [str(eval_value(column, stat)) for column in columns]
         yield fields
+    if forbidden:
+        print('{:d} paths were skipped because of permissions'.format(
+            len(forbidden)), file=sys.stderr)
 
-
-def walk_with_depth(path, depth=0):
-    names = os.listdir(path)
+def walk_with_depth(path, depth=0, forbidden=[]):
+    try:
+        names = os.listdir(path)
+    except OSError as exc:
+        if exc.errno == errno.EACCES:
+            forbidden.append(path)
+        return
     dirs = []
     for name in names:
         full_path = os.path.join(path, name)
@@ -314,7 +324,7 @@ def walk_with_depth(path, depth=0):
         yield full_path, depth
     for d in dirs:
         if not os.path.islink(d):
-            for x in walk_with_depth(d, depth + 1):
+            for x in walk_with_depth(d, depth + 1, forbidden):
                 yield x
 
 
