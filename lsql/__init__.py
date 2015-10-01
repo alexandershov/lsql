@@ -5,17 +5,16 @@ from grp import getgrgid
 from pwd import getpwuid
 import argparse
 import datetime
-import operator
-import re
 import errno
+import operator
+import os
+import re
+import sys
 
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
     CharsNotIn, White, nums, Combine, oneOf, sglQuotedString,
     Forward, Suppress)
-
-import os
-import sys
 
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
@@ -308,6 +307,7 @@ def run_query(query, directory=None, header=False):
     if forbidden:
         print('{:d} paths were skipped because of permissions'.format(
             len(forbidden)), file=sys.stderr)
+
 
 def walk_with_depth(path, depth=0, forbidden=[]):
     try:
