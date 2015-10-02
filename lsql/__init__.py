@@ -380,7 +380,7 @@ def main():
 
 
 def warning(s):
-    print(Fore.RED + s, file=sys.stderr)
+    print(Fore.RED + s + Fore.RESET, file=sys.stderr)
 
 
 def parse_args():
