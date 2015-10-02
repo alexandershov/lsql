@@ -265,7 +265,7 @@ def identity(x):
     return x
 
 
-def run_query(query, directory=None, header=False):
+def run_query(query, directory=None, header=False, verbose=False):
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
     if tokens.columns == '*':
@@ -305,8 +305,14 @@ def run_query(query, directory=None, header=False):
         fields = [str(eval_value(column, stat)) for column in columns]
         yield fields
     if forbidden:
-        print('{:d} paths were skipped because of permissions'.format(
-            len(forbidden)), file=sys.stderr)
+        if verbose:
+            print('Skipped paths because of permissions:', file=sys.stderr)
+            for path in forbidden:
+                print(path)
+        else:
+            print('{:d} paths were skipped because of permissions'.format(
+                len(forbidden)), file=sys.stderr)
+            print('use -v (or --verbose) flag to show skippped paths', file=sys.stderr)
 
 
 def walk_with_depth(path, depth=0, forbidden=[]):
@@ -366,7 +372,7 @@ def get_grammar():
 
 def main():
     args = parse_args()
-    for row in run_query(args.query, args.directory, args.header):
+    for row in run_query(args.query, args.directory, args.header, args.verbose):
         print('\t'.join(row))
 
 
@@ -374,6 +380,8 @@ def parse_args():
     parser = argparse.ArgumentParser(prog='lsql', description='Search for files with SQL')
     parser.add_argument('-H', '--header', action='store_true',
                         help='Show header with column names?')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='verbose mode')
     parser.add_argument('query', help='sql query to execute, e.g "select name')
     parser.add_argument('directory', help='directory to search in', nargs='?')
     return parser.parse_args()
