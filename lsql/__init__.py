@@ -14,7 +14,9 @@ import sys
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
     CharsNotIn, White, nums, Combine, oneOf, sglQuotedString,
-    Forward, Suppress)
+    Forward, Suppress,
+)
+from colorama import Fore, init
 
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
@@ -306,13 +308,13 @@ def run_query(query, directory=None, header=False, verbose=False):
         yield fields
     if forbidden:
         if verbose:
-            print('Skipped paths because of permissions:', file=sys.stderr)
+            warning('Skipped paths because of permissions:')
             for path in forbidden:
-                print(path)
+                warning(path)
         else:
-            print('{:d} paths were skipped because of permissions'.format(
-                len(forbidden)), file=sys.stderr)
-            print('use -v (or --verbose) flag to show skippped paths', file=sys.stderr)
+            warning('{:d} paths were skipped because of permissions'.format(
+                len(forbidden)))
+            warning('use -v (or --verbose) flag to show skippped paths')
 
 
 def walk_with_depth(path, depth=0, forbidden=[]):
@@ -372,8 +374,13 @@ def get_grammar():
 
 def main():
     args = parse_args()
+    init()
     for row in run_query(args.query, args.directory, args.header, args.verbose):
         print('\t'.join(row))
+
+
+def warning(s):
+    print(Fore.RED + s, file=sys.stderr)
 
 
 def parse_args():
