@@ -1,5 +1,5 @@
 import os
-
+from colorama import Fore
 import lsql
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -7,8 +7,8 @@ DIR = os.path.join(os.path.dirname(__file__), 'data')
 SELECT_CLAUSE = 'SELECT name'
 FROM_CLAUSE = 'FROM {}'.format(DIR)
 
-MD = ['README.md']
-PY = ['small.py']
+MD = [lsql.colored('README.md', Fore.RESET)]
+PY = [lsql.colored('small.py', Fore.RESET)]
 
 
 def test_simple():

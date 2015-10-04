@@ -117,6 +117,8 @@ class Stat(object):
         'content', 'lines',
     ])
 
+    COLORED_ATTRS = {'name', 'path', 'fullpath'}
+
     def __init__(self, path, depth):
         self.path = path
         self.depth = depth
@@ -268,6 +270,7 @@ def identity(x):
 
 
 def run_query(query, directory=None, header=False, verbose=False):
+    colors = parse_lscolors(os.getenv('LSCOLORS') or '')
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
     if tokens.columns == '*':
@@ -304,7 +307,14 @@ def run_query(query, directory=None, header=False, verbose=False):
     if len(stats) > limit:
         stats = stats[:limit]
     for stat in stats:
-        fields = [str(eval_value(column, stat)) for column in columns]
+        fields = []
+        for column in columns:
+            value = str(eval_value(column, stat))
+            if column in Stat.COLORED_ATTRS:
+                color = colors.get(stat.type, Fore.RESET)
+                fields.append(colored(value, color))
+            else:
+                fields.append(value)
         yield fields
     if forbidden:
         if verbose:
@@ -379,8 +389,45 @@ def main():
         print('\t'.join(row))
 
 
-def warning(s):
-    print(Fore.RED + s + Fore.RESET, file=sys.stderr)
+def warning(text):
+    print(colored(text, Fore.RED), file=sys.stderr)
+
+
+def colored(text, color):
+    return color + text + Fore.RESET
+
+
+# TODO: respect background, respect executable
+def parse_lscolors(lscolors):
+    """
+    :param lscolors: value of $LSCOLORS env var
+    :return: dictionary {file_type -> color}
+    """
+    if not lscolors:
+        return {
+            'dir': Fore.RESET,
+            'file': Fore.RESET,
+            'link': Fore.RESET,
+        }
+    return {
+        'dir': lscolor_to_term(lscolors[0].lower()),
+        'file': Fore.RESET,
+        'link': lscolor_to_term(lscolors[2].lower()),
+    }
+
+
+def lscolor_to_term(s):
+    mapping = {
+        'a': Fore.BLACK,
+        'b': Fore.RED,
+        'c': Fore.GREEN,
+        'd': Fore.RESET,
+        'e': Fore.BLUE,  # should be brown
+        'f': Fore.MAGENTA,
+        'g': Fore.CYAN,
+        'h': Fore.LIGHTWHITE_EX,
+    }
+    return mapping.get(s, Fore.RESET)
 
 
 def parse_args():
