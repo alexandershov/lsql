@@ -43,7 +43,7 @@ KEYWORDS = {
     name.name: name for name in
     [SELECT, WHERE, FROM, GT, LT, EQ, GE, LE, CONCAT, NE_OLD, NE_NEW, PLUS, MINUS, MUL,
      DIV, COMMA, LPAREN, RPAREN]
-}
+    }
 
 
 class StringLiteral(Token, namedtuple('StringLiteral', ['value'])):

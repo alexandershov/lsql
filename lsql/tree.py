@@ -4,6 +4,8 @@ from functools import wraps
 import operator
 import re
 
+from lsql import walk_with_depth, Stat
+
 
 def sql_function(fn):
     @wraps(fn)
@@ -93,3 +95,41 @@ class NameNode(Node):
 
     def eval(self, context):
         return context.get_value(self.name)
+
+
+class FromNode(Node):
+    def __init__(self, path):
+        self.path = path
+
+    def eval(self, context):
+        for path, depth in walk_with_depth(self.path):
+            yield Stat(path, depth)
+
+
+class WhereNode(Node):
+    def __init__(self, condition):
+        self.condition = condition
+
+    def eval(self, context):
+        return self.condition.eval(context)
+
+
+class AlwaysTrueWhereNode(Node):
+    def eval(self, context):
+        return True
+
+
+class SelectNode(Node):
+    def __init__(self, expressions, from_clause, where_clause=AlwaysTrueWhereNode()):
+        self.expressions = expressions
+        self.from_clause = from_clause
+        self.where_clause = where_clause
+
+    def eval(self, context):
+        stats = self.from_clause.eval(context)
+        for stat in stats:
+            if self.where_clause.eval(stat):
+                row = []
+                for expr in self.expressions:
+                    row.append(expr.eval(stat))
+                yield row
