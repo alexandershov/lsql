@@ -60,6 +60,14 @@ def test_len():
     )
 
 
+def test_star():
+    assert_query_unordered(
+        [[lsql.colored('tests/data/README.md', Fore.RESET)],
+         [lsql.colored('tests/data/small.py', Fore.RESET)]],
+        before_from='SELECT *'
+    )
+
+
 def assert_query(expected_results,
                  before_from=SELECT_CLAUSE,
                  after_from='',

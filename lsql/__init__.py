@@ -117,7 +117,11 @@ class Stat(object):
         'content', 'lines',
     ])
 
-    COLORED_ATTRS = {'name', 'path', 'fullpath'}
+    ATTR_ALIASES = {
+        '*': 'path',
+    }
+
+    COLORED_ATTRS = {'name', 'path', 'fullpath', '*'}
 
     def __init__(self, path, depth):
         self.path = path
@@ -220,6 +224,7 @@ class Stat(object):
         return self.content.splitlines()
 
     def get_value(self, name):
+        name = Stat.ATTR_ALIASES.get(name, name)
         if name not in Stat.ATTRS:
             raise ValueError('unknown attr: {!r}'.format(name))
         return getattr(self, name)
@@ -273,10 +278,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     colors = parse_lscolors(os.getenv('LSCOLORS') or '')
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
-    if tokens.columns == '*':
-        columns = list(Stat.ATTRS)
-    else:
-        columns = list(tokens.columns)
+    columns = list(tokens.columns)
     if tokens.directory and directory:
         raise ValueError("You can't specify both FROM clause and "
                          "directory as command line argument")
@@ -288,6 +290,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
     forbidden = []
+    print('dir = {}'.format(directory))
     for path, depth in walk_with_depth(directory, forbidden=forbidden):
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
@@ -327,7 +330,9 @@ def run_query(query, directory=None, header=False, verbose=False):
             warning('use -v (or --verbose) flag to show skippped paths')
 
 
-def walk_with_depth(path, depth=0, forbidden=[]):
+def walk_with_depth(path, directory=None, depth=0, forbidden=[]):
+    if directory is None:
+        directory = os.getcwd()
     try:
         names = os.listdir(path)
     except OSError as exc:
@@ -339,10 +344,10 @@ def walk_with_depth(path, depth=0, forbidden=[]):
         full_path = os.path.join(path, name)
         if os.path.isdir(full_path):
             dirs.append(full_path)
-        yield full_path, depth
+        yield os.path.relpath(full_path, directory), depth
     for d in dirs:
         if not os.path.islink(d):
-            for x in walk_with_depth(d, depth + 1, forbidden):
+            for x in walk_with_depth(d, directory, depth + 1, forbidden):
                 yield x
 
 
