@@ -290,7 +290,6 @@ def run_query(query, directory=None, header=False, verbose=False):
     stats = []
     limit = int(tokens.limit) if tokens.limit else float('inf')
     forbidden = []
-    print('dir = {}'.format(directory))
     for path, depth in walk_with_depth(directory, forbidden=forbidden):
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
