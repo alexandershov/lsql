@@ -63,14 +63,6 @@ def tokenize(s):
         if c.isspace():
             while c.isspace():
                 c = next(chars, '')
-        elif tokens and isinstance(tokens[-1], Name) and tokens[-1].name == 'FROM' and c != "'":
-            value = []
-            while not c.isspace():
-                value.append(c)
-                c = next(chars, '')
-                if not c:
-                    break
-            tokens.append(StringLiteral(''.join(value)))
         elif is_identifier_start(c):
             name = []
             while is_identifier(c):

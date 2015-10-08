@@ -369,9 +369,8 @@ def get_grammar():
     bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
 
     columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
-    directory = White() + CharsNotIn('" ').setResultsName('directory')
     from_clause = (CaselessKeyword('FROM')
-                   + (QuotedString('"').setResultsName('directory') | directory))
+                   + QuotedString("'").setResultsName('directory'))
     condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')

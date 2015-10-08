@@ -23,7 +23,7 @@ def test_number_literal():
 
 
 def test_from():
-    assert tokenize('SELECT name FROM ./tmp') == \
+    assert tokenize("SELECT name FROM './tmp'") == \
            [SELECT, Name('name'), FROM, StringLiteral('./tmp')]
 
 
