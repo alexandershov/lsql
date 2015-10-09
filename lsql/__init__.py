@@ -234,8 +234,8 @@ class Stat(object):
     def content(self):
         if self.type == 'dir':
             return NULL
-        with open(self.path, 'rb') as input:
-            return input.read()
+        with open(self.path, 'rb') as fileobj:
+            return fileobj.read()
 
     @property
     def lines(self):
@@ -323,9 +323,9 @@ def run_query(query, directory=None, header=False, verbose=False):
         reverse = False
         if len(tokens.order_by) == 2:
             reverse = tokens.order_by[-1] == 'DESC'
-        order_by = lambda stat: eval_value(value, stat)
+        order_by = lambda st: eval_value(value, st)
     else:
-        order_by = lambda stat: 0
+        order_by = lambda st: 0
         reverse = False
     stats = sorted(stats, key=order_by, reverse=reverse)
     if len(stats) > limit:
