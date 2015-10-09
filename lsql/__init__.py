@@ -291,6 +291,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     limit = int(tokens.limit) if tokens.limit else float('inf')
     forbidden = []
     for path, depth in walk_with_depth(directory, forbidden=forbidden):
+        path = os.path.relpath(path, os.getcwd())
         stat = Stat(path, depth)
         if not tokens.condition or eval_condition(tokens.condition, stat):
             stats.append(stat)
@@ -329,9 +330,7 @@ def run_query(query, directory=None, header=False, verbose=False):
             warning('use -v (or --verbose) flag to show skippped paths')
 
 
-def walk_with_depth(path, directory=None, depth=0, forbidden=[]):
-    if directory is None:
-        directory = os.getcwd()
+def walk_with_depth(path, depth=0, forbidden=[]):
     try:
         names = os.listdir(path)
     except OSError as exc:
@@ -343,10 +342,10 @@ def walk_with_depth(path, directory=None, depth=0, forbidden=[]):
         full_path = os.path.join(path, name)
         if os.path.isdir(full_path):
             dirs.append(full_path)
-        yield os.path.relpath(full_path, directory), depth
+        yield full_path, depth
     for d in dirs:
         if not os.path.islink(d):
-            for x in walk_with_depth(d, directory, depth + 1, forbidden):
+            for x in walk_with_depth(d, depth + 1, forbidden):
                 yield x
 
 
