@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 
 from collections import OrderedDict
+from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
 import argparse
@@ -11,12 +12,12 @@ import os
 import re
 import sys
 
+from colorama import Fore, init
 from pyparsing import (
     alphas, CaselessKeyword, Group, delimitedList, Optional, QuotedString, Word,
-    CharsNotIn, White, nums, Combine, oneOf, sglQuotedString,
+    nums, Combine, oneOf, sglQuotedString,
     Forward, Suppress,
 )
-from colorama import Fore, init
 
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
@@ -29,7 +30,13 @@ SIZE_SUFFIXES = {
     'gb': 3,
 }
 
-NULL = object()
+
+class Null(object):
+    def __str__(self):
+        return 'NULL'
+
+
+NULL = Null()
 
 
 def like(string, pattern):
@@ -86,10 +93,21 @@ OPERATOR_MAPPING = {
     'rlike': rlike,
 }
 
+
+def propagate_null(fn):
+    @wraps(fn)
+    def wrapper(*args):
+        if any(arg is NULL for arg in args):
+            return NULL
+        return fn(*args)
+
+    return wrapper
+
+
 FUNCTIONS = {
     'lower': lambda s: s.lower(),
     'upper': lambda s: s.upper(),
-    'length': len,
+    'length': propagate_null(len),
     'age': age,
     'btrim': btrim,
 }
@@ -221,7 +239,10 @@ class Stat(object):
 
     @property
     def lines(self):
-        return self.content.splitlines()
+        content = self.content
+        if content is NULL:
+            return NULL
+        return content.splitlines()
 
     def get_value(self, name):
         name = Stat.ATTR_ALIASES.get(name, name)
