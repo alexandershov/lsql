@@ -24,7 +24,7 @@ def like(string, pattern):
 
 
 def rlike(string, re_pattern):
-    # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
+    # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
     regex = re.compile(re_pattern + '$', re.DOTALL)
     if not isinstance(string, list):
         string = [string]

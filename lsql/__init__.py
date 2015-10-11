@@ -48,7 +48,7 @@ def like(string, pattern):
 def rlike(string, re_pattern):
     if string is NULL:
         return False
-    # we need re.DOTALL because string can contain newlines (e.g in 'content' column)
+    # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
     regex = re.compile(re_pattern + '$', re.DOTALL)
     if not isinstance(string, list):
         string = [string]
@@ -132,7 +132,7 @@ class Stat(object):
         'path', 'fulldir', 'dir', 'name', 'extension',
         'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
-        'content', 'lines',
+        'text', 'lines',
     ])
 
     ATTR_ALIASES = {
@@ -231,7 +231,7 @@ class Stat(object):
         return self.__stat.st_ino
 
     @property
-    def content(self):
+    def text(self):
         if self.type == 'dir':
             return NULL
         with open(self.path, 'rb') as fileobj:
@@ -239,7 +239,7 @@ class Stat(object):
 
     @property
     def lines(self):
-        content = self.content
+        content = self.text
         if content is NULL:
             return NULL
         return content.splitlines()

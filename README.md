@@ -10,7 +10,7 @@ cd lsql && pip install .
 ## Examples
 Let's select name and size of all files from the /tmp
 ```shell
-lsql "SELECT name, size FROM /tmp"
+lsql "SELECT name, size FROM '/tmp'"
 ```
 
 You can omit the FROM clause and specify the directory as the command line argument:
@@ -30,7 +30,7 @@ lsql "SELECT name, size WHERE name LIKE '%.py' AND depth = 0"
 
 Select python scripts which import argparse module:
 ```shell
-lsql "SELECT path WHERE extension = 'py' AND content like '%import argparse%'"
+lsql "SELECT path WHERE extension = 'py' AND text like '%import argparse%'"
  ```
  
 ## Limitation
@@ -64,4 +64,4 @@ Let's say you're in the directory /tmp with two files
 | device | device | 16777220 |
 | hardlinks | number of hard links to file | 1 |
 | inode | inode number | 2015-09-13T05:24:51 |
-| content | content of the file | whatever is in file |
+| text | content of the file | whatever is in file |

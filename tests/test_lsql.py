@@ -32,17 +32,17 @@ def test_where():
 def test_like():
     assert_query(
         [MD],
-        after_from="WHERE content LIKE '%nice!%'"
+        after_from="WHERE text LIKE '%nice!%'"
     )
 
     assert_query(
         [],
-        after_from="WHERE content LIKE '%very%'"
+        after_from="WHERE text LIKE '%very%'"
     )
 
     assert_query(
         [MD],
-        after_from="WHERE content LIKE '%_ery%'"
+        after_from="WHERE text LIKE '%_ery%'"
     )
 
 
