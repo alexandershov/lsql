@@ -105,8 +105,8 @@ def propagate_null(fn):
 
 
 FUNCTIONS = {
-    'lower': lambda s: s.lower(),
-    'upper': lambda s: s.upper(),
+    'lower': propagate_null(lambda s: s.lower()),
+    'upper': propagate_null(lambda s: s.upper()),
     'length': propagate_null(len),
     'age': age,
     'btrim': btrim,
