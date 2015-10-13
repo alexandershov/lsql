@@ -137,6 +137,7 @@ class Stat(object):
 
     ATTR_ALIASES = {
         '*': 'path',
+        'ext': 'extension',
     }
 
     COLORED_ATTRS = {'name', 'path', 'fullpath', '*'}
