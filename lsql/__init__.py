@@ -176,9 +176,7 @@ class Stat(object):
     @property
     def extension(self):
         extension = os.path.splitext(self.path)[1]
-        if extension:
-            extension = extension[1:]  # skip dot
-        return extension
+        return extension[1:]  # skip dot
 
     @property
     def mode(self):
