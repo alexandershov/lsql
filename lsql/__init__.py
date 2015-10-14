@@ -31,6 +31,10 @@ SIZE_SUFFIXES = {
 }
 
 
+class Error(Exception):
+    pass
+
+
 class Null(object):
     def __str__(self):
         return 'NULL'
@@ -201,7 +205,7 @@ class Stat(object):
     @property
     def birthtime(self):
         if not hasattr(self.__stat, 'st_birthtime'):
-            raise ValueError('birthtime is not supported on your platform')
+            raise Error('birthtime is not supported on your platform')
         return Timestamp(self.__stat.st_birthtime)
 
     @property
@@ -246,7 +250,7 @@ class Stat(object):
     def get_value(self, name):
         name = Stat.ATTR_ALIASES.get(name, name)
         if name not in Stat.ATTRS:
-            raise ValueError('unknown attr: {!r}'.format(name))
+            raise Error('unknown attr: {!r}'.format(name))
         return getattr(self, name)
 
 # matches strings of form 'digits:suffix'. e.g '30kb'
@@ -256,7 +260,7 @@ SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
 def eval_size_literal(literal):
     match = SIZE_RE.match(literal)
     if not match:
-        raise ValueError('bad literal: {!r}'.format(literal))
+        raise Error('bad literal: {!r}'.format(literal))
     value = int(match.group('value'))
     suffix = match.group('suffix')
     if suffix:
@@ -300,11 +304,11 @@ def run_query(query, directory=None, header=False, verbose=False):
     tokens = grammar.parseString(query, parseAll=True)
     columns = list(tokens.columns)
     if tokens.directory and directory:
-        raise ValueError("You can't specify both FROM clause and "
+        raise Error("You can't specify both FROM clause and "
                          "directory as command line argument")
     directory = directory or tokens.directory or '.'
     if not os.path.isdir(directory):
-        raise ValueError('{!r} is not a directory'.format(directory))
+        raise Error('{!r} is not a directory'.format(directory))
     if header:
         yield columns
     stats = []
@@ -407,12 +411,20 @@ def get_grammar():
 def main():
     args = parse_args()
     init()
-    for row in run_query(args.query, args.directory, args.header, args.verbose):
-        print('\t'.join(row))
+    try:
+        for row in run_query(args.query, args.directory, args.header, args.verbose):
+            print('\t'.join(row))
+    except Error as exc:
+        error(str(exc))
+        sys.exit(1)
 
 
 def warning(text):
     print(colored(text, Fore.RED), file=sys.stderr)
+
+
+def error(text):
+    warning(text)
 
 
 def colored(text, color):
