@@ -302,7 +302,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     colors = parse_lscolors(os.getenv('LSCOLORS') or '')
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
-    columns = list(tokens.columns)
+    columns = list(tokens.columns) or ['*']
     if tokens.directory and directory:
         raise Error("You can't specify both FROM clause and "
                          "directory as command line argument")
@@ -401,7 +401,8 @@ def get_grammar():
         value + Optional(CaselessKeyword('ASC') | CaselessKeyword('DESC'))).setResultsName(
         'order_by'))
     limit_clause = CaselessKeyword('LIMIT') + Word(nums).setResultsName('limit')
-    return (CaselessKeyword('SELECT') + columns
+    select_clause = CaselessKeyword('SELECT') + columns
+    return (Optional(select_clause)
             + Optional(from_clause)
             + Optional(where_clause)
             + Optional(order_by_clause)

@@ -67,6 +67,13 @@ def test_star():
         before_from='SELECT *'
     )
 
+def test_no_select():
+    assert_query_unordered(
+        [[lsql.colored('tests/data/README.md', Fore.RESET)],
+         [lsql.colored('tests/data/small.py', Fore.RESET)]],
+        before_from=''
+    )
+
 
 def assert_query(expected_results,
                  before_from=SELECT_CLAUSE,
