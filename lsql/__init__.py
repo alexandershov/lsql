@@ -345,13 +345,13 @@ def run_query(query, directory=None, header=False, verbose=False):
         yield fields
     if forbidden:
         if verbose:
-            warning('Skipped paths because of permissions:')
+            print_warning('Skipped paths because of permissions:')
             for path in forbidden:
-                warning(path)
+                print_warning(path)
         else:
-            warning('{:d} paths were skipped because of permissions'.format(
+            print_warning('{:d} paths were skipped because of permissions'.format(
                 len(forbidden)))
-            warning('use -v (or --verbose) flag to show skippped paths')
+            print_warning('use -v (or --verbose) flag to show skippped paths')
 
 
 def walk_with_depth(path, depth=0, forbidden=[]):
@@ -415,16 +415,16 @@ def main():
         for row in run_query(args.query, args.directory, args.header, args.verbose):
             print('\t'.join(row))
     except Error as exc:
-        error(str(exc))
+        print_error(str(exc))
         sys.exit(1)
 
 
-def warning(text):
+def print_warning(text):
     print(colored(text, Fore.RED), file=sys.stderr)
 
 
-def error(text):
-    warning(text)
+def print_error(text):
+    print_warning(text)
 
 
 def colored(text, color):
