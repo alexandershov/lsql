@@ -302,7 +302,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     colors = parse_lscolors(os.getenv('LSCOLORS') or '')
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
-    columns = list(tokens.columns) or ['*']
+    columns = list(tokens.columns) or ['path']
     if tokens.directory and directory:
         raise Error("You can't specify both FROM clause and "
                          "directory as command line argument")
