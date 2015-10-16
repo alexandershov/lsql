@@ -305,7 +305,7 @@ def run_query(query, directory=None, header=False, verbose=False):
     columns = list(tokens.columns) or ['path']
     if tokens.directory and directory:
         raise Error("You can't specify both FROM clause and "
-                         "directory as command line argument")
+                    "directory as command line argument")
     directory = directory or tokens.directory or '.'
     if not os.path.isdir(directory):
         raise Error('{!r} is not a directory'.format(directory))
@@ -351,7 +351,7 @@ def run_query(query, directory=None, header=False, verbose=False):
         else:
             print_warning('{:d} paths were skipped because of permissions'.format(
                 len(forbidden)))
-            print_warning('use -v (or --verbose) flag to show skippped paths')
+            print_warning('use -v (or --verbose) flag to show skipped paths')
 
 
 def walk_with_depth(path, depth=0, forbidden=[]):
@@ -445,19 +445,22 @@ def parse_lscolors(lscolors):
             'link': Fore.RESET,
         }
     return {
-        'dir': lscolor_to_term(lscolors[0].lower()),
+        'dir': lscolor_to_termcolor(lscolors[0].lower()),
         'file': Fore.RESET,
-        'link': lscolor_to_term(lscolors[2].lower()),
+        'link': lscolor_to_termcolor(lscolors[2].lower()),
     }
 
 
-def lscolor_to_term(s):
+BROWN = '\x1b[33m'
+
+
+def lscolor_to_termcolor(s):
     mapping = {
         'a': Fore.BLACK,
         'b': Fore.RED,
         'c': Fore.GREEN,
         'd': Fore.RESET,
-        'e': Fore.BLUE,  # should be brown
+        'e': BROWN,
         'f': Fore.MAGENTA,
         'g': Fore.CYAN,
         'h': Fore.LIGHTWHITE_EX,
