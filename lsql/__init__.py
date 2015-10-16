@@ -250,7 +250,7 @@ class Stat(object):
     def get_value(self, name):
         name = Stat.ATTR_ALIASES.get(name, name)
         if name not in Stat.ATTRS:
-            raise Error('unknown attr: {!r}'.format(name))
+            raise Error('unknown column: {!r}'.format(name))
         return getattr(self, name)
 
 # matches strings of form 'digits:suffix'. e.g '30kb'
