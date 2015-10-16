@@ -64,35 +64,39 @@ def test_star():
     assert_query_unordered(
         [[lsql.colored('tests/data/README.md', Fore.RESET)],
          [lsql.colored('tests/data/small.py', Fore.RESET)]],
-        before_from='SELECT *'
+        select_clause='SELECT *'
     )
 
 def test_no_select():
     assert_query_unordered(
         [[lsql.colored('tests/data/README.md', Fore.RESET)],
          [lsql.colored('tests/data/small.py', Fore.RESET)]],
-        before_from=''
+        select_clause=''
     )
 
 
 def assert_query(expected_results,
-                 before_from=SELECT_CLAUSE,
-                 after_from='',
-                 from_clause=FROM_CLAUSE):
-    results = get_results(before_from, after_from, from_clause)
+                 select_clause=SELECT_CLAUSE,
+                 from_clause=FROM_CLAUSE,
+                 after_from=''):
+    results = get_results(select_clause=select_clause,
+                          from_clause=from_clause,
+                          after_from=after_from)
     assert results == expected_results
 
 
 def assert_query_unordered(expected_results,
-                           before_from=SELECT_CLAUSE,
-                           after_from='',
-                           from_clause=FROM_CLAUSE):
-    results = get_results(before_from, after_from, from_clause)
+                           select_clause=SELECT_CLAUSE,
+                           from_clause=FROM_CLAUSE,
+                           after_from=''):
+    results = get_results(select_clause=select_clause,
+                          from_clause=from_clause,
+                          after_from=after_from)
     assert_same_items(results, expected_results)
 
 
-def get_results(before_from=SELECT_CLAUSE, after_from='', from_clause=FROM_CLAUSE):
-    return list(lsql.run_query(' '.join([before_from, from_clause, after_from])))
+def get_results(select_clause=SELECT_CLAUSE, from_clause=FROM_CLAUSE, after_from=''):
+    return list(lsql.run_query(' '.join([select_clause, from_clause, after_from])))
 
 
 def assert_same_items(seq_x, seq_y):
