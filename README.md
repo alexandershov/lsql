@@ -30,8 +30,13 @@ lsql "SELECT name, size WHERE name LIKE '%.py' AND depth = 0"
 
 Select python scripts which import argparse module:
 ```shell
-lsql "SELECT path WHERE extension = 'py' AND text like '%import argparse%'"
+lsql "SELECT path WHERE ext = 'py' AND text like '%import argparse%'"
  ```
+ 
+`SELECT` is optional (`SELECT path` is default):
+```shell
+lsql "WHERE ext = 'py'"
+```
  
 ## Limitation
 * OR conditions are not supported YET. 
