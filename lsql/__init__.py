@@ -4,6 +4,7 @@ from collections import OrderedDict
 from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
+from stat import S_IXUSR
 import argparse
 import datetime
 import errno
@@ -136,12 +137,13 @@ class Stat(object):
         'path', 'fulldir', 'dir', 'name', 'extension',
         'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
-        'text', 'lines',
+        'text', 'lines', 'is_executable'
     ])
 
     ATTR_ALIASES = {
         '*': 'path',
         'ext': 'extension',
+        'is_exec': 'is_executable'
     }
 
     COLORED_ATTRS = {'name', 'path', 'fullpath', '*'}
@@ -253,6 +255,17 @@ class Stat(object):
             raise Error('unknown column: {!r}'.format(name))
         return getattr(self, name)
 
+    @property
+    def is_executable(self):
+        return bool(self.__stat.st_mode & S_IXUSR)
+
+    def get_tags(self):
+        tags = set()
+        if self.is_executable:
+            tags.add('exec')
+        tags.add(self.type)
+        return tags
+
 # matches strings of form 'digits:suffix'. e.g '30kb'
 SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
 
@@ -338,7 +351,11 @@ def run_query(query, directory=None, header=False, verbose=False):
         for column in columns:
             value = str(eval_value(column, stat))
             if column in Stat.COLORED_ATTRS:
-                color = colors.get(stat.type, Fore.RESET)
+                tags = stat.get_tags()
+                color = Fore.RESET
+                for tag, color in colors.viewitems():
+                    if tag in tags:
+                        break
                 fields.append(colored(value, color))
             else:
                 fields.append(value)
@@ -436,19 +453,21 @@ def colored(text, color):
 def parse_lscolors(lscolors):
     """
     :param lscolors: value of $LSCOLORS env var
-    :return: dictionary {file_type -> color}
+    :return: dictionary {tag -> color}
     """
     if not lscolors:
-        return {
-            'dir': Fore.RESET,
-            'file': Fore.RESET,
-            'link': Fore.RESET,
-        }
-    return {
-        'dir': lscolor_to_termcolor(lscolors[0].lower()),
-        'file': Fore.RESET,
-        'link': lscolor_to_termcolor(lscolors[2].lower()),
-    }
+        return OrderedDict([
+            ('dir', Fore.RESET),
+            ('link', Fore.RESET),
+            ('exec', Fore.RESET),
+            ('file', Fore.RESET),
+        ])
+    return OrderedDict([
+        ('dir', lscolor_to_termcolor(lscolors[0].lower())),
+        ('link', lscolor_to_termcolor(lscolors[2].lower())),
+        ('exec', lscolor_to_termcolor(lscolors[8].lower())),
+        ('file', Fore.RESET),
+    ])
 
 
 BROWN = '\x1b[33m'
