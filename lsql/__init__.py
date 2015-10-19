@@ -85,20 +85,6 @@ def btrim(string, chars=None):
     return string.strip(chars)
 
 
-OPERATOR_MAPPING = {
-    '<>': operator.ne,
-    '!=': operator.ne,
-    '=': operator.eq,
-    '==': operator.eq,
-    '<': operator.lt,
-    '<=': operator.le,
-    '>': operator.gt,
-    '>=': operator.ge,
-    'like': like,
-    'rlike': rlike,
-}
-
-
 def propagate_null(fn):
     @wraps(fn)
     def wrapper(*args):
@@ -109,13 +95,30 @@ def propagate_null(fn):
     return wrapper
 
 
-FUNCTIONS = {
-    'lower': propagate_null(lambda s: s.lower()),
-    'upper': propagate_null(lambda s: s.upper()),
-    'length': propagate_null(len),
+def map_values(function, dictionary):
+    return {key: function(value) for key, value in dictionary.viewitems()}
+
+
+OPERATOR_MAPPING = map_values(propagate_null, {
+    '<>': operator.ne,
+    '!=': operator.ne,
+    '=': operator.eq,
+    '==': operator.eq,
+    '<': operator.lt,
+    '<=': operator.le,
+    '>': operator.gt,
+    '>=': operator.ge,
+    'like': like,
+    'rlike': rlike,
+})
+
+FUNCTIONS = map_values(propagate_null, {
+    'lower': lambda s: s.lower(),
+    'upper': lambda s: s.upper(),
+    'length': len,
     'age': age,
     'btrim': btrim,
-}
+})
 
 
 class Timestamp(int):
