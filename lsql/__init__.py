@@ -496,6 +496,7 @@ def parse_args():
                         help='Show header with column names?')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='verbose mode')
-    parser.add_argument('query', help='sql query to execute, e.g "select name')
+    parser.add_argument('query', help='sql query to execute, e.g "select name',
+                        default='', nargs='?')
     parser.add_argument('directory', help='directory to search in', nargs='?')
     return parser.parse_args()
