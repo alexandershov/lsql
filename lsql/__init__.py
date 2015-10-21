@@ -304,6 +304,8 @@ def eval_simple_condition(condition, stat):
     if condition[0] == 'NOT':
         condition = condition[1:]
         modify = operator.not_
+    if len(condition) == 1:
+        return modify(eval_value(condition[0], stat))
     left, op, right = condition
     if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
         return modify(True)
@@ -402,18 +404,19 @@ def get_dir_size(path):
 
 
 def get_grammar():
-    column = Word(alphas)
+    ident = alphas + '_'
+    column = Word(ident)
     literal = Combine(
         Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
-    funcall << Group(Word(alphas) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
+    funcall << Group(Word(ident) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
     bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
 
     columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
     from_clause = (CaselessKeyword('FROM')
                    + QuotedString("'").setResultsName('directory'))
-    condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
+    condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value) | Group(value)
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
     order_by_clause = (CaselessKeyword('ORDER BY')
@@ -476,8 +479,8 @@ def parse_lscolors(lscolors):
 BROWN = '\x1b[33m'
 
 
-def lscolor_to_termcolor(s):
-    mapping = {
+def lscolor_to_termcolor(lscolor):
+    color_mapping = {
         'a': Fore.BLACK,
         'b': Fore.RED,
         'c': Fore.GREEN,
@@ -487,7 +490,7 @@ def lscolor_to_termcolor(s):
         'g': Fore.CYAN,
         'h': Fore.LIGHTWHITE_EX,
     }
-    return mapping.get(s, Fore.RESET)
+    return color_mapping.get(lscolor, Fore.RESET)
 
 
 def parse_args():
