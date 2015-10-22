@@ -22,13 +22,16 @@ from pyparsing import (
 
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
+KILO = 1024
+
+# unit -> size of 1 unit
 SIZE_SUFFIXES = {
-    'k': 1,
-    'kb': 1,
-    'm': 2,
-    'mb': 2,
-    'g': 3,
-    'gb': 3,
+    'k': KILO,
+    'kb': KILO,
+    'm': KILO ** 2,
+    'mb': KILO ** 2,
+    'g': KILO ** 3,
+    'gb': KILO ** 3,
 }
 
 
@@ -280,7 +283,7 @@ def eval_size_literal(literal):
     value = int(match.group('value'))
     suffix = match.group('suffix')
     if suffix:
-        value *= 1024 ** SIZE_SUFFIXES[suffix]
+        value *= SIZE_SUFFIXES[suffix]
     return value
 
 
