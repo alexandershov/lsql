@@ -23,15 +23,17 @@ from pyparsing import (
 CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
 
 KILO = 1024
+MEGA = KILO ** 2
+GIGA = KILO ** 3
 
-# unit -> size of 1 unit
+# unit -> num of bytes in 1 unit
 SIZE_SUFFIXES = {
     'k': KILO,
     'kb': KILO,
-    'm': KILO ** 2,
-    'mb': KILO ** 2,
-    'g': KILO ** 3,
-    'gb': KILO ** 3,
+    'm': MEGA,
+    'mb': MEGA,
+    'g': GIGA,
+    'gb': GIGA,
 }
 
 
