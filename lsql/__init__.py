@@ -56,8 +56,6 @@ def like(string, pattern):
 
 
 def rlike(string, re_pattern):
-    if string is NULL:
-        return False
     # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
     regex = re.compile(re_pattern + '$', re.DOTALL)
     if not isinstance(string, list):
