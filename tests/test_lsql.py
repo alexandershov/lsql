@@ -46,6 +46,23 @@ def test_like():
     )
 
 
+def test_rlike():
+    assert_query(
+        [MD],
+        after_from="WHERE text RLIKE '.*nice!.*'"
+    )
+
+    assert_query(
+        [],
+        after_from="WHERE text RLIKE '.*very.*'"
+    )
+
+    assert_query(
+        [MD],
+        after_from="WHERE text RLIKE '.*.ery.*'"
+    )
+
+
 def test_and():
     assert_query(
         [PY],
