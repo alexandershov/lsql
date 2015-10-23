@@ -7,31 +7,32 @@ DIR = os.path.join(os.path.dirname(__file__), 'data')
 SELECT_CLAUSE = 'SELECT name'
 FROM_CLAUSE = "FROM '{}'".format(DIR)
 
-MD = [lsql.colored('README.md', Fore.RESET)]
-PY = [lsql.colored('small.py', Fore.RESET)]
+NAME_MD = [lsql.colored('README.md', Fore.RESET)]
+NAME_PY = [lsql.colored('small.py', Fore.RESET)]
+PATH_PY = lsql.colored('tests/data/small.py', Fore.RESET)
+PATH_MD = lsql.colored('tests/data/README.md', Fore.RESET)
 
 
 def test_simple():
-    assert_query_unordered([MD, PY])
+    assert_query_unordered([NAME_MD, NAME_PY])
 
 
 def test_order():
-    assert_query(
-        [MD, PY],
+    assert_query([NAME_MD, NAME_PY],
         after_from='ORDER BY name',
     )
 
 
 def test_where():
     assert_query(
-        [PY],
+        [NAME_PY],
         after_from="WHERE extension = 'py' ORDER BY name"
     )
 
 
 def test_like():
     assert_query(
-        [MD],
+        [NAME_MD],
         after_from="WHERE text LIKE '%nice!%'"
     )
 
@@ -41,14 +42,14 @@ def test_like():
     )
 
     assert_query(
-        [MD],
+        [NAME_MD],
         after_from="WHERE text LIKE '%_ery%'"
     )
 
 
 def test_rlike():
     assert_query(
-        [MD],
+        [NAME_MD],
         after_from="WHERE text RLIKE '.*nice!.*'"
     )
 
@@ -58,37 +59,37 @@ def test_rlike():
     )
 
     assert_query(
-        [MD],
+        [NAME_MD],
         after_from="WHERE text RLIKE '.*.ery.*'"
     )
 
 
 def test_and():
     assert_query(
-        [PY],
+        [NAME_PY],
         after_from="WHERE LOWER(name) LIKE '%a%' AND extension = 'py'"
     )
 
 
 def test_len():
     assert_query(
-        [PY],
+        [NAME_PY],
         after_from='WHERE LENGTH(lines) = 4'
     )
 
 
 def test_star():
     assert_query_unordered(
-        [[lsql.colored('tests/data/README.md', Fore.RESET)],
-         [lsql.colored('tests/data/small.py', Fore.RESET)]],
+        [[PATH_MD],
+         [PATH_PY]],
         select_clause='SELECT *'
     )
 
 
 def test_no_select():
     assert_query_unordered(
-        [[lsql.colored('tests/data/README.md', Fore.RESET)],
-         [lsql.colored('tests/data/small.py', Fore.RESET)]],
+        [[PATH_MD],
+         [PATH_PY]],
         select_clause=''
     )
 
