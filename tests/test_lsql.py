@@ -15,53 +15,57 @@ PATH_MD = [lsql.colored('tests/data/README.md', Fore.RESET)]
 
 def test_simple():
     assert_same_items(
-        get_results(select_clause=DEFAULT_SELECT),
+        get_results(select=DEFAULT_SELECT),
         [NAME_MD, NAME_PY]
     )
 
 
 def test_order():
-    assert get_results(after_from='ORDER BY name') == [NAME_MD, NAME_PY]
+    assert get_results(order='name') == [NAME_MD, NAME_PY]
 
 
 def test_where():
-    assert get_results(after_from="WHERE extension = 'py' ORDER BY name") == [NAME_PY]
+    assert get_results(where="extension = 'py'", order='name') == [NAME_PY]
 
 
 def test_like():
-    assert get_results(after_from="WHERE text LIKE '%nice!%'") == [NAME_MD]
-    assert get_results(after_from="WHERE text LIKE '%very%'") == []
-    assert get_results(after_from="WHERE text LIKE '%_ery%'") == [NAME_MD]
+    assert get_results(where="text LIKE '%nice!%'") == [NAME_MD]
+    assert get_results(where="text LIKE '%very%'") == []
+    assert get_results(where="text LIKE '%_ery%'") == [NAME_MD]
 
 
 def test_rlike():
-    assert get_results(after_from="WHERE text RLIKE '.*nice!.*'") == [NAME_MD]
-    assert get_results(after_from="WHERE text RLIKE '.*very.*'") == []
-    assert get_results(after_from="WHERE text RLIKE '.*.ery.*'") == [NAME_MD]
+    assert get_results(where="text RLIKE '.*nice!.*'") == [NAME_MD]
+    assert get_results(where="text RLIKE '.*very.*'") == []
+    assert get_results(where="text RLIKE '.*.ery.*'") == [NAME_MD]
 
 
 def test_and():
-    assert get_results(after_from="WHERE LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
+    assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 
 
 def test_len():
-    assert get_results(after_from='WHERE LENGTH(lines) = 4') == [NAME_PY]
+    assert get_results(where='LENGTH(lines) = 4') == [NAME_PY]
 
 
 def test_star():
-    assert_same_items(get_results(select_clause='SELECT *'), [PATH_PY, PATH_MD])
+    assert_same_items(get_results(select='SELECT *'), [PATH_PY, PATH_MD])
 
 
 def test_no_select():
-    assert_same_items(get_results(select_clause=''), [PATH_PY, PATH_MD])
+    assert_same_items(get_results(select=''), [PATH_PY, PATH_MD])
 
 
 def test_is_exec():
-    assert get_results(after_from='WHERE is_exec') == []
+    assert get_results(where='is_exec') == []
 
 
-def get_results(select_clause=DEFAULT_SELECT, from_clause=FROM_CLAUSE, after_from=''):
-    return list(lsql.run_query(' '.join([select_clause, from_clause, after_from])))
+def get_results(select=DEFAULT_SELECT, from_clause=FROM_CLAUSE, where='', order=''):
+    if where:
+        where = 'WHERE ' + where
+    if order:
+        order = 'ORDER BY ' + order
+    return list(lsql.run_query(' '.join([select, from_clause, where, order])))
 
 
 def assert_same_items(seq_x, seq_y):
