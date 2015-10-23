@@ -31,16 +31,22 @@ def test_where():
     assert get_results(where="extension = 'py'", order='name') == [NAME_PY]
 
 
-def test_like():
-    assert get_results(where="text LIKE '%nice!%'") == [NAME_MD]
-    assert get_results(where="text LIKE '%very%'") == []
-    assert get_results(where="text LIKE '%_ery%'") == [NAME_MD]
+@pytest.mark.parametrize('where, results', [
+    ("text LIKE '%nice!%'", [NAME_MD]),
+    ("text LIKE '%very%'", []),
+    ("text LIKE '%_ery%'", [NAME_MD]),
+])
+def test_like(where, results):
+    assert get_results(where=where) == results
 
 
-def test_rlike():
-    assert get_results(where="text RLIKE '.*nice!.*'") == [NAME_MD]
-    assert get_results(where="text RLIKE '.*very.*'") == []
-    assert get_results(where="text RLIKE '.*.ery.*'") == [NAME_MD]
+@pytest.mark.parametrize('where, results', [
+    ("text RLIKE '.*nice!.*'", [NAME_MD]),
+    ("text RLIKE '.*very.*'", []),
+    ("text RLIKE '.*.ery.*'", [NAME_MD]),
+])
+def test_rlike(where, results):
+    assert get_results(where=where) == results
 
 
 def test_and():
