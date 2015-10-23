@@ -1,10 +1,13 @@
 import os
+
 from colorama import Fore
+import pytest
+
 import lsql
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 
-DEFAULT_SELECT = 'SELECT name'
+NAME = 'name'
 FROM_CLAUSE = "FROM '{}'".format(DIR)
 
 NAME_MD = [lsql.colored('README.md', Fore.RESET)]
@@ -15,7 +18,7 @@ PATH_MD = [lsql.colored('tests/data/README.md', Fore.RESET)]
 
 def test_simple():
     assert_same_items(
-        get_results(select=DEFAULT_SELECT),
+        get_results(select=NAME),
         [NAME_MD, NAME_PY]
     )
 
@@ -49,7 +52,7 @@ def test_len():
 
 
 def test_star():
-    assert_same_items(get_results(select='SELECT *'), [PATH_PY, PATH_MD])
+    assert_same_items(get_results(select='*'), [PATH_PY, PATH_MD])
 
 
 def test_no_select():
@@ -60,7 +63,9 @@ def test_is_exec():
     assert get_results(where='is_exec') == []
 
 
-def get_results(select=DEFAULT_SELECT, from_clause=FROM_CLAUSE, where='', order=''):
+def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order=''):
+    if select:
+        select = 'SELECT ' + select
     if where:
         where = 'WHERE ' + where
     if order:
