@@ -69,6 +69,10 @@ def test_is_exec():
     assert get_results(where='is_exec') == []
 
 
+def test_upper():
+    assert get_results(select='UPPER(ext)', order='name') == [['MD'], ['PY']]
+
+
 def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order=''):
     if select:
         select = 'SELECT ' + select
