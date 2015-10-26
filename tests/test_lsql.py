@@ -77,14 +77,20 @@ def test_suffix():
     assert get_results(select='1kb') == [['1024'], ['1024']]
 
 
-def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order=''):
+def test_limit():
+    assert get_results(select='1', limit='1') == [['1']]
+
+
+def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order='', limit=''):
     if select:
         select = 'SELECT ' + select
     if where:
         where = 'WHERE ' + where
     if order:
         order = 'ORDER BY ' + order
-    return list(lsql.run_query(' '.join([select, from_clause, where, order])))
+    if limit:
+        limit = 'LIMIT ' + limit
+    return list(lsql.run_query(' '.join([select, from_clause, where, order, limit])))
 
 
 def assert_same_items(seq_x, seq_y):
