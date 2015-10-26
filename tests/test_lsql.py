@@ -7,7 +7,6 @@ import lsql
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 
-NAME = 'name'
 FROM_CLAUSE = "FROM '{}'".format(DIR)
 
 NAME_MD = [lsql.colored('README.md', Fore.RESET)]
@@ -18,7 +17,7 @@ PATH_MD = [lsql.colored('tests/data/README.md', Fore.RESET)]
 
 def test_simple():
     assert_same_items(
-        get_results(select=NAME),
+        get_results(select='name'),
         [NAME_MD, NAME_PY]
     )
 
@@ -86,16 +85,18 @@ def test_limit():
     assert get_results(select='1', limit='1') == [['1']]
 
 
-def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order='', limit=''):
+def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
+    clauses = []
     if select:
-        select = 'SELECT ' + select
+        clauses.extend(['SELECT', select])
+    clauses.append(from_clause)
     if where:
-        where = 'WHERE ' + where
+        clauses.extend(['WHERE', where])
     if order:
-        order = 'ORDER BY ' + order
+        clauses.extend(['ORDER BY', order])
     if limit:
-        limit = 'LIMIT ' + limit
-    return list(lsql.run_query(' '.join([select, from_clause, where, order, limit])))
+        clauses.extend(['LIMIT', limit])
+    return list(lsql.run_query(' '.join(clauses)))
 
 
 def assert_same_items(seq_x, seq_y):
