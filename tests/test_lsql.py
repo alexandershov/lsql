@@ -61,7 +61,7 @@ def test_star():
     assert_same_items(get_results(select='*'), [PATH_PY, PATH_MD])
 
 
-def test_no_select():
+def test_empty_select():
     assert_same_items(get_results(select=''), [PATH_PY, PATH_MD])
 
 
@@ -71,6 +71,10 @@ def test_is_exec():
 
 def test_upper():
     assert get_results(select='UPPER(ext)', order='name') == [['MD'], ['PY']]
+
+
+def test_suffix():
+    assert get_results(select='1kb') == [['1024'], ['1024']]
 
 
 def get_results(select=NAME, from_clause=FROM_CLAUSE, where='', order=''):
