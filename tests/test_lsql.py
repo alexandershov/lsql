@@ -23,8 +23,13 @@ def test_simple():
     )
 
 
-def test_order():
-    assert get_results(order='name') == [NAME_MD, NAME_PY]
+@pytest.mark.parametrize('order, results', [
+    ('name', [NAME_MD, NAME_PY]),
+    ('name ASC', [NAME_MD, NAME_PY]),
+    ('name DESC', [NAME_PY, NAME_MD]),
+])
+def test_order(order, results):
+    assert get_results(order=order) == results
 
 
 def test_where():
