@@ -45,6 +45,9 @@ class Null(object):
     def __str__(self):
         return 'NULL'
 
+    def __nonzero__(self):
+        return False
+
 
 NULL = Null()
 

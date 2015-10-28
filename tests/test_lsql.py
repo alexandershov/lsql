@@ -1,5 +1,9 @@
 import os
 
+
+# avoiding directory coloring
+os.environ['LSCOLORS'] = ''
+
 from colorama import Fore
 import pytest
 
@@ -11,21 +15,25 @@ FROM_CLAUSE = "FROM '{}'".format(DIR)
 
 NAME_MD = [lsql.colored('README.md', Fore.RESET)]
 NAME_PY = [lsql.colored('small.py', Fore.RESET)]
+NAME_DIR = [lsql.colored('small', Fore.RESET)]
+NAME_LIC = [lsql.colored('LICENSE', Fore.RESET)]
 PATH_PY = [lsql.colored('tests/data/small.py', Fore.RESET)]
 PATH_MD = [lsql.colored('tests/data/README.md', Fore.RESET)]
+PATH_DIR = [lsql.colored('tests/data/small', Fore.RESET)]
+PATH_LIC = [lsql.colored('tests/data/small/LICENSE', Fore.RESET)]
 
 
 def test_simple():
     assert_same_items(
         get_results(select='name'),
-        [NAME_MD, NAME_PY]
+        [NAME_MD, NAME_PY, NAME_DIR, NAME_LIC]
     )
 
 
 @pytest.mark.parametrize('order, results', [
-    ('name', [NAME_MD, NAME_PY]),
-    ('name ASC', [NAME_MD, NAME_PY]),
-    ('name DESC', [NAME_PY, NAME_MD]),
+    ('name', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
+    ('name ASC', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
+    ('name DESC', [NAME_PY, NAME_DIR, NAME_MD, NAME_LIC]),
 ])
 def test_order(order, results):
     assert get_results(order=order) == results
@@ -62,23 +70,23 @@ def test_len():
 
 
 def test_star():
-    assert_same_items(get_results(select='*'), [PATH_PY, PATH_MD])
+    assert_same_items(get_results(select='*'), [PATH_PY, PATH_MD, PATH_DIR, PATH_LIC])
 
 
 def test_empty_select():
-    assert_same_items(get_results(select=''), [PATH_PY, PATH_MD])
+    assert_same_items(get_results(select=''), [PATH_PY, PATH_MD, PATH_DIR, PATH_LIC])
 
 
 def test_is_exec():
-    assert get_results(where='is_exec') == []
+    assert get_results(where='is_exec') == [NAME_DIR]
 
 
 def test_upper():
-    assert get_results(select='UPPER(ext)', order='name') == [['MD'], ['PY']]
+    assert get_results(select='UPPER(ext)', order='UPPER(ext)') == [[''], [''], ['MD'], ['PY']]
 
 
 def test_suffix():
-    assert get_results(select='1kb') == [['1024'], ['1024']]
+    assert get_results(select='1kb') == [['1024']] * 4
 
 
 def test_limit():
