@@ -89,6 +89,13 @@ def test_suffix():
     assert get_results(select='1kb') == [['1024']] * 4
 
 
+def test_type():
+    assert_same_items(
+        get_results(select='type'),
+        [['file'], ['file'], ['file'], ['dir']]
+    )
+
+
 def test_limit():
     assert get_results(select='1', limit='1') == [['1']]
 
