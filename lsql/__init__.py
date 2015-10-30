@@ -94,6 +94,24 @@ class Interval(object):
                     human.append('{} {}'.format(x, name))
         return ', '.join(human)
 
+    def __lt__(self, other):
+        return self.seconds < other.seconds
+
+    def __le__(self, other):
+        return self.seconds <= other.seconds
+
+    def __gt__(self, other):
+        return self.seconds > other.seconds
+
+    def __ge__(self, other):
+        return self.seconds >= other.seconds
+
+    def __eq__(self, other):
+        return self.seconds == other.seconds
+
+    def __ne__(self, other):
+        return self.seconds != other.seconds
+
 
 def btrim(string, chars=None):
     return string.strip(chars)
