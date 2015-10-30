@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
@@ -22,7 +22,6 @@ from pyparsing import (
 
 CURRENT_TIME = datetime.datetime.utcnow()
 CURRENT_DATE = CURRENT_TIME.date()
-
 
 KILO = 1024
 MEGA = KILO ** 2
@@ -76,12 +75,13 @@ def rlike(string, re_pattern):
 
 def age(ts):
     d_time = datetime.datetime.utcfromtimestamp(ts)
-    return Interval((CURRENT_TIME - d_time).total_seconds())
+    return Interval.from_range(d_time, CURRENT_TIME)
 
 
-class Interval(object):
-    def __init__(self, seconds):
-        self.seconds = int(seconds)
+class Interval(namedtuple('Interval', ['seconds'])):
+    @classmethod
+    def from_range(cls, start, end):
+        return cls(int((end - start).total_seconds()))
 
     def __str__(self):
         parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
@@ -93,24 +93,6 @@ class Interval(object):
                 if x:
                     human.append('{} {}'.format(x, name))
         return ', '.join(human)
-
-    def __lt__(self, other):
-        return self.seconds < other.seconds
-
-    def __le__(self, other):
-        return self.seconds <= other.seconds
-
-    def __gt__(self, other):
-        return self.seconds > other.seconds
-
-    def __ge__(self, other):
-        return self.seconds >= other.seconds
-
-    def __eq__(self, other):
-        return self.seconds == other.seconds
-
-    def __ne__(self, other):
-        return self.seconds != other.seconds
 
 
 def btrim(string, chars=None):
@@ -439,7 +421,8 @@ def get_grammar():
     ident = alphas + '_'
     column = Word(ident)
     literal = Combine(
-        Word(nums) + Optional(oneOf('k m g kb mb gb minute minutes hour hours day days', caseless=True))) | sglQuotedString
+        Word(nums) + Optional(oneOf('k m g kb mb gb minute minutes hour hours day days',
+                                    caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
     funcall << Group(Word(ident) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
