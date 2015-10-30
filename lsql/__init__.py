@@ -34,6 +34,12 @@ SIZE_SUFFIXES = {
     'mb': MEGA,
     'g': GIGA,
     'gb': GIGA,
+    'minute': 60,
+    'minutes': 60,
+    'hour': 3600,
+    'hours': 3600,
+    'day': 86400,
+    'days': 86400,
 }
 
 
@@ -413,7 +419,7 @@ def get_grammar():
     ident = alphas + '_'
     column = Word(ident)
     literal = Combine(
-        Word(nums) + Optional(oneOf('k m g kb mb gb', caseless=True))) | sglQuotedString
+        Word(nums) + Optional(oneOf('k m g kb mb gb minute minutes hour hours day days', caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
     funcall << Group(Word(ident) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
