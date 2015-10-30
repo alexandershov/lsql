@@ -20,7 +20,9 @@ from pyparsing import (
     Forward, Suppress,
 )
 
-CURRENT_DATE = datetime.datetime.combine(datetime.datetime.now().date(), datetime.time())
+CURRENT_TIME = datetime.datetime.utcnow()
+CURRENT_DATE = CURRENT_TIME.date()
+
 
 KILO = 1024
 MEGA = KILO ** 2
@@ -74,7 +76,7 @@ def rlike(string, re_pattern):
 
 def age(ts):
     d_time = datetime.datetime.utcfromtimestamp(ts)
-    return Interval((CURRENT_DATE - d_time).total_seconds())
+    return Interval((CURRENT_TIME - d_time).total_seconds())
 
 
 class Interval(object):
