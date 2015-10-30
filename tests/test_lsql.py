@@ -91,6 +91,12 @@ def test_upper():
     ('mb', 2 ** 20),
     ('g', 2 ** 30),
     ('gb', 2 ** 30),
+    ('minute', 60),
+    ('minutes', 60),
+    ('hour', 3600),
+    ('hours', 3600),
+    ('day', 86400),
+    ('days', 86400),
 ])
 def test_suffix(suffix, value):
     assert get_results(select='1{}'.format(suffix)) == [[str(value)]] * 4
