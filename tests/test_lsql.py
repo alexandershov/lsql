@@ -84,9 +84,16 @@ def test_is_exec():
 def test_upper():
     assert get_results(select='UPPER(ext)', order='UPPER(ext)') == [[''], [''], ['MD'], ['PY']]
 
-
-def test_suffix():
-    assert get_results(select='1kb') == [['1024']] * 4
+@pytest.mark.parametrize('suffix, value', [
+    ('k', 2 ** 10),
+    ('kb', 2 ** 10),
+    ('m', 2 ** 20),
+    ('mb', 2 ** 20),
+    ('g', 2 ** 30),
+    ('gb', 2 ** 30),
+])
+def test_suffix(suffix, value):
+    assert get_results(select='1{}'.format(suffix)) == [[str(value)]] * 4
 
 
 def test_type():
