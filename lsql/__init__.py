@@ -78,15 +78,15 @@ def age(ts):
     return Interval.from_range(d_time, CURRENT_TIME)
 
 
-class Interval(namedtuple('Interval', ['seconds'])):
+class Interval(int):
     @classmethod
     def from_range(cls, start, end):
-        return cls(int((end - start).total_seconds()))
+        return cls((end - start).total_seconds())
 
     def __str__(self):
         parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
         human = []
-        seconds = self.seconds
+        seconds = self
         for n, name in parts:
             if seconds:
                 x, seconds = divmod(seconds, n)
