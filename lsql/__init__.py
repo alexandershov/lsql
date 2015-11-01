@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
@@ -86,7 +86,7 @@ class Interval(int):
     def __str__(self):
         parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
         human = []
-        seconds = self
+        seconds = int(self)
         for n, name in parts:
             if seconds:
                 x, seconds = divmod(seconds, n)
