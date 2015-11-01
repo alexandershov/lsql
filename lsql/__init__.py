@@ -24,8 +24,8 @@ CURRENT_TIME = datetime.datetime.utcnow()
 CURRENT_DATE = CURRENT_TIME.date()
 
 KILO = 1024
-MEGA = KILO ** 2
-GIGA = KILO ** 3
+MEGA = KILO * 1024
+GIGA = MEGA * 1024
 
 # unit -> num of bytes in 1 unit
 SIZE_SUFFIXES = {
