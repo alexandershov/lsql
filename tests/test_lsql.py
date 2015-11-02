@@ -97,6 +97,10 @@ def test_upper():
     ('hours', 3600),
     ('day', 86400),
     ('days', 86400),
+    ('week', 86400 * 7),
+    ('weeks', 86400 * 7),
+    ('month', 86400 * 30),
+    ('months', 86400 * 30),
 ])
 def test_suffix(suffix, value):
     assert get_results(select='1{}'.format(suffix)) == [[str(value)]] * 4

@@ -41,6 +41,10 @@ SIZE_SUFFIXES = {
     'hours': 3600,
     'day': 86400,
     'days': 86400,
+    'week': 86400 * 7,
+    'weeks': 86400 * 7,
+    'month': 86400 * 30,
+    'months': 86400 * 30,
 }
 
 
@@ -421,7 +425,7 @@ def get_grammar():
     ident = alphas + '_'
     column = Word(ident)
     literal = Combine(
-        Word(nums) + Optional(oneOf('k m g kb mb gb minute minutes hour hours day days',
+        Word(nums) + Optional(oneOf(' '.join(SIZE_SUFFIXES),
                                     caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
