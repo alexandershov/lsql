@@ -45,6 +45,8 @@ SIZE_SUFFIXES = {
     'weeks': 86400 * 7,
     'month': 86400 * 30,
     'months': 86400 * 30,
+    'year': 86400 * 365,
+    'years': 86400 * 365,
 }
 
 
