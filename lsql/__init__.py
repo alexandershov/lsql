@@ -27,6 +27,8 @@ KILO = 1024
 MEGA = KILO * 1024
 GIGA = MEGA * 1024
 
+SECONDS_IN_DAY = 86400
+
 # unit -> num of bytes in 1 unit
 SIZE_SUFFIXES = {
     'k': KILO,
@@ -39,14 +41,14 @@ SIZE_SUFFIXES = {
     'minutes': 60,
     'hour': 3600,
     'hours': 3600,
-    'day': 86400,
-    'days': 86400,
-    'week': 86400 * 7,
-    'weeks': 86400 * 7,
-    'month': 86400 * 30,
-    'months': 86400 * 30,
-    'year': 86400 * 365,
-    'years': 86400 * 365,
+    'day': SECONDS_IN_DAY,
+    'days': SECONDS_IN_DAY,
+    'week': SECONDS_IN_DAY * 7,
+    'weeks': SECONDS_IN_DAY * 7,
+    'month': SECONDS_IN_DAY * 30,
+    'months': SECONDS_IN_DAY * 30,
+    'year': SECONDS_IN_DAY * 365,
+    'years': SECONDS_IN_DAY * 365,
 }
 
 
