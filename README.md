@@ -57,7 +57,8 @@ Let's say you're in the directory /tmp with two files
 | fulldir | full path to the directory containing file | /tmp |
 | dir | relative path to the directory containing file| ./ |
 | name | name of the file | a.txt |
-| extension | extension (without dot) | txt |
+| ext | extension (without dot) | txt |
+| extension | same as `ext` column | txt |
 | mode | permissions mode | 0100644 |
 | group | group of the owner of the file | staff |
 | atime | access time to file | 2015-09-13T05:24:51 |
@@ -70,3 +71,5 @@ Let's say you're in the directory /tmp with two files
 | hardlinks | number of hard links to file | 1 |
 | inode | inode number | 2015-09-13T05:24:51 |
 | text | content of the file | whatever is in file |
+| is_exec | is executable? | true if file is executable, false otherwise |
+| is_executable | same as `is_exec` column | true if file is executable, false otherwise |
