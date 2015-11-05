@@ -123,6 +123,13 @@ def test_dir_column():
     )
 
 
+def test_depth_column():
+    assert_same_items(
+        get_results(select='depth'),
+        [['0'], ['0'], ['0'], ['1']]
+    )
+
+
 def test_limit_clause():
     assert get_results(select='1', limit='1') == [['1']]
 
