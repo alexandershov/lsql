@@ -84,6 +84,7 @@ def test_is_exec():
 def test_upper():
     assert get_results(select='UPPER(ext)', order='UPPER(ext)') == [[''], [''], ['MD'], ['PY']]
 
+
 @pytest.mark.parametrize('suffix, value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
@@ -112,6 +113,13 @@ def test_type():
     assert_same_items(
         get_results(select='type'),
         [['file'], ['file'], ['file'], ['dir']]
+    )
+
+
+def test_dir_column():
+    assert_same_items(
+        get_results(select='dir'),
+        [['tests/data'], ['tests/data'], ['tests/data'], ['tests/data/small']]
     )
 
 
