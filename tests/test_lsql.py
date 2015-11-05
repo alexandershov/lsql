@@ -105,7 +105,7 @@ def test_upper_function():
     ('year', 86400 * 365),
     ('years', 86400 * 365),
 ])
-def test_suffixes(suffix, expected_value):
+def test_literal_suffixes(suffix, expected_value):
     assert get_results(select='1{}'.format(suffix)) == [[str(expected_value)]] * 4
 
 
@@ -123,7 +123,7 @@ def test_dir_column():
     )
 
 
-def test_limit():
+def test_limit_clause():
     assert get_results(select='1', limit='1') == [['1']]
 
 
