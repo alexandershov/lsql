@@ -23,7 +23,7 @@ PATH_DIR = [lsql.colored('tests/data/small', Fore.RESET)]
 PATH_LIC = [lsql.colored('tests/data/small/LICENSE', Fore.RESET)]
 
 
-def test_simple():
+def test_name_column():
     assert_same_items(
         get_results(select='name'),
         [NAME_MD, NAME_PY, NAME_DIR, NAME_LIC]
@@ -35,11 +35,11 @@ def test_simple():
     ('name ASC', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
     ('name DESC', [NAME_PY, NAME_DIR, NAME_MD, NAME_LIC]),
 ])
-def test_order(order, results):
+def test_order_clause(order, results):
     assert get_results(order=order) == results
 
 
-def test_where():
+def test_where_clause():
     assert get_results(where="extension = 'py'", order='name') == [NAME_PY]
 
 
@@ -48,7 +48,7 @@ def test_where():
     ("text LIKE '%very%'", []),
     ("text LIKE '%_ery%'", [NAME_MD]),
 ])
-def test_like(where, results):
+def test_like_operator(where, results):
     assert get_results(where=where) == results
 
 
@@ -57,19 +57,19 @@ def test_like(where, results):
     ("text RLIKE '.*very.*'", []),
     ("text RLIKE '.*.ery.*'", [NAME_MD]),
 ])
-def test_rlike(where, results):
+def test_rlike_operator(where, results):
     assert get_results(where=where) == results
 
 
-def test_and():
+def test_and_operator():
     assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 
 
-def test_length():
+def test_length_function():
     assert get_results(where='LENGTH(lines) = 4') == [NAME_PY]
 
 
-def test_star():
+def test_star_column():
     assert_same_items(get_results(select='*'), [PATH_PY, PATH_MD, PATH_DIR, PATH_LIC])
 
 
@@ -77,15 +77,15 @@ def test_empty_select():
     assert_same_items(get_results(select=''), [PATH_PY, PATH_MD, PATH_DIR, PATH_LIC])
 
 
-def test_is_exec():
+def test_is_exec_column():
     assert get_results(where='is_exec') == [NAME_DIR]
 
 
-def test_upper():
+def test_upper_function():
     assert get_results(select='UPPER(ext)', order='UPPER(ext)') == [[''], [''], ['MD'], ['PY']]
 
 
-@pytest.mark.parametrize('suffix, value', [
+@pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
     ('m', 2 ** 20),
@@ -105,11 +105,11 @@ def test_upper():
     ('year', 86400 * 365),
     ('years', 86400 * 365),
 ])
-def test_suffix(suffix, value):
-    assert get_results(select='1{}'.format(suffix)) == [[str(value)]] * 4
+def test_suffixes(suffix, expected_value):
+    assert get_results(select='1{}'.format(suffix)) == [[str(expected_value)]] * 4
 
 
-def test_type():
+def test_type_column():
     assert_same_items(
         get_results(select='type'),
         [['file'], ['file'], ['file'], ['dir']]
