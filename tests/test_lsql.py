@@ -85,6 +85,10 @@ def test_upper_function():
     assert get_results(select='UPPER(ext)', order='UPPER(ext)') == [[''], [''], ['MD'], ['PY']]
 
 
+def test_text_of_dir():
+    assert get_results(select='text', where="type = 'dir'") == [['NULL']]
+
+
 @pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
