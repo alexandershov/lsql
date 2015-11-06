@@ -166,9 +166,8 @@ class Stat(object):
     ])
 
     ATTR_ALIASES = {
-        '*': 'path',
         'ext': 'extension',
-        'is_exec': 'is_executable'
+        'is_exec': 'is_executable',
     }
 
     COLORED_ATTRS = {'name', 'path', 'fullpath', '*'}
@@ -343,6 +342,8 @@ def run_query(query, directory=None, header=False, verbose=False):
     grammar = get_grammar()
     tokens = grammar.parseString(query, parseAll=True)
     columns = list(tokens.columns) or ['path']
+    if columns == ['*']:
+        columns = ['mode', 'owner', 'size', 'mtime', 'path']
     if tokens.directory and directory:
         raise Error("You can't specify both FROM clause and "
                     "directory as command line argument")
