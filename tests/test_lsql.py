@@ -94,6 +94,13 @@ def test_length_of_null_is_null():
     assert get_results(select='LENGTH(text)', where="type = 'dir'") == [['NULL']]
 
 
+def test_null_is_false():
+    assert_same_items(
+        get_results(where='text'),
+        [NAME_PY, NAME_MD, NAME_LIC]
+    )
+
+
 @pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
