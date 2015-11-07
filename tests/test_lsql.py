@@ -65,7 +65,7 @@ def test_and_operator():
     assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 
 
-def test_length_function():
+def test_length_and_lines_functions():
     assert get_results(where='LENGTH(lines) = 4') == [NAME_PY]
 
 
@@ -88,6 +88,10 @@ def test_upper_function():
 
 def test_text_of_dir():
     assert get_results(select='text', where="type = 'dir'") == [['NULL']]
+
+
+def test_length_of_null_is_null():
+    assert get_results(select='LENGTH(text)', where="type = 'dir'") == [['NULL']]
 
 
 @pytest.mark.parametrize('suffix, expected_value', [
