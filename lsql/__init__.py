@@ -61,6 +61,9 @@ class Null(object):
         return 'NULL'
 
     def __nonzero__(self):
+        """
+        Null is always False in boolean context.
+        """
         return False
 
 
