@@ -84,6 +84,18 @@ def rlike(string, re_pattern):
     return any(regex.match(line) for line in string)
 
 
+def ilike(string, pattern):
+    return like(string.lower(), pattern.lower())
+
+
+def contains(string, substring):
+    return substring in string
+
+
+def icontains(string, substring):
+    return contains(string.lower(), substring.lower())
+
+
 def age(ts):
     d_time = datetime.datetime.utcfromtimestamp(ts)
     return Interval.from_range(d_time, CURRENT_TIME)
@@ -124,7 +136,7 @@ def map_values(function, dictionary):
     return {key: function(value) for key, value in dictionary.viewitems()}
 
 
-OPERATOR_MAPPING = map_values(propagate_null, {
+OPERATORS = map_values(propagate_null, {
     '<>': operator.ne,
     '!=': operator.ne,
     '=': operator.eq,
@@ -135,6 +147,9 @@ OPERATOR_MAPPING = map_values(propagate_null, {
     '>=': operator.ge,
     'like': like,
     'rlike': rlike,
+    'ilike': ilike,
+    'contains': contains,
+    'icontains': icontains,
 })
 
 FUNCTIONS = map_values(propagate_null, {
@@ -331,7 +346,7 @@ def eval_simple_condition(condition, stat):
     if len(condition) == 1:
         return modify(eval_value(condition[0], stat))
     left, op, right = condition
-    if OPERATOR_MAPPING[op.lower()](eval_value(left, stat), eval_value(right, stat)):
+    if OPERATORS[op.lower()](eval_value(left, stat), eval_value(right, stat)):
         return modify(True)
     return modify(False)
 
@@ -438,7 +453,7 @@ def get_grammar():
     funcall = Forward()
     value = funcall | column | literal
     funcall << Group(Word(ident) + Suppress('(') + Group(delimitedList(value)) + Suppress(')'))
-    bin_op = oneOf('<> != = == < <= > >= LIKE RLIKE', caseless=True)
+    bin_op = oneOf(' '.join(OPERATORS), caseless=True)
 
     columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
     from_clause = (CaselessKeyword('FROM')

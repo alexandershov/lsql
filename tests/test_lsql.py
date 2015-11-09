@@ -61,6 +61,18 @@ def test_rlike_operator(where, results):
     assert get_results(where=where) == results
 
 
+def test_ilike_operator():
+    assert get_results(where="text ILIKE '%NICE%'") == [NAME_MD]
+
+
+def test_contains_operator():
+    assert get_results(where="text CONTAINS 'nice'") == [NAME_MD]
+
+
+def test_icontains_operator():
+    assert get_results(where="text ICONTAINS 'NICE'") == [NAME_MD]
+
+
 def test_and_operator():
     assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 
