@@ -73,6 +73,10 @@ def test_icontains_operator():
     assert get_results(where="text ICONTAINS 'NICE'") == [NAME_MD]
 
 
+def test_rilike_operator():
+    assert get_results(where="text RILIKE '.*NICE.*'") == [NAME_MD]
+
+
 def test_and_operator():
     assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 

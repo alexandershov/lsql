@@ -79,6 +79,10 @@ def like(string, pattern):
 def rlike(string, re_pattern):
     # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
     regex = re.compile(re_pattern + '$', re.DOTALL)
+    return match(string, regex)
+
+
+def match(string, regex):
     if not isinstance(string, list):
         string = [string]
     return any(regex.match(line) for line in string)
@@ -86,6 +90,12 @@ def rlike(string, re_pattern):
 
 def ilike(string, pattern):
     return like(string.lower(), pattern.lower())
+
+
+def rilike(string, re_pattern):
+    # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
+    regex = re.compile(re_pattern + '$', re.DOTALL | re.IGNORECASE)
+    return match(string, regex)
 
 
 def contains(string, substring):
@@ -148,6 +158,7 @@ OPERATORS = map_values(propagate_null, {
     'like': like,
     'rlike': rlike,
     'ilike': ilike,
+    'rilike': rilike,
     'contains': contains,
     'icontains': icontains,
 })
