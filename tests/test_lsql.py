@@ -137,6 +137,13 @@ def test_null_is_false():
     )
 
 
+def test_not_null_is_false():
+    assert_same_items(
+        get_results(where='NOT text'),
+        []
+    )
+
+
 @pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),

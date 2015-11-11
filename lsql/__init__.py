@@ -353,7 +353,7 @@ def eval_simple_condition(condition, stat):
     modify = identity
     if condition[0] == 'NOT':
         condition = condition[1:]
-        modify = operator.not_
+        modify = propagate_null(operator.not_)
     if len(condition) == 1:
         return modify(eval_value(condition[0], stat))
     left, op, right = condition
@@ -469,7 +469,8 @@ def get_grammar():
     columns = (Group(delimitedList(value)) | '*').setResultsName('columns')
     from_clause = (CaselessKeyword('FROM')
                    + QuotedString("'").setResultsName('directory'))
-    condition = Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value) | Group(value)
+    condition = (Group(Optional(CaselessKeyword('NOT')) + value + bin_op + value)
+                 | Group(Optional(CaselessKeyword('NOT')) + value))
     conditions = Group(delimitedList(condition, delim=CaselessKeyword('AND')))
     where_clause = CaselessKeyword('WHERE') + conditions.setResultsName('condition')
     order_by_clause = (CaselessKeyword('ORDER BY')
