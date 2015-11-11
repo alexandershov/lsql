@@ -88,8 +88,13 @@ def test_contains_operator(where, results):
     assert get_results(where=where) == results
 
 
-def test_icontains_operator():
-    assert get_results(where="text ICONTAINS 'NICE'") == [NAME_MD]
+@pytest.mark.parametrize('where, results', [
+    ("text ICONTAINS 'NICE'", [NAME_MD]),
+    ("text ICONTAINS 'very'", [NAME_MD]),
+    ("text ICONTAINS 'BADADUM'", []),
+])
+def test_icontains_operator(where, results):
+    assert get_results(where=where) == results
 
 
 def test_and_operator():
