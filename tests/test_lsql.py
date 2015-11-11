@@ -70,8 +70,13 @@ def test_rlike_operator(where, results):
     assert get_results(where=where) == results
 
 
-def test_rilike_operator():
-    assert get_results(where="text RILIKE '.*NICE.*'") == [NAME_MD]
+@pytest.mark.parametrize('where, results', [
+    ("text RILIKE '.*NICE!.*'", [NAME_MD]),
+    ("text RILIKE '.*VERY.*'", [NAME_MD]),
+    ("text RILIKE '.*.BADADUM.*'", []),
+])
+def test_rlike_operator(where, results):
+    assert get_results(where=where) == results
 
 
 def test_contains_operator():
