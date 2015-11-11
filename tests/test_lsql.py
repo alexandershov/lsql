@@ -101,7 +101,7 @@ def test_and_operator():
     assert get_results(where="LOWER(name) LIKE '%a%' AND extension = 'py'") == [NAME_PY]
 
 
-def test_length_and_lines_functions():
+def test_length_of_lines():
     assert get_results(where='LENGTH(lines) = 4') == [NAME_PY]
 
 
