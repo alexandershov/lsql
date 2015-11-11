@@ -79,8 +79,13 @@ def test_rlike_operator(where, results):
     assert get_results(where=where) == results
 
 
-def test_contains_operator():
-    assert get_results(where="text CONTAINS 'nice'") == [NAME_MD]
+@pytest.mark.parametrize('where, results', [
+    ("text CONTAINS 'nice'", [NAME_MD]),
+    ("text CONTAINS 'very'", []),
+    ("text CONTAINS 'ery'", [NAME_MD]),
+])
+def test_contains_operator(where, results):
+    assert get_results(where=where) == results
 
 
 def test_icontains_operator():
