@@ -53,6 +53,15 @@ def test_like_operator(where, results):
 
 
 @pytest.mark.parametrize('where, results', [
+    ("text ILIKE '%NICE%'", [NAME_MD]),
+    ("text ILIKE '%VERY%'", [NAME_MD]),
+    ("text ILIKE '%BADADUM%'", []),
+])
+def test_ilike_operator(where, results):
+    assert get_results(where=where) == results
+
+
+@pytest.mark.parametrize('where, results', [
     ("text RLIKE '.*nice!.*'", [NAME_MD]),
     ("text RLIKE '.*very.*'", []),
     ("text RLIKE '.*.ery.*'", [NAME_MD]),
@@ -61,8 +70,8 @@ def test_rlike_operator(where, results):
     assert get_results(where=where) == results
 
 
-def test_ilike_operator():
-    assert get_results(where="text ILIKE '%NICE%'") == [NAME_MD]
+def test_rilike_operator():
+    assert get_results(where="text RILIKE '.*NICE.*'") == [NAME_MD]
 
 
 def test_contains_operator():
@@ -71,10 +80,6 @@ def test_contains_operator():
 
 def test_icontains_operator():
     assert get_results(where="text ICONTAINS 'NICE'") == [NAME_MD]
-
-
-def test_rilike_operator():
-    assert get_results(where="text RILIKE '.*NICE.*'") == [NAME_MD]
 
 
 def test_and_operator():
