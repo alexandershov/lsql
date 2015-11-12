@@ -144,6 +144,10 @@ def test_not_null_is_false():
     )
 
 
+def test_ext_column():
+    assert get_results(where="ext = 'py'") == [NAME_PY]
+
+
 @pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
