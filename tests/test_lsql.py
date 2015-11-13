@@ -144,13 +144,15 @@ def test_not_null_is_false():
     )
 
 
-@pytest.mark.parametrize('operator', [
-    '=',
-    '=='
+@pytest.mark.parametrize('operator, num_rows', [
+    ('!=', 3),
+    ('<>', 3),
+    ('=', 1),
+    ('==', 1),
 ])
-def test_equal_operator(operator):
-    ext_is_py = "ext {} 'py'".format(operator)
-    assert len(get_results(where=ext_is_py)) == 1
+def test_equality_operators(operator, num_rows):
+    where = "ext {} 'py'".format(operator)
+    assert len(get_results(where=where)) == num_rows
 
 
 @pytest.mark.parametrize('operator, num_rows', [
@@ -162,15 +164,6 @@ def test_equal_operator(operator):
 def test_comparison_operators(operator, num_rows):
     where = 'size {} 0'.format(operator)
     assert len(get_results(where=where)) == num_rows
-
-
-@pytest.mark.parametrize('operator', [
-    '<>',
-    '!='
-])
-def test_not_equal_operator(operator):
-    ext_is_not_py = "ext {} 'py'".format(operator)
-    assert len(get_results(where=ext_is_not_py)) == 3
 
 
 def test_ext_column():
