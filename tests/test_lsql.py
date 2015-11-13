@@ -153,6 +153,17 @@ def test_equal_operator(operator):
     assert len(get_results(where=ext_is_py)) == 1
 
 
+@pytest.mark.parametrize('operator, num_rows', [
+    ('<', 0),
+    ('<=', 0),
+    ('>', 4),
+    ('>=', 4),
+])
+def test_comparison_operators(operator, num_rows):
+    where = 'size {} 0'.format(operator)
+    assert len(get_results(where=where)) == num_rows
+
+
 @pytest.mark.parametrize('operator', [
     '<>',
     '!='
