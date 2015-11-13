@@ -144,6 +144,15 @@ def test_not_null_is_false():
     )
 
 
+@pytest.mark.parametrize('operator', [
+    '<>',
+    '!='
+])
+def test_not_equal_operator(operator):
+    ext_not_py = "ext {} 'py'".format(operator)
+    assert len(get_results(where=ext_not_py)) == 3
+
+
 def test_ext_column():
     assert get_results(where="ext = 'py'") == [NAME_PY]
 
