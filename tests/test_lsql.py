@@ -219,11 +219,11 @@ def test_limit_clause():
     assert get_results(select='1', limit='1') == [['1']]
 
 
-def test_btrim():
+def test_btrim_function():
     assert get_results(select="btrim(name, 'sl')", where="type = 'dir'") == [['ma']]
 
 
-def test_age():
+def test_age_function():
     assert len(get_results(where='age(mtime) >= 0')) == 4
 
 
