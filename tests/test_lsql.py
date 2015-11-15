@@ -223,6 +223,10 @@ def test_btrim():
     assert get_results(select="btrim(name, 'sl')", where="type = 'dir'") == [['ma']]
 
 
+def test_age():
+    assert len(get_results(where='age(mtime) >= 0')) == 4
+
+
 def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
     clauses = []
     if select:
