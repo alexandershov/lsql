@@ -77,9 +77,7 @@ def like(string, pattern):
 
 
 def rlike(string, re_pattern):
-    # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
-    regex = re.compile(re_pattern + '$', re.DOTALL)
-    return match(string, regex)
+    return match(string, _make_multiline_regex(re_pattern))
 
 
 def match(string, regex):
@@ -93,9 +91,12 @@ def ilike(string, pattern):
 
 
 def rilike(string, re_pattern):
+    return match(string, _make_multiline_regex(re_pattern, re.IGNORECASE))
+
+
+def _make_multiline_regex(re_pattern, flags=0):
     # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
-    regex = re.compile(re_pattern + '$', re.DOTALL | re.IGNORECASE)
-    return match(string, regex)
+    return re.compile(re_pattern + '$', flags | re.DOTALL)
 
 
 def contains(string, substring):
