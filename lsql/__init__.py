@@ -39,7 +39,7 @@ SIZE_SUFFIXES = {
 }
 
 SECONDS_IN_DAY = 86400
-# unit -> num of bytes in 1 unit
+# unit -> num of seconds in 1 unit
 TIME_SUFFIXES = {
     'minute': 60,
     'minutes': 60,
