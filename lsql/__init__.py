@@ -27,7 +27,6 @@ KILO = 1024
 MEGA = KILO * 1024
 GIGA = MEGA * 1024
 
-SECONDS_IN_DAY = 86400
 
 # unit -> num of bytes in 1 unit
 SIZE_SUFFIXES = {
@@ -37,6 +36,11 @@ SIZE_SUFFIXES = {
     'mb': MEGA,
     'g': GIGA,
     'gb': GIGA,
+}
+
+SECONDS_IN_DAY = 86400
+# unit -> num of bytes in 1 unit
+TIME_SUFFIXES = {
     'minute': 60,
     'minutes': 60,
     'hour': 3600,
@@ -50,6 +54,21 @@ SIZE_SUFFIXES = {
     'year': SECONDS_IN_DAY * 365,
     'years': SECONDS_IN_DAY * 365,
 }
+
+
+def merge_dicts(x, y):
+    """
+    Merge two dicts into one.
+    :type x: dict
+    :type y: dict
+    :return: merged dictionary
+    """
+    merged = x.copy()
+    merged.update(y)
+    return merged
+
+
+LITERAL_SUFFIXES = merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
 
 
 class Error(Exception):
@@ -331,7 +350,7 @@ def eval_size_literal(literal):
     value = int(match.group('value'))
     suffix = match.group('suffix')
     if suffix:
-        value *= SIZE_SUFFIXES[suffix]
+        value *= LITERAL_SUFFIXES[suffix]
     return value
 
 
@@ -460,7 +479,7 @@ def get_grammar():
     ident = alphas + '_'
     column = Word(ident)
     literal = Combine(
-        Word(nums) + Optional(oneOf(' '.join(SIZE_SUFFIXES),
+        Word(nums) + Optional(oneOf(' '.join(LITERAL_SUFFIXES),
                                     caseless=True))) | sglQuotedString
     funcall = Forward()
     value = funcall | column | literal
