@@ -317,10 +317,10 @@ class Stat(object):
 
     @property
     def lines(self):
-        content = self.text
-        if content is NULL:
+        text = self.text
+        if text is NULL:
             return NULL
-        return content.splitlines()
+        return text.splitlines()
 
     def get_value(self, name):
         name = Stat.ATTR_ALIASES.get(name, name)
