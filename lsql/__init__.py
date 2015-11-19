@@ -137,15 +137,26 @@ class Interval(int):
         return cls((end - start).total_seconds())
 
     def __str__(self):
-        parts = [(86400, 'days'), (3600, 'hours'), (60, 'minutes'), (1, 'seconds')]
+        parts = [(86400, 'day'), (3600, 'hour'), (60, 'minute'), (1, 'second')]
         human = []
         seconds = int(self)
         for n, name in parts:
             if seconds:
                 x, seconds = divmod(seconds, n)
                 if x:
-                    human.append('{} {}'.format(x, name))
+                    human.append(inflect(x, name))
         return ', '.join(human)
+
+
+def inflect(quantity, noun):
+    """
+    :param quantity: int
+    :param noun: str
+    :return: '5 nouns', '1 noun'
+    """
+    if quantity == 1:
+        return '{:d} {:s}'.format(quantity, noun)
+    return '{:d} {:s}s'.format(quantity, noun)
 
 
 def btrim(string, chars=None):
