@@ -182,6 +182,22 @@ def test_no_ext_column():
     )
 
 
+@pytest.mark.parametrize('column', [
+    'owner',
+    'group',
+    'mode',
+    'atime',
+    'ctime',
+    'device',
+    'hardlinks',
+    'inode',
+])
+def test_esoteric_columns(column):
+    # it's hard to test the exact values of those columns, so we just check
+    # that they work
+    assert len(get_results(select=column)) == 4
+
+
 @pytest.mark.parametrize('suffix, expected_value', [
     ('k', 2 ** 10),
     ('kb', 2 ** 10),
