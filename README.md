@@ -73,3 +73,10 @@ Let's say you're in the directory /tmp with two files
 | text | content of the file | whatever is in file |
 | is_exec | is executable? | `true` if file is executable, `false` otherwise |
 | is_executable | same as `is_exec` column | `true` if file is executable, `false` otherwise |
+
+## Functions
+| Name  | Description  | Example |
+| ----  | -----------  | ------- |
+| UPPER | convert string to uppercase | `lsql "select UPPER(name)"` |
+| LOWER | convert string to lowercase | `lsql "select UPPER(name)"` | 
+| AGE | return age of timestamp | `lsql "select AGE(mtime)"` |
