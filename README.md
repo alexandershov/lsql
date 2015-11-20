@@ -51,20 +51,20 @@ Let's say you're in the directory /tmp with two files
 | Name  | Description  | Example |
 | :---- | :----------- | ----- |
 | name | name of the file | a.txt |
-| path | relative path to file | ./a.txt |
+| path | relative path to file | a.txt |
 | fullpath | full path to file | /tmp/a.txt|
 | size | size of file in bytes | 8234 |
 | atime | access time to file | 2015-09-13T05:24:51 |
 | mtime | modification time of file | 2015-09-13T05:24:51 |
 | ctime | time of file's status change | 2015-09-13T05:24:51 |
 | birthtime | creation time, supported on OS X only | 2015-09-13T05:24:51 |
-| owner | owner of file | root |
-| dir | relative path to the directory containing file| ./ |
+| dir | relative path to the directory containing file| tmp |
 | fulldir | full path to the directory containing file | /tmp |
 | ext | extension (without dot) | txt |
 | extension | same as `ext` column | txt |
-| mode | permissions mode | 0100644 |
+| owner | owner of file | root |
 | group | group of the owner of the file | staff |
+| mode | permissions mode | 0100644 |
 | depth | depth of file relative to cwd | 0 for files in cwd, 1 in direct siblings of cwd, etc|
 | type | type of file | one of 'file/dir/link/mount/unknown' |
 | device | device | 16777220 |
