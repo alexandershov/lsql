@@ -139,10 +139,10 @@ class Interval(int):
     def __str__(self):
         parts = [(86400, 'day'), (3600, 'hour'), (60, 'minute'), (1, 'second')]
         human = []
-        seconds = int(self)
+        total_seconds = int(self)
         for n, name in parts:
-            if seconds:
-                x, seconds = divmod(seconds, n)
+            if total_seconds:
+                x, total_seconds = divmod(total_seconds, n)
                 if x:
                     human.append(inflect(x, name))
         return ', '.join(human)
