@@ -13,6 +13,11 @@ DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 FROM_CLAUSE = "FROM '{}'".format(DIR)
 
+
+NO_EXT_MD = [lsql.colored('README', Fore.RESET)]
+NO_EXT_PY = [lsql.colored('small', Fore.RESET)]
+NO_EXT_DIR = [lsql.colored('small', Fore.RESET)]
+NO_EXT_LIC = [lsql.colored('LICENSE', Fore.RESET)]
 NAME_MD = [lsql.colored('README.md', Fore.RESET)]
 NAME_PY = [lsql.colored('small.py', Fore.RESET)]
 NAME_DIR = [lsql.colored('small', Fore.RESET)]
@@ -168,6 +173,13 @@ def test_comparison_operators(operator, num_rows):
 
 def test_ext_column():
     assert get_results(where="ext = 'py'") == [NAME_PY]
+
+
+def test_no_ext_column():
+    assert_same_items(
+        get_results(select='no_ext'),
+        [NO_EXT_PY, NO_EXT_MD, NO_EXT_DIR, NO_EXT_LIC]
+    )
 
 
 @pytest.mark.parametrize('suffix, expected_value', [

@@ -62,6 +62,7 @@ Let's say you're in the directory /tmp with two files
 | fulldir | full path to the directory containing file | /tmp |
 | ext | extension (without dot) | txt |
 | extension | same as `ext` column | txt |
+| no_ext | name of the file without extension | a |
 | owner | owner of file | root |
 | group | group of the owner of the file | staff |
 | mode | permissions mode | 0100644 |

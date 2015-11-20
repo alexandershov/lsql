@@ -219,7 +219,7 @@ class Mode(object):
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
-        'path', 'fulldir', 'dir', 'name', 'extension',
+        'path', 'fulldir', 'dir', 'name', 'extension', 'no_ext',
         'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
         'text', 'lines', 'is_executable'
@@ -230,7 +230,7 @@ class Stat(object):
         'is_exec': 'is_executable',
     }
 
-    COLORED_ATTRS = {'name', 'path', 'fullpath', '*'}
+    COLORED_ATTRS = {'name', 'path', 'no_ext', 'fullpath', '*'}
 
     def __init__(self, path, depth):
         self.path = path
@@ -267,6 +267,10 @@ class Stat(object):
     def extension(self):
         extension = os.path.splitext(self.path)[1]
         return extension[1:]  # skip dot
+
+    @property
+    def no_ext(self):
+        return os.path.splitext(self.name)[0]
 
     @property
     def mode(self):
