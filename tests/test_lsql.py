@@ -1,4 +1,5 @@
 import os
+import sys
 
 
 # avoiding directory coloring
@@ -12,7 +13,6 @@ import lsql
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 FROM_CLAUSE = "FROM '{}'".format(DIR)
-
 
 NO_EXT_MD = [lsql.colored('README', Fore.RESET)]
 NO_EXT_PY = [lsql.colored('small', Fore.RESET)]
@@ -196,6 +196,14 @@ def test_esoteric_columns(column):
     # it's hard to test the exact values of those columns, so we just check
     # that they work
     assert len(get_results(select=column)) == 4
+
+
+# TODO: support freebsd
+@pytest.mark.skipif(
+    not sys.platform.startswith('darwin'),
+    reason='birthtime is supported only on Mac OS X')
+def test_birthtime_column():
+    assert len(get_results(select='birthtime')) == 4
 
 
 @pytest.mark.parametrize('suffix, expected_value', [
