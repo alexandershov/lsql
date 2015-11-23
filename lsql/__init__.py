@@ -138,14 +138,16 @@ class Interval(int):
 
     def __str__(self):
         parts = [(86400, 'day'), (3600, 'hour'), (60, 'minute'), (1, 'second')]
-        human = []
+        human_parts = []
         total_seconds = int(self)
         for n, name in parts:
             if total_seconds:
                 x, total_seconds = divmod(total_seconds, n)
-                if x:
-                    human.append(inflect(x, name))
-        return ', '.join(human)
+                human_parts.append((x, name))
+        max_parts = 3
+        human_parts = human_parts[:max_parts]
+        without_zeroes = [inflect(x, name) for x, name in human_parts if x]
+        return ', '.join(without_zeroes)
 
 
 def inflect(quantity, noun):
