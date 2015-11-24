@@ -38,7 +38,9 @@ def test_name_column():
 @pytest.mark.parametrize('order, results', [
     ('name', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
     ('name ASC', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
+    ('name asc', [NAME_LIC, NAME_MD, NAME_DIR, NAME_PY]),
     ('name DESC', [NAME_PY, NAME_DIR, NAME_MD, NAME_LIC]),
+    ('name desc', [NAME_PY, NAME_DIR, NAME_MD, NAME_LIC]),
 ])
 def test_order_clause(order, results):
     assert get_results(order=order) == results
