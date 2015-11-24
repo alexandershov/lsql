@@ -112,7 +112,7 @@ def test_length_of_lines():
 
 def test_star_column():
     # just checking that it works
-    assert get_results(select='*')
+    assert len(get_results(select='*')) == 4
 
 
 def test_empty_select():
