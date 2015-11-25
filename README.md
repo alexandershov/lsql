@@ -76,8 +76,9 @@ Let's say you're in the directory /tmp with two files
 | is_executable | same as `is_exec` column | `true` if file is executable, `false` otherwise |
 
 ## Functions
-| Name  | Description  | Example |
-| ----  | -----------  | ------- |
-| UPPER | convert string to uppercase | `lsql "select UPPER(name)"` |
-| LOWER | convert string to lowercase | `lsql "select UPPER(name)"` | 
-| AGE | return age of timestamp | `lsql "select AGE(mtime)"` |
+| Name  | Description  | Usage | Example |
+| ----  | -----------  | ----- | ------- |
+| UPPER | convert string to uppercase | `lsql "select UPPER(name)"` | 'A' |
+| LOWER | convert string to lowercase | `lsql "select LOWER(name)"` | 'a' |
+| AGE | return age of timestamp | `lsql "select AGE(mtime)"` | '1 minute' |
+| BTRIM | delete characters from the both ends of the string | `lsql "select BTRIM(name, '~')"` | 'a' |
