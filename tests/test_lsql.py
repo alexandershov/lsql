@@ -200,10 +200,10 @@ def test_esoteric_columns(column):
     assert len(get_results(select=column)) == 4
 
 
-# TODO: support freebsd
+# TODO: support windows if it supports st_birthtime
 @pytest.mark.skipif(
-    not sys.platform.startswith('darwin'),
-    reason='birthtime is supported only on Mac OS X')
+    not sys.platform.startswith(('darwin', 'freebsd')),
+    reason='birthtime is supported only on Mac OS X and freebsd')
 def test_birthtime_column():
     assert len(get_results(select='birthtime')) == 4
 
