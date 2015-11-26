@@ -82,3 +82,5 @@ Let's say you're in the directory /tmp with two files
 | LOWER | convert string to lowercase | `lsql "select LOWER(name)"` | 'a' |
 | AGE | return age of timestamp | `lsql "select AGE(mtime)"` | '1 minute' |
 | BTRIM | delete characters from the both ends of the string | `lsql "select BTRIM(name, '~')"` | 'a' |
+| LENGTH | length of the string/array | `lsql "select LENGTH(lines)"` | 5 |
+
