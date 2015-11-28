@@ -265,6 +265,10 @@ def test_age_function():
     assert len(get_results(where='age(mtime) >= 0')) == 4
 
 
+def test_concat_function():
+    assert get_results(select="concat(no_ext, '.py')", where="ext = 'md'") == [['README.py']]
+
+
 def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
     clauses = []
     if select:

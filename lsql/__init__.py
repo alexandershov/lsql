@@ -113,6 +113,13 @@ def rilike(string, re_pattern):
     return match(string, _make_multiline_regex(re_pattern, re.IGNORECASE))
 
 
+def concat(*items):
+    result = []
+    for obj in items:
+        result.append(str(obj))
+    return ''.join(result)
+
+
 def _make_multiline_regex(re_pattern, flags=0):
     # we need re.DOTALL because string can contain newlines (e.g in 'text' column)
     return re.compile(re_pattern + '$', flags | re.DOTALL)
@@ -202,6 +209,7 @@ FUNCTIONS = map_values(propagate_null, {
     'length': len,
     'age': age,
     'btrim': btrim,
+    'concat': concat,
 })
 
 
@@ -372,12 +380,15 @@ def eval_size_literal(literal):
 
 
 def eval_value(value, stat):
-    if len(value) == 2 and value[0].lower() in FUNCTIONS:  # function call
+    if len(value) == 2 and not isinstance(value, str):  # function call
+        fn_name = value[0].lower()
+        if fn_name not in FUNCTIONS:
+            raise Error('unknown function: {}'.format(fn_name.upper()))
         args = [eval_value(x, stat) for x in value[1]]
-        return FUNCTIONS[value[0].lower()](*args)
-    if value.startswith("'"):
+        return FUNCTIONS[fn_name](*args)
+    elif value.startswith("'"):
         return value[1:-1]
-    if value[0].isdigit():
+    elif value[0].isdigit():
         return eval_size_literal(value)
     return stat.get_value(value)
 
