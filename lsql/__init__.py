@@ -113,10 +113,17 @@ def rilike(string, re_pattern):
     return match(string, _make_multiline_regex(re_pattern, re.IGNORECASE))
 
 
+def accepts_nulls(fn):
+    fn.accepts_nulls = True
+    return fn
+
+
+@accepts_nulls
 def concat(*items):
     result = []
     for obj in items:
-        result.append(str(obj))
+        if obj is not NULL:
+            result.append(str(obj))
     return ''.join(result)
 
 
@@ -173,6 +180,9 @@ def btrim(string, chars=None):
 
 
 def propagate_null(fn):
+    if getattr(fn, 'accepts_nulls', False):
+        return fn
+
     @wraps(fn)
     def wrapper(*args):
         if any(arg is NULL for arg in args):

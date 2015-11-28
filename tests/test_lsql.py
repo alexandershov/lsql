@@ -265,8 +265,12 @@ def test_age_function():
     assert len(get_results(where='age(mtime) >= 0')) == 4
 
 
-def test_concat_function():
-    assert get_results(select="concat(no_ext, '.py')", where="ext = 'md'") == [['README.py']]
+@pytest.mark.parametrize('select, where, results', [
+    ("concat(no_ext, '.py')", "ext = 'md'", [['README.py']]),
+    ("concat(name, text, '.py')", "type='dir'", [['small.py']]),
+])
+def test_concat_function(select, where, results):
+    assert get_results(select=select, where=where) == results
 
 
 def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
