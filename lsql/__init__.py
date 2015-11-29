@@ -222,6 +222,10 @@ FUNCTIONS = map_values(propagate_null, {
     'concat': concat,
 })
 
+CONSTANTS = {
+    'current_date': CURRENT_DATE,
+}
+
 
 class Timestamp(int):
     def __str__(self):
@@ -400,6 +404,8 @@ def eval_value(value, stat):
         return value[1:-1]
     elif value[0].isdigit():
         return eval_size_literal(value)
+    elif value.lower() in CONSTANTS:
+        return CONSTANTS[value.lower()]
     return stat.get_value(value)
 
 

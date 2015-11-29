@@ -270,7 +270,13 @@ def test_age_function():
     ("concat(name, text, '.py')", "type='dir'", [['small.py']]),
 ])
 def test_concat_function(select, where, results):
+
     assert get_results(select=select, where=where) == results
+
+
+def test_current_date_function():
+    # just checking that it works
+    assert len(get_results(select='CURRENT_DATE')) == 4
 
 
 def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
