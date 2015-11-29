@@ -224,6 +224,7 @@ FUNCTIONS = map_values(propagate_null, {
 
 CONSTANTS = {
     'current_date': CURRENT_DATE,
+    'null': NULL,
 }
 
 

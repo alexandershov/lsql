@@ -279,6 +279,10 @@ def test_current_date_function():
     assert len(get_results(select='CURRENT_DATE')) == 4
 
 
+def test_null_constant():
+    assert get_results(select='NULL', limit=1) == [['NULL']]
+
+
 def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limit=''):
     clauses = []
     if select:
@@ -289,7 +293,7 @@ def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limi
     if order:
         clauses.extend(['ORDER BY', order])
     if limit:
-        clauses.extend(['LIMIT', limit])
+        clauses.extend(['LIMIT', str(limit)])
     return list(lsql.run_query(' '.join(clauses)))
 
 
