@@ -1,110 +1,91 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, unicode_literals
 
-from collections import namedtuple
-
-OPERATORS = {'>', '<', '=', '>=', '<=', '||', '<>', '!=',
-             '+', '-', '*', '/',
-             ',', '(', ')',
-             }
-
-
-class TokenError(Exception):
-    pass
+import re
 
 
 class Token(object):
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        if self.value == other.value:
+            return True
+        return False
+
+    # TODO: add __hash__
+
+    def __repr__(self):
+        return '{:s}({!r})'.format(self.__class__.__name__, self.value)
+
+
+class WhitespaceToken(Token):
     pass
 
 
-class Name(Token, namedtuple('Name', ['name'])):
-    __slots__ = ()
+class IntToken(Token):
+    pass
 
 
-SELECT = Name('SELECT')
-WHERE = Name('WHERE')
-FROM = Name('FROM')
-GT = Name('>')
-LT = Name('<')
-EQ = Name('=')
-GE = Name('>=')
-LE = Name('<=')
-CONCAT = Name('||')
-NE_OLD = Name('<>')
-NE_NEW = Name('!=')
-PLUS = Name('+')
-MINUS = Name('-')
-MUL = Name('*')
-DIV = Name('/')
-COMMA = Name(',')
-LPAREN = Name('(')
-RPAREN = Name(')')
-
-KEYWORDS = {
-    name.name: name for name in
-    [SELECT, WHERE, FROM, GT, LT, EQ, GE, LE, CONCAT, NE_OLD, NE_NEW, PLUS, MINUS, MUL,
-     DIV, COMMA, LPAREN, RPAREN]
-    }
+class StringToken(Token):
+    pass
 
 
-class StringLiteral(Token, namedtuple('StringLiteral', ['value'])):
-    __slots__ = ()
+# TODO: should case-insensitive __eq__
+class KeywordToken(Token):
+    pass
 
 
-class IntLiteral(Token, namedtuple('IntLiteral', ['value'])):
-    __slots__ = ()
+class SelectToken(KeywordToken):
+    pass
 
 
-def tokenize(s):
-    tokens = []
-    s = unicode(s)
-    chars = iter(s)
-    c = next(chars, '')
-    while c:
-        if c.isspace():
-            while c.isspace():
-                c = next(chars, '')
-        elif is_identifier_start(c):
-            name = []
-            while is_identifier(c):
-                name.append(c)
-                c = next(chars, '')
-            name = ''.join(name)
-            if name.upper() in KEYWORDS:
-                tokens.append(KEYWORDS[name.upper()])
+class NameToken(Token):
+    pass
+
+
+class OperatorToken(Token):
+    pass
+
+
+class LexerError(Exception):
+    def __init__(self, string, pos):
+        self.string = string
+        self.pos = pos
+
+    def __str__(self):
+        substring = self.string[self.pos:self.pos + 20] + '...'
+        return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
+
+
+class Lexer(object):
+    def __init__(self):
+        self._rules = []  # [(regex, token_class), ...]
+
+    def add(self, regex, token_class):
+        self._rules.append((regex, token_class))
+
+    def tokenize(self, string):
+        pos = 0
+        while pos < len(string):
+            for regex, token_class in self._rules:
+                m = regex.match(string, pos)
+                if not m:
+                    continue
+                if token_class is not WhitespaceToken:
+                    yield token_class(string[pos:m.end()])
+                pos = m.end()
+                break
             else:
-                tokens.append(Name(''.join(name)))
-        elif c.isdigit():
-            value = []
-            while is_identifier(c):
-                value.append(c)
-                c = next(chars, '')
-            tokens.append(IntLiteral(''.join(value)))
-        elif c == "'":
-            value = []
-            c = next(chars, '')
-            while c != "'":
-                if not c:
-                    raise TokenError('unclosed single quote')
-                value.append(c)
-                c = next(chars, '')
-            tokens.append(StringLiteral(''.join(value)))
-            c = next(chars, '')
-        else:
-            name = [c]
-            while (''.join(name) in OPERATORS) and c:
-                c = next(chars, '')
-                name.append(c)
-            if c:
-                name = name[:-1]
-            if not name:
-                raise TokenError('unknown char: {}'.format(c))
-            tokens.append(KEYWORDS[''.join(name)])
-    return tokens
+                raise LexerError(string, pos)
 
+# TODO: Parens
 
-def is_identifier_start(c):
-    return c.isalpha() or c == '_'
-
-
-def is_identifier(c):
-    return is_identifier_start(c) or c.isdigit()
+# TODO: move rules to constructor
+_lexer = Lexer()
+_lexer.add(re.compile(r'select\b', re.I | re.U), SelectToken)
+_lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
+_lexer.add(re.compile(r'\s+'), WhitespaceToken)
+_lexer.add(re.compile(r'\w+'), NameToken)
+tokenize = _lexer.tokenize
