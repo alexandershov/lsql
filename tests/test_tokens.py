@@ -65,9 +65,18 @@ def test_operators(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-# TODO: floats (e.g: 1.5year)
-def test_number_literals():
-    pass
+@pytest.mark.parametrize('string, token', [
+    make_test_case('23', tokens.NumberToken),
+    make_test_case('2.3', tokens.NumberToken),
+    make_test_case('2.', tokens.NumberToken),
+    make_test_case('2e5', tokens.NumberToken),
+    make_test_case('2.5e5', tokens.NumberToken),
+    make_test_case('2k', tokens.NumberToken),
+    make_test_case('2.5year', tokens.NumberToken),
+    make_test_case('2.year', tokens.NumberToken),
+])
+def test_number_literals(string, token):
+    assert list(tokens.tokenize(string)) == [token]
 
 
 def test_funcall():
@@ -87,5 +96,6 @@ def test_string_literals(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
+# TODO: test '-3' as MinusToken(), NumberToken('3')
 def test_full_query():
     pass

@@ -193,7 +193,7 @@ class WhitespaceToken(Token):
     pass
 
 
-class IntToken(Token):
+class NumberToken(Token):
     pass
 
 
@@ -279,6 +279,8 @@ def _make_default_lexer():
     _add_keywords(lexer)
     _add_operators(lexer)
     _add_string_literals(lexer)
+    _add_number_literals(lexer)
+    _add_whitespace(lexer)
     return lexer
 
 
@@ -322,9 +324,6 @@ def _add_keywords(lexer):
     lexer.add(_keyword('then'), ThenToken)
     lexer.add(_keyword('update'), UpdateToken)
     lexer.add(_keyword('where'), WhereToken)
-    lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
-    lexer.add(re.compile(r'\s+'), WhitespaceToken)
-    lexer.add(re.compile(r'\w+'), NameToken)
 
 
 def _add_operators(lexer):
@@ -336,6 +335,16 @@ def _add_operators(lexer):
 
 def _add_string_literals(lexer):
     lexer.add(_regex(r"'([^']|'')*'"), StringToken)
+
+
+def _add_number_literals(lexer):
+    lexer.add(_regex(r'\d+\.?\d*e\d+'), NumberToken)  # 2e10, 2.5e10
+    lexer.add(_regex(r'\d+\.?\d*[^\W\d]+'), NumberToken)  # 2year, 2.5year
+    lexer.add(_regex(r'\d+\.?\d*'), NumberToken)  # 2, 2.5
+
+
+def _add_whitespace(lexer):
+    lexer.add(re.compile(r'\s+'), WhitespaceToken)
 
 
 def _operator(s):
