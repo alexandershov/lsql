@@ -196,6 +196,22 @@ class OperatorToken(Token):
     pass
 
 
+class DivToken(OperatorToken):
+    pass
+
+
+class MinusToken(OperatorToken):
+    pass
+
+
+class MulToken(OperatorToken):
+    pass
+
+
+class PlusToken(OperatorToken):
+    pass
+
+
 class LexerError(Exception):
     def __init__(self, string, pos):
         self.string = string
@@ -243,6 +259,7 @@ def _keyword(s):
 def _make_default_lexer():
     lexer = Lexer()
     _add_keywords(lexer)
+    _add_operators(lexer)
     return lexer
 
 
@@ -286,6 +303,17 @@ def _add_keywords(lexer):
     lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
     lexer.add(re.compile(r'\s+'), WhitespaceToken)
     lexer.add(re.compile(r'\w+'), NameToken)
+
+
+def _add_operators(lexer):
+    lexer.add(_operator(r'/'), DivToken)
+    lexer.add(_operator(r'-'), MinusToken)
+    lexer.add(_operator(r'*'), MulToken)
+    lexer.add(_operator(r'+'), PlusToken)
+
+
+def _operator(s):
+    return re.compile(re.escape(s), re.I)
 
 
 tokenize = _make_default_lexer().tokenize

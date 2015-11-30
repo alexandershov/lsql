@@ -5,54 +5,60 @@ import pytest
 from lsql import tokens
 
 
-def keyword_test_case(keyword, token_class):
-    return keyword, token_class(keyword, tokens.Position(keyword, 0, len(keyword)))
+def make_test_case(string, expected_token_class):
+    return string, expected_token_class(string, tokens.Position(string, 0, len(string)))
 
 
 @pytest.mark.parametrize('string, token', [
-    keyword_test_case('and', tokens.AndToken),
-    keyword_test_case('as', tokens.AsToken),
-    keyword_test_case('asc', tokens.AscToken),
-    keyword_test_case('between', tokens.BetweenToken),
-    keyword_test_case('by', tokens.ByToken),
-    keyword_test_case('case', tokens.CaseToken),
-    keyword_test_case('contains', tokens.ContainsToken),
-    keyword_test_case('delete', tokens.DeleteToken),
-    keyword_test_case('desc', tokens.DescToken),
-    keyword_test_case('drop', tokens.DropToken),
-    keyword_test_case('else', tokens.ElseToken),
-    keyword_test_case('end', tokens.EndToken),
-    keyword_test_case('exists', tokens.ExistsToken),
-    keyword_test_case('from', tokens.FromToken),
-    keyword_test_case('group', tokens.GroupToken),
-    keyword_test_case('having', tokens.HavingToken),
-    keyword_test_case('ilike', tokens.IlikeToken),
-    keyword_test_case('in', tokens.InToken),
-    keyword_test_case('is', tokens.IsToken),
-    keyword_test_case('isnull', tokens.IsNullToken),
-    keyword_test_case('join', tokens.JoinToken),
-    keyword_test_case('left', tokens.LeftToken),
-    keyword_test_case('like', tokens.LikeToken),
-    keyword_test_case('like_regex', tokens.LikeRegexToken),
-    keyword_test_case('limit', tokens.LimitToken),
-    keyword_test_case('not', tokens.NotToken),
-    keyword_test_case('notnull', tokens.NotNullToken),
-    keyword_test_case('null', tokens.NullToken),
-    keyword_test_case('offset', tokens.OffsetToken),
-    keyword_test_case('or', tokens.OrToken),
-    keyword_test_case('order', tokens.OrderToken),
-    keyword_test_case('outer', tokens.OuterToken),
-    keyword_test_case('select', tokens.SelectToken),
-    keyword_test_case('then', tokens.ThenToken),
-    keyword_test_case('update', tokens.UpdateToken),
-    keyword_test_case('where', tokens.WhereToken),
+    make_test_case('and', tokens.AndToken),
+    make_test_case('as', tokens.AsToken),
+    make_test_case('asc', tokens.AscToken),
+    make_test_case('between', tokens.BetweenToken),
+    make_test_case('by', tokens.ByToken),
+    make_test_case('case', tokens.CaseToken),
+    make_test_case('contains', tokens.ContainsToken),
+    make_test_case('delete', tokens.DeleteToken),
+    make_test_case('desc', tokens.DescToken),
+    make_test_case('drop', tokens.DropToken),
+    make_test_case('else', tokens.ElseToken),
+    make_test_case('end', tokens.EndToken),
+    make_test_case('exists', tokens.ExistsToken),
+    make_test_case('from', tokens.FromToken),
+    make_test_case('group', tokens.GroupToken),
+    make_test_case('having', tokens.HavingToken),
+    make_test_case('ilike', tokens.IlikeToken),
+    make_test_case('in', tokens.InToken),
+    make_test_case('is', tokens.IsToken),
+    make_test_case('isnull', tokens.IsNullToken),
+    make_test_case('join', tokens.JoinToken),
+    make_test_case('left', tokens.LeftToken),
+    make_test_case('like', tokens.LikeToken),
+    make_test_case('like_regex', tokens.LikeRegexToken),
+    make_test_case('limit', tokens.LimitToken),
+    make_test_case('not', tokens.NotToken),
+    make_test_case('notnull', tokens.NotNullToken),
+    make_test_case('null', tokens.NullToken),
+    make_test_case('offset', tokens.OffsetToken),
+    make_test_case('or', tokens.OrToken),
+    make_test_case('order', tokens.OrderToken),
+    make_test_case('outer', tokens.OuterToken),
+    make_test_case('select', tokens.SelectToken),
+    make_test_case('then', tokens.ThenToken),
+    make_test_case('update', tokens.UpdateToken),
+    make_test_case('where', tokens.WhereToken),
 ])
 def test_keywords(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-def test_operators():
-    pass
+@pytest.mark.parametrize('string, token', [
+    make_test_case('/', tokens.DivToken),
+    make_test_case('-', tokens.MinusToken),
+    make_test_case('*', tokens.MulToken),
+    make_test_case('+', tokens.PlusToken),
+])
+def test_operators(string, token):
+    assert list(tokens.tokenize(string)) == [token]
 
 
 def test_number_literals():
