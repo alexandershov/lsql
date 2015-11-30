@@ -59,11 +59,13 @@ def test_keywords(string, token):
     make_test_case('-', tokens.MinusToken),
     make_test_case('*', tokens.MulToken),
     make_test_case('+', tokens.PlusToken),
+    # TODO: add ^ (power), <>=, ||
 ])
 def test_operators(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
+# TODO: floats (e.g: 1.5year)
 def test_number_literals():
     pass
 
@@ -76,8 +78,13 @@ def test_special_characters():
     pass
 
 
-def test_string_literals():
-    pass
+@pytest.mark.parametrize('string, token', [
+    make_test_case("''", tokens.StringToken),
+    make_test_case("'test'", tokens.StringToken),
+    make_test_case("'te''st'", tokens.StringToken),
+])
+def test_string_literals(string, token):
+    assert list(tokens.tokenize(string)) == [token]
 
 
 def test_full_query():

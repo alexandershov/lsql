@@ -8,6 +8,7 @@ Position = namedtuple('Position', ['string', 'start', 'end'])
 
 
 class Token(object):
+    # TODO: probably __init__ should receive the re.Match object as a single argument
     def __init__(self, value, position):
         # TODO: add string, and position in it
         self.value = value
@@ -266,12 +267,18 @@ def _keyword(s):
     return re.compile(r'{}\b'.format(re.escape(s)), re.I | re.U)
 
 
+# TODO: use _regex in _keyword and _operator
+def _regex(s):
+    return re.compile(s, re.U)
+
+
 # TODO: Parens
 
 def _make_default_lexer():
     lexer = Lexer()
     _add_keywords(lexer)
     _add_operators(lexer)
+    _add_string_literals(lexer)
     return lexer
 
 
@@ -325,6 +332,10 @@ def _add_operators(lexer):
     lexer.add(_operator(r'-'), MinusToken)
     lexer.add(_operator(r'*'), MulToken)
     lexer.add(_operator(r'+'), PlusToken)
+
+
+def _add_string_literals(lexer):
+    lexer.add(_regex(r"'([^']|'')*'"), StringToken)
 
 
 def _operator(s):
