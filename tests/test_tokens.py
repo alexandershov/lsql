@@ -3,12 +3,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import pytest
 
 from lsql.tokens import (
-    NameToken, OperatorToken, Position, SelectToken, tokenize,
+    AsToken, AscToken, NameToken, OperatorToken, Position, SelectToken, tokenize,
 )
 
 
 @pytest.mark.parametrize('string, token', [
     ('and', OperatorToken('and', Position('and', 0, 3))),
+    ('as', AsToken('as', Position('as', 0, 2))),
+    ('asc', AscToken('asc', Position('asc', 0, 3))),
     ('select', SelectToken('select', Position('select', 0, 6)))
 ])
 def test_keywords(string, token):

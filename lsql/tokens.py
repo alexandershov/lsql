@@ -4,7 +4,6 @@ from collections import namedtuple
 
 import re
 
-
 Position = namedtuple('Position', ['string', 'start', 'end'])
 
 
@@ -28,6 +27,19 @@ class Token(object):
         return '{:s}({!r})'.format(self.__class__.__name__, self.value)
 
 
+class KeywordToken(Token):
+    def __init__(self, value, position):
+        super(KeywordToken, self).__init__(value.upper(), position)
+
+
+class AsToken(KeywordToken):
+    pass
+
+
+class AscToken(KeywordToken):
+    pass
+
+
 class WhitespaceToken(Token):
     pass
 
@@ -40,15 +52,8 @@ class StringToken(Token):
     pass
 
 
-class KeywordToken(Token):
-    def __init__(self, value, position):
-        super(KeywordToken, self).__init__(value.upper(), position)
-
-
 class SelectToken(KeywordToken):
     pass
-
-
 
 
 class NameToken(Token):
@@ -105,8 +110,10 @@ def _keyword(s):
 
 def _make_default_lexer():
     lexer = Lexer()
-    lexer.add(_keyword('select'), SelectToken)
     lexer.add(_keyword('and'), OperatorToken)
+    lexer.add(_keyword('as'), AsToken)
+    lexer.add(_keyword('asc'), AscToken)
+    lexer.add(_keyword('select'), SelectToken)
     lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
     lexer.add(re.compile(r'\s+'), WhitespaceToken)
     lexer.add(re.compile(r'\w+'), NameToken)
