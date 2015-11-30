@@ -32,11 +32,147 @@ class KeywordToken(Token):
         super(KeywordToken, self).__init__(value.upper(), position)
 
 
+class AndToken(KeywordToken):
+    pass
+
+
 class AsToken(KeywordToken):
     pass
 
 
 class AscToken(KeywordToken):
+    pass
+
+
+class BetweenToken(KeywordToken):
+    pass
+
+
+class CaseToken(KeywordToken):
+    pass
+
+
+class ByToken(KeywordToken):
+    pass
+
+
+class ContainsToken(KeywordToken):
+    pass
+
+
+class DeleteToken(KeywordToken):
+    pass
+
+
+class DescToken(KeywordToken):
+    pass
+
+
+class DropToken(KeywordToken):
+    pass
+
+
+class ElseToken(KeywordToken):
+    pass
+
+
+class EndToken(KeywordToken):
+    pass
+
+
+class ExistsToken(KeywordToken):
+    pass
+
+
+class FromToken(KeywordToken):
+    pass
+
+
+class GroupToken(KeywordToken):
+    pass
+
+
+class HavingToken(KeywordToken):
+    pass
+
+
+class IlikeToken(KeywordToken):
+    pass
+
+
+class InToken(KeywordToken):
+    pass
+
+
+class IsToken(KeywordToken):
+    pass
+
+
+class IsNullToken(KeywordToken):
+    pass
+
+
+class JoinToken(KeywordToken):
+    pass
+
+
+class LeftToken(KeywordToken):
+    pass
+
+
+class LikeToken(KeywordToken):
+    pass
+
+
+class LikeRegexToken(KeywordToken):
+    pass
+
+
+class LimitToken(KeywordToken):
+    pass
+
+
+class NotToken(KeywordToken):
+    pass
+
+
+class NotNullToken(KeywordToken):
+    pass
+
+
+class NullToken(KeywordToken):
+    pass
+
+
+class OffsetToken(KeywordToken):
+    pass
+
+
+class OrToken(KeywordToken):
+    pass
+
+
+class OrderToken(KeywordToken):
+    pass
+
+
+class OuterToken(KeywordToken):
+    pass
+
+
+class SelectToken(KeywordToken):
+    pass
+
+
+class ThenToken(KeywordToken):
+    pass
+
+
+class UpdateToken(KeywordToken):
+    pass
+
+
+class WhereToken(KeywordToken):
     pass
 
 
@@ -49,10 +185,6 @@ class IntToken(Token):
 
 
 class StringToken(Token):
-    pass
-
-
-class SelectToken(KeywordToken):
     pass
 
 
@@ -110,14 +242,50 @@ def _keyword(s):
 
 def _make_default_lexer():
     lexer = Lexer()
-    lexer.add(_keyword('and'), OperatorToken)
+    _add_keywords(lexer)
+    return lexer
+
+
+def _add_keywords(lexer):
+    lexer.add(_keyword('and'), AndToken)
     lexer.add(_keyword('as'), AsToken)
     lexer.add(_keyword('asc'), AscToken)
+    lexer.add(_keyword('between'), BetweenToken)
+    lexer.add(_keyword('by'), ByToken)
+    lexer.add(_keyword('case'), CaseToken)
+    lexer.add(_keyword('contains'), ContainsToken)
+    lexer.add(_keyword('delete'), DeleteToken)
+    lexer.add(_keyword('desc'), DescToken)
+    lexer.add(_keyword('drop'), DropToken)
+    lexer.add(_keyword('else'), ElseToken)
+    lexer.add(_keyword('end'), EndToken)
+    lexer.add(_keyword('exists'), ExistsToken)
+    lexer.add(_keyword('from'), FromToken)
+    lexer.add(_keyword('group'), GroupToken)
+    lexer.add(_keyword('having'), HavingToken)
+    lexer.add(_keyword('ilike'), IlikeToken)
+    lexer.add(_keyword('in'), InToken)
+    lexer.add(_keyword('is'), IsToken)
+    lexer.add(_keyword('isnull'), IsNullToken)
+    lexer.add(_keyword('join'), JoinToken)
+    lexer.add(_keyword('left'), LeftToken)
+    lexer.add(_keyword('like'), LikeToken)
+    lexer.add(_keyword('like_regex'), LikeRegexToken)
+    lexer.add(_keyword('limit'), LimitToken)
+    lexer.add(_keyword('not'), NotToken)
+    lexer.add(_keyword('notnull'), NotNullToken)
+    lexer.add(_keyword('null'), NullToken)
+    lexer.add(_keyword('offset'), OffsetToken)
+    lexer.add(_keyword('or'), OrToken)
+    lexer.add(_keyword('order'), OrderToken)
+    lexer.add(_keyword('outer'), OuterToken)
     lexer.add(_keyword('select'), SelectToken)
+    lexer.add(_keyword('then'), ThenToken)
+    lexer.add(_keyword('update'), UpdateToken)
+    lexer.add(_keyword('where'), WhereToken)
     lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
     lexer.add(re.compile(r'\s+'), WhitespaceToken)
     lexer.add(re.compile(r'\w+'), NameToken)
-    return lexer
 
 
 tokenize = _make_default_lexer().tokenize
