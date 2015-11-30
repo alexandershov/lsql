@@ -96,6 +96,10 @@ class HavingToken(KeywordToken):
     pass
 
 
+class IcontainsToken(KeywordToken):
+    pass
+
+
 class IlikeToken(KeywordToken):
     pass
 
@@ -157,6 +161,14 @@ class OrderToken(KeywordToken):
 
 
 class OuterToken(KeywordToken):
+    pass
+
+
+class RlikeToken(KeywordToken):
+    pass
+
+
+class RilikeToken(KeywordToken):
     pass
 
 
@@ -280,6 +292,7 @@ def _add_keywords(lexer):
     lexer.add(_keyword('from'), FromToken)
     lexer.add(_keyword('group'), GroupToken)
     lexer.add(_keyword('having'), HavingToken)
+    lexer.add(_keyword('icontains'), IcontainsToken)
     lexer.add(_keyword('ilike'), IlikeToken)
     lexer.add(_keyword('in'), InToken)
     lexer.add(_keyword('is'), IsToken)
@@ -296,6 +309,8 @@ def _add_keywords(lexer):
     lexer.add(_keyword('or'), OrToken)
     lexer.add(_keyword('order'), OrderToken)
     lexer.add(_keyword('outer'), OuterToken)
+    lexer.add(_keyword('rilike'), RilikeToken)
+    lexer.add(_keyword('rlike'), RlikeToken)
     lexer.add(_keyword('select'), SelectToken)
     lexer.add(_keyword('then'), ThenToken)
     lexer.add(_keyword('update'), UpdateToken)
