@@ -1,11 +1,18 @@
 from __future__ import division, print_function, unicode_literals
 
+from collections import namedtuple
+
 import re
 
 
+Position = namedtuple('Position', ['string', 'start', 'end'])
+
+
 class Token(object):
-    def __init__(self, value):
+    def __init__(self, value, position):
+        # TODO: add string, and position in it
         self.value = value
+        self.position = position
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -14,7 +21,8 @@ class Token(object):
             return True
         return False
 
-    # TODO: add __hash__
+    def __hash__(self):
+        return hash((self.__class__, self.value))
 
     def __repr__(self):
         return '{:s}({!r})'.format(self.__class__.__name__, self.value)
@@ -32,13 +40,15 @@ class StringToken(Token):
     pass
 
 
-# TODO: should case-insensitive __eq__
 class KeywordToken(Token):
-    pass
+    def __init__(self, value, position):
+        super(KeywordToken, self).__init__(value.upper(), position)
 
 
 class SelectToken(KeywordToken):
     pass
+
+
 
 
 class NameToken(Token):
@@ -66,26 +76,41 @@ class Lexer(object):
     def add(self, regex, token_class):
         self._rules.append((regex, token_class))
 
-    def tokenize(self, string):
-        pos = 0
-        while pos < len(string):
+    def tokenize_with_whitespaces(self, string):
+        start = 0
+        while start < len(string):
             for regex, token_class in self._rules:
-                m = regex.match(string, pos)
+                m = regex.match(string, start)
                 if not m:
                     continue
-                if token_class is not WhitespaceToken:
-                    yield token_class(string[pos:m.end()])
-                pos = m.end()
+                position = Position(string, start, m.end())
+                yield token_class(string[start:m.end()], position)
+                start = m.end()
                 break
             else:
-                raise LexerError(string, pos)
+                raise LexerError(string, start)
+
+    def tokenize(self, string):
+        assert isinstance(string, unicode)
+        for token in self.tokenize_with_whitespaces(string):
+            if not isinstance(token, WhitespaceToken):
+                yield token
+
+
+def _keyword(s):
+    return re.compile(r'{}\b'.format(re.escape(s)), re.I | re.U)
+
 
 # TODO: Parens
 
-# TODO: move rules to constructor
-_lexer = Lexer()
-_lexer.add(re.compile(r'select\b', re.I | re.U), SelectToken)
-_lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
-_lexer.add(re.compile(r'\s+'), WhitespaceToken)
-_lexer.add(re.compile(r'\w+'), NameToken)
-tokenize = _lexer.tokenize
+def _make_default_lexer():
+    lexer = Lexer()
+    lexer.add(_keyword('select'), SelectToken)
+    lexer.add(_keyword('and'), OperatorToken)
+    lexer.add(re.compile(r'\d+\w*', re.I | re.U), IntToken)
+    lexer.add(re.compile(r'\s+'), WhitespaceToken)
+    lexer.add(re.compile(r'\w+'), NameToken)
+    return lexer
+
+
+tokenize = _make_default_lexer().tokenize
