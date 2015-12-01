@@ -92,12 +92,14 @@ def test_number_literals(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-def test_funcall():
-    pass
-
-
-def test_special_characters():
-    pass
+@pytest.mark.parametrize('string, token', [
+    make_test_case(',', tokens.CommaToken),
+    make_test_case(')', tokens.ClosingParenToken),
+    make_test_case('(', tokens.OpeningParenToken),
+    make_test_case('.', tokens.PeriodToken),
+])
+def test_special_characters(string, token):
+    assert list(tokens.tokenize(string)) == [token]
 
 
 @pytest.mark.parametrize('string, token', [
@@ -109,7 +111,7 @@ def test_string_literals(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-# TODO: test '-3' as MinusToken(), NumberToken('3')
+# TODO: test '-3' as MinusToken(), NumberToken('3'), funcalls, etc
 def test_full_query():
     pass
 

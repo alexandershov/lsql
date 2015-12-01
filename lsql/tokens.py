@@ -274,6 +274,26 @@ class PowerToken(OperatorToken):
     pass
 
 
+class SpecialToken(Token):
+    pass
+
+
+class OpeningParenToken(SpecialToken):
+    pass
+
+
+class ClosingParenToken(SpecialToken):
+    pass
+
+
+class CommaToken(SpecialToken):
+    pass
+
+
+class PeriodToken(SpecialToken):
+    pass
+
+
 class LexerError(Exception):
     def __init__(self, string, pos):
         self.string = string
@@ -330,12 +350,20 @@ def _regex(s):
 
 def _make_default_lexer():
     lexer = Lexer()
+    _add_special(lexer)
     _add_keywords(lexer)
     _add_operators(lexer)
     _add_string_literals(lexer)
     _add_number_literals(lexer)
     _add_whitespace(lexer)
     return lexer
+
+
+def _add_special(lexer):
+    lexer.add(_regex(r'\)'), ClosingParenToken)
+    lexer.add(_regex(r'\,'), CommaToken)
+    lexer.add(_regex(r'\('), OpeningParenToken)
+    lexer.add(_regex(r'\.'), PeriodToken)
 
 
 def _add_keywords(lexer):
@@ -379,9 +407,9 @@ def _add_keywords(lexer):
     lexer.add(_keyword('update'), UpdateToken)
     lexer.add(_keyword('where'), WhereToken)
 
-
 # TODO: create _OPERATOR_CHARS based on _add_operators dynamically
 _OPERATOR_CHARS = '|/=><-%*!+^'
+
 
 def _add_operators(lexer):
     lexer.add(_operator('||'), ConcatToken)
