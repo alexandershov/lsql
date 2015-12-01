@@ -6,7 +6,7 @@ import pytest
 
 from lsql import tokens
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 def make_test_case(string, expected_token_class):
@@ -111,15 +111,35 @@ def test_string_literals(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-# TODO: funcalls
+# TODO: check token contents
 @pytest.mark.parametrize('string, expected_token_classes', [
     ('-3', [tokens.MinusToken, tokens.NumberToken]),
+    ("SELECT length(LINES) AS num_lines "
+     "FROM '/tmp' "
+     "WHERE ext = 'py' AND size > 3kb OR age(mtime) >= 1.5year "
+     "GROUP BY dir "
+     "ORDER BY size",
+     [tokens.SelectToken, tokens.NameToken, tokens.OpeningParenToken,
+      tokens.NameToken, tokens.ClosingParenToken, tokens.AsToken, tokens.NameToken,
+      tokens.FromToken, tokens.StringToken,
+      tokens.WhereToken, tokens.NameToken, tokens.EqToken, tokens.StringToken,
+      tokens.AndToken, tokens.NameToken, tokens.GtToken, tokens.NumberToken,
+      tokens.OrToken, tokens.NameToken, tokens.OpeningParenToken, tokens.NameToken,
+      tokens.ClosingParenToken, tokens.GteToken, tokens.NumberToken,
+      tokens.GroupToken, tokens.ByToken, tokens.NameToken,
+      tokens.OrderToken, tokens.ByToken, tokens.NameToken
+      ]),
 ])
 def test_full_query(string, expected_token_classes):
     assert_classes_equal(
         list(tokens.tokenize(string)),
         expected_token_classes
     )
+
+
+# TODO: several whitespaces, tabs, newlines, etc
+def test_whitespace():
+    pass
 
 
 def assert_classes_equal(objects, expected_classes):

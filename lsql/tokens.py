@@ -352,6 +352,7 @@ def _make_default_lexer():
     lexer = Lexer()
     _add_special(lexer)
     _add_keywords(lexer)
+    _add_names(lexer)
     _add_operators(lexer)
     _add_string_literals(lexer)
     _add_number_literals(lexer)
@@ -406,6 +407,10 @@ def _add_keywords(lexer):
     lexer.add(_keyword('then'), ThenToken)
     lexer.add(_keyword('update'), UpdateToken)
     lexer.add(_keyword('where'), WhereToken)
+
+
+def _add_names(lexer):
+    lexer.add(_regex(r'[^\W\d]\w*'), NameToken)
 
 # TODO: create _OPERATOR_CHARS based on _add_operators dynamically
 _OPERATOR_CHARS = '|/=><-%*!+^'
