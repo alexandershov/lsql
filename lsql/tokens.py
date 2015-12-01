@@ -1,10 +1,14 @@
 from __future__ import division, print_function, unicode_literals
 
 from collections import namedtuple
+import logging
 
 import re
 
 Position = namedtuple('Position', ['string', 'start', 'end'])
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class Token(object):
@@ -33,6 +37,7 @@ class KeywordToken(Token):
         super(KeywordToken, self).__init__(value.upper(), position)
 
 
+# TODO: make it operator token?
 class AndToken(KeywordToken):
     pass
 
@@ -57,6 +62,7 @@ class ByToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class ContainsToken(KeywordToken):
     pass
 
@@ -97,10 +103,12 @@ class HavingToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class IcontainsToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class IlikeToken(KeywordToken):
     pass
 
@@ -125,10 +133,12 @@ class LeftToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class LikeToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class LikeRegexToken(KeywordToken):
     pass
 
@@ -153,6 +163,7 @@ class OffsetToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class OrToken(KeywordToken):
     pass
 
@@ -165,10 +176,12 @@ class OuterToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class RlikeToken(KeywordToken):
     pass
 
 
+# TODO: make it operator token?
 class RilikeToken(KeywordToken):
     pass
 
@@ -209,7 +222,31 @@ class OperatorToken(Token):
     pass
 
 
+class ConcatToken(OperatorToken):
+    pass
+
+
 class DivToken(OperatorToken):
+    pass
+
+
+class EqToken(OperatorToken):
+    pass
+
+
+class GtToken(OperatorToken):
+    pass
+
+
+class GteToken(OperatorToken):
+    pass
+
+
+class LtToken(OperatorToken):
+    pass
+
+
+class LteToken(OperatorToken):
     pass
 
 
@@ -217,11 +254,23 @@ class MinusToken(OperatorToken):
     pass
 
 
+class ModuloToken(OperatorToken):
+    pass
+
+
 class MulToken(OperatorToken):
     pass
 
 
+class NeToken(OperatorToken):
+    pass
+
+
 class PlusToken(OperatorToken):
+    pass
+
+
+class PowerToken(OperatorToken):
     pass
 
 
@@ -246,9 +295,14 @@ class Lexer(object):
         start = 0
         while start < len(string):
             for regex, token_class in self._rules:
+                logger.debug('matching token {!r} with string {!r} at position {:d}'.format(
+                    token_class, string, start))
                 m = regex.match(string, start)
                 if not m:
+                    logger.debug('failed token {!r} with string {!r} at position {:d}'.format(
+                        token_class, string, start))
                     continue
+                logger.debug('success!')
                 position = Position(string, start, m.end())
                 yield token_class(string[start:m.end()], position)
                 start = m.end()
@@ -267,7 +321,7 @@ def _keyword(s):
     return re.compile(r'{}\b'.format(re.escape(s)), re.I | re.U)
 
 
-# TODO: use _regex in _keyword and _operator
+# TODO: use _regex in _keyword, _operator, and all _helper_regexes
 def _regex(s):
     return re.compile(s, re.U)
 
@@ -326,11 +380,24 @@ def _add_keywords(lexer):
     lexer.add(_keyword('where'), WhereToken)
 
 
+# TODO: create _OPERATOR_CHARS based on _add_operators dynamically
+_OPERATOR_CHARS = '|/=><-%*!+^'
+
 def _add_operators(lexer):
-    lexer.add(_operator(r'/'), DivToken)
-    lexer.add(_operator(r'-'), MinusToken)
-    lexer.add(_operator(r'*'), MulToken)
-    lexer.add(_operator(r'+'), PlusToken)
+    lexer.add(_operator('||'), ConcatToken)
+    lexer.add(_operator('/'), DivToken)
+    lexer.add(_operator('='), EqToken)
+    lexer.add(_operator('>'), GtToken)
+    lexer.add(_operator('>='), GteToken)
+    lexer.add(_operator('<'), LtToken)
+    lexer.add(_operator('<='), LteToken)
+    lexer.add(_operator('-'), MinusToken)
+    lexer.add(_operator('%'), ModuloToken)
+    lexer.add(_operator('*'), MulToken)
+    lexer.add(_operator('<>'), NeToken)
+    lexer.add(_operator('!='), NeToken)
+    lexer.add(_operator('+'), PlusToken)
+    lexer.add(_operator('^'), PowerToken)
 
 
 def _add_string_literals(lexer):
@@ -338,6 +405,7 @@ def _add_string_literals(lexer):
 
 
 def _add_number_literals(lexer):
+    # TODO: check this regexes
     lexer.add(_regex(r'\d+\.?\d*e\d+'), NumberToken)  # 2e10, 2.5e10
     lexer.add(_regex(r'\d+\.?\d*[^\W\d]+'), NumberToken)  # 2year, 2.5year
     lexer.add(_regex(r'\d+\.?\d*'), NumberToken)  # 2, 2.5
@@ -348,7 +416,7 @@ def _add_whitespace(lexer):
 
 
 def _operator(s):
-    return re.compile(re.escape(s), re.I)
+    return re.compile(r'{}(?![{}])'.format(re.escape(s), re.escape(_OPERATOR_CHARS)), re.I)
 
 
 tokenize = _make_default_lexer().tokenize

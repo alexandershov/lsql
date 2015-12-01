@@ -1,8 +1,12 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import logging
+
 import pytest
 
 from lsql import tokens
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def make_test_case(string, expected_token_class):
@@ -55,11 +59,20 @@ def test_keywords(string, token):
 
 
 @pytest.mark.parametrize('string, token', [
+    make_test_case('||', tokens.ConcatToken),
     make_test_case('/', tokens.DivToken),
+    make_test_case('=', tokens.EqToken),
+    make_test_case('>', tokens.GtToken),
+    make_test_case('>=', tokens.GteToken),
+    make_test_case('<', tokens.LtToken),
+    make_test_case('<=', tokens.LteToken),
     make_test_case('-', tokens.MinusToken),
+    make_test_case('%', tokens.ModuloToken),
     make_test_case('*', tokens.MulToken),
+    make_test_case('<>', tokens.NeToken),
+    make_test_case('!=', tokens.NeToken),
     make_test_case('+', tokens.PlusToken),
-    # TODO: add ^ (power), <>=, ||
+    make_test_case('^', tokens.PowerToken),
 ])
 def test_operators(string, token):
     assert list(tokens.tokenize(string)) == [token]
@@ -98,4 +111,9 @@ def test_string_literals(string, token):
 
 # TODO: test '-3' as MinusToken(), NumberToken('3')
 def test_full_query():
+    pass
+
+
+# TODO: test bad operators (`<=>`) etc
+def test_bad_queries():
     pass
