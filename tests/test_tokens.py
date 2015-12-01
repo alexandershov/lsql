@@ -111,9 +111,20 @@ def test_string_literals(string, token):
     assert list(tokens.tokenize(string)) == [token]
 
 
-# TODO: test '-3' as MinusToken(), NumberToken('3'), funcalls, etc
-def test_full_query():
-    pass
+# TODO: funcalls
+@pytest.mark.parametrize('string, expected_token_classes', [
+    ('-3', [tokens.MinusToken, tokens.NumberToken]),
+])
+def test_full_query(string, expected_token_classes):
+    assert_classes_equal(
+        list(tokens.tokenize(string)),
+        expected_token_classes
+    )
+
+
+def assert_classes_equal(objects, expected_classes):
+    classes = [obj.__class__ for obj in objects]
+    assert classes == expected_classes
 
 
 # TODO: test bad operators (`<=>`) etc
