@@ -137,9 +137,16 @@ def test_full_query(string, expected_token_classes):
     )
 
 
-# TODO: several whitespaces, tabs, newlines, etc
-def test_whitespace():
-    pass
+@pytest.mark.parametrize('string, expected_token_classes', [
+    ('SELECT  path', [tokens.SelectToken, tokens.NameToken]),  # two whitespaces
+    ('SELECT\tpath', [tokens.SelectToken, tokens.NameToken]),
+    ('SELECT\npath', [tokens.SelectToken, tokens.NameToken]),
+])
+def test_whitespace(string, expected_token_classes):
+    assert_classes_equal(
+        list(tokens.tokenize(string)),
+        expected_token_classes
+    )
 
 
 def assert_classes_equal(objects, expected_classes):
