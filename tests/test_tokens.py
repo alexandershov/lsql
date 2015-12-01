@@ -155,5 +155,9 @@ def assert_classes_equal(objects, expected_classes):
 
 
 # TODO: test bad operators (`<=>`) etc
-def test_bad_queries():
-    pass
+@pytest.mark.parametrize('string', [
+    'SELECT <=>',
+])
+def test_bad_queries(string):
+    with pytest.raises(tokens.LexerError):
+        list(tokens.tokenize(string))
