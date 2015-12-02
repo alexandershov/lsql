@@ -11,23 +11,22 @@ logger.addHandler(logging.NullHandler())
 class Token(object):
     def __init__(self, match):
         self._match = match
-        # TODO: rename value -> text
-        self.value = match.group()
+        self.text = match.group()
         self.start = match.start()
         self.end = match.end()
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        if self.value == other.value:
+        if self.text == other.text:
             return True
         return False
 
     def __hash__(self):
-        return hash((self.__class__, self.value))
+        return hash((self.__class__, self.text))
 
     def __repr__(self):
-        return '{:s}({!r})'.format(self.__class__.__name__, self.value)
+        return '{:s}({!r})'.format(self.__class__.__name__, self.text)
 
 
 class KeywordToken(Token):
