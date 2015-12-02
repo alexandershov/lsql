@@ -67,6 +67,15 @@ def test_keywords(string, token):
 
 
 @pytest.mark.parametrize('string, token', [
+    make_test_case('path', tokens.NameToken),
+    make_test_case('_path', tokens.NameToken),
+    make_test_case('path1', tokens.NameToken),
+])
+def test_names(string, token):
+    assert_tokenizes_to(string, [token])
+
+
+@pytest.mark.parametrize('string, token', [
     make_test_case('||', tokens.ConcatToken),
     make_test_case('/', tokens.DivToken),
     make_test_case('=', tokens.EqToken),
@@ -165,6 +174,8 @@ def assert_classes_equal(objects, expected_classes):
 # TODO: more test cases
 @pytest.mark.parametrize('string', [
     'SELECT <=>',
+    "SELECT 'x",  # unclosed single quote
+    "SELECT 'x''",  # unclosed single quote ('' is not a string end)
 ])
 def test_bad_queries(string):
     with pytest.raises(tokens.LexerError):
