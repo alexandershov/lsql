@@ -1,22 +1,20 @@
 from __future__ import division, print_function, unicode_literals
 
-from collections import namedtuple
 import logging
 
 import re
-
-Position = namedtuple('Position', ['string', 'start', 'end'])
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
 class Token(object):
-    # TODO: probably __init__ should receive the re.Match object as a single argument
-    def __init__(self, value, position):
-        # TODO: add string, and position in it
-        self.value = value
-        self.position = position
+    def __init__(self, match):
+        self._match = match
+        # TODO: rename value -> text
+        self.value = match.group()
+        self.start = match.start()
+        self.end = match.end()
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -33,8 +31,7 @@ class Token(object):
 
 
 class KeywordToken(Token):
-    def __init__(self, value, position):
-        super(KeywordToken, self).__init__(value.upper(), position)
+    pass
 
 
 # TODO: make it operator token?
@@ -317,15 +314,14 @@ class Lexer(object):
             for regex, token_class in self._rules:
                 logger.debug('matching token {!r} with string {!r} at position {:d}'.format(
                     token_class, string, start))
-                m = regex.match(string, start)
-                if not m:
+                match = regex.match(string, start)
+                if not match:
                     logger.debug('failed token {!r} with string {!r} at position {:d}'.format(
                         token_class, string, start))
                     continue
                 logger.debug('success!')
-                position = Position(string, start, m.end())
-                yield token_class(string[start:m.end()], position)
-                start = m.end()
+                yield token_class(match)
+                start = match.end()
                 break
             else:
                 raise LexerError(string, start)

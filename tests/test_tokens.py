@@ -1,12 +1,24 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from collections import namedtuple
 import pytest
 
 from lsql import tokens
 
 
+class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
+    def start(self):
+        return self.pos
+
+    def end(self):
+        return self.endpos
+
+    def group(self):
+        return self.string[self.pos:self.endpos]
+
+
 def make_test_case(string, expected_token_class):
-    return string, expected_token_class(string, tokens.Position(string, 0, len(string)))
+    return string, expected_token_class(Match(string, 0, len(string)))
 
 
 @pytest.mark.parametrize('string, token', [
