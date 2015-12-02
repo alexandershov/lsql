@@ -323,15 +323,12 @@ class Lexer(object):
 
 
 def _keyword(s):
-    return re.compile(r'{}\b'.format(re.escape(s)), re.I | re.U)
+    return _regex(r'{}\b'.format(re.escape(s)), re.I)
 
 
-# TODO: use _regex in _keyword, _operator, and all _helper_regexes
-def _regex(s):
-    return re.compile(s, re.U)
+def _regex(s, extra_flags=0):
+    return re.compile(s, re.U | extra_flags)
 
-
-# TODO: Parens
 
 def _make_default_lexer():
     lexer = Lexer()
@@ -430,11 +427,11 @@ def _add_number_literals(lexer):
 
 
 def _add_whitespace(lexer):
-    lexer.add(re.compile(r'\s+'), WhitespaceToken)
+    lexer.add(_regex(r'\s+'), WhitespaceToken)
 
 
 def _operator(s):
-    return re.compile(r'{}(?![{}])'.format(re.escape(s), re.escape(_OPERATOR_CHARS)), re.I)
+    return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(_OPERATOR_CHARS)))
 
 
 tokenize = _make_default_lexer().tokenize
