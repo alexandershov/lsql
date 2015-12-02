@@ -1,4 +1,4 @@
-from __future__ import division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
 
@@ -400,12 +400,12 @@ def _add_keywords(lexer):
 def _add_names(lexer):
     lexer.add(_regex(r'[^\W\d]\w*'), NameToken)
 
-# TODO: create _OPERATOR_CHARS based on _add_operators dynamically
-_OPERATOR_CHARS = '|/=><-%*!+^'
+# populated in _add_operators
+_OPERATOR_CHARS = set()
 
 
 def _add_operators(lexer):
-    for pattern, operator_class in [
+    pattern_classes = [
         ('||', ConcatToken),
         ('/', DivToken),
         ('=', EqToken),
@@ -420,7 +420,10 @@ def _add_operators(lexer):
         ('!=', NeToken),
         ('+', PlusToken),
         ('^', PowerToken),
-    ]:
+    ]
+    for pattern, _ in pattern_classes:
+        _OPERATOR_CHARS.update(pattern)
+    for pattern, operator_class in pattern_classes:
         lexer.add(_operator(pattern), operator_class)
 
 
@@ -443,7 +446,8 @@ def _add_whitespace(lexer):
 
 
 def _operator(s):
-    return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(_OPERATOR_CHARS)))
+    chars = ''.join(_OPERATOR_CHARS)
+    return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(chars)))
 
 
 tokenize = _make_default_lexer().tokenize
