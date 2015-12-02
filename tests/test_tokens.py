@@ -63,7 +63,7 @@ def make_test_case(string, expected_token_class):
     make_test_case('where', tokens.WhereToken),
 ])
 def test_keywords(string, token):
-    assert list(tokens.tokenize(string)) == [token]
+    assert_tokenizes_to(string, [token])
 
 
 @pytest.mark.parametrize('string, token', [
@@ -83,7 +83,7 @@ def test_keywords(string, token):
     make_test_case('^', tokens.PowerToken),
 ])
 def test_operators(string, token):
-    assert list(tokens.tokenize(string)) == [token]
+    assert_tokenizes_to(string, [token])
 
 
 @pytest.mark.parametrize('string, token', [
@@ -97,7 +97,7 @@ def test_operators(string, token):
     make_test_case('2.year', tokens.NumberToken),
 ])
 def test_number_literals(string, token):
-    assert list(tokens.tokenize(string)) == [token]
+    assert_tokenizes_to(string, [token])
 
 
 @pytest.mark.parametrize('string, token', [
@@ -107,7 +107,7 @@ def test_number_literals(string, token):
     make_test_case('.', tokens.PeriodToken),
 ])
 def test_special_characters(string, token):
-    assert list(tokens.tokenize(string)) == [token]
+    assert_tokenizes_to(string, [token])
 
 
 @pytest.mark.parametrize('string, token', [
@@ -116,7 +116,7 @@ def test_special_characters(string, token):
     make_test_case("'te''st'", tokens.StringToken),
 ])
 def test_string_literals(string, token):
-    assert list(tokens.tokenize(string)) == [token]
+    assert_tokenizes_to(string, [token])
 
 
 # TODO: check token contents
@@ -169,3 +169,14 @@ def assert_classes_equal(objects, expected_classes):
 def test_bad_queries(string):
     with pytest.raises(tokens.LexerError):
         list(tokens.tokenize(string))
+
+
+def assert_tokenizes_to(string, expected_tokens):
+    actual_tokens = list(tokens.tokenize(string))
+    assert len(actual_tokens) == len(expected_tokens)
+    for actual, expected in zip(actual_tokens, expected_tokens):
+        assert same_tokens(actual, expected)
+
+
+def same_tokens(x, y):
+    return (x.__class__, x.text, x.start, x.end) == (y.__class__, y.text, y.start, y.end)
