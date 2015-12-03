@@ -69,7 +69,7 @@ def test_keywords(string, token):
 @pytest.mark.parametrize('string, token', [
     make_test_case('path', tokens.NameToken),
     make_test_case('_path', tokens.NameToken),
-    make_test_case('path1', tokens.NameToken),
+    make_test_case('path2', tokens.NameToken),
 ])
 def test_names(string, token):
     assert_tokenizes_to(string, [token])
@@ -104,6 +104,10 @@ def test_operators(string, token):
     make_test_case('2k', tokens.NumberToken),
     make_test_case('2.5year', tokens.NumberToken),
     make_test_case('2.year', tokens.NumberToken),
+    make_test_case('.2', tokens.NumberToken),
+    make_test_case('.2year', tokens.NumberToken),
+    make_test_case('.2e5', tokens.NumberToken),
+    make_test_case('2e5days', tokens.NumberToken),
 ])
 def test_number_literals(string, token):
     assert_tokenizes_to(string, [token])
@@ -173,9 +177,10 @@ def assert_classes_equal(objects, expected_classes):
 
 # TODO: more test cases
 @pytest.mark.parametrize('string', [
-    'SELECT <=>',
+    'SELECT <=>',  # unknown operator
     "SELECT 'x",  # unclosed single quote
     "SELECT 'x''",  # unclosed single quote ('' is not a string end)
+    "2path2",  # bad literal
 ])
 def test_bad_queries(string):
     with pytest.raises(tokens.LexerError):

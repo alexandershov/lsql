@@ -301,12 +301,11 @@ class Lexer(object):
         start = 0
         while start < len(string):
             for regex, token_class in self._rules:
-                logger.debug('matching token {!r} with string {!r} at position {:d}'.format(
-                    token_class, string, start))
+                logger.debug('matching regex {!r} with string {!r} at position {:d}'.format(
+                    regex.pattern, string, start))
                 match = regex.match(string, start)
                 if not match:
-                    logger.debug('failed token {!r} with string {!r} at position {:d}'.format(
-                        token_class, string, start))
+                    logger.debug('failed')
                     continue
                 logger.debug('success!')
                 yield token_class(match)
@@ -332,13 +331,13 @@ def _regex(pattern, extra_flags=0):
 
 def _make_default_lexer():
     lexer = Lexer()
-    _add_special(lexer)
     _add_keywords(lexer)
     _add_names(lexer)
     _add_operators(lexer)
     _add_string_literals(lexer)
     _add_number_literals(lexer)
     _add_whitespace(lexer)
+    _add_special(lexer)  # special should go after number_literals because of '.2'
     return lexer
 
 
@@ -434,9 +433,15 @@ def _add_string_literals(lexer):
 def _add_number_literals(lexer):
     # TODO: check this regexes
     for pattern, number_class in [
-        (r'\d+\.?\d*e\d+', NumberToken),  # 2e10, 2.5e10
-        (r'\d+\.?\d*[^\W\d]+', NumberToken),  # 2year, 2.5year
-        (r'\d+\.?\d*', NumberToken),  # 2, 2.5
+        (r'\d+\.?\d*e\d+\b', NumberToken),  # 2e10, 2.5e10
+        (r'\d+\.?\d*e\d+[^\W\d]+\b', NumberToken),  # 2e10years
+        (r'\d+\.?\d*[^\W\d]+\b', NumberToken),  # 2year, 2.5year
+        (r'\d+\.\d+\b', NumberToken),  # 2.5
+        (r'\d+\.', NumberToken),  # 2.
+        (r'\d+\b', NumberToken),  # 2
+        (r'\.\d+\b', NumberToken),  # .2
+        (r'\.\d+[^\W\d]+\b', NumberToken),  # .2year
+        (r'\.\d+e\d+\b', NumberToken),  # .2e5
     ]:
         lexer.add(_regex(pattern), number_class)
 
