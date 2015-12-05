@@ -429,16 +429,17 @@ def _add_operators(lexer):
 def _add_string_literals(lexer):
     lexer.add(_regex(r"'([^']|'')*'"), StringToken)
 
-# [[3].[2]][e10][suffix]
+
+# [[3].[2]][e[-]10][suffix]
 def _add_number_literals(lexer):
     # TODO: check this regexes
     for pattern, number_class in [
-        # [2].3[e5][years]
-        (r'\d*\.\d+(?:e\d+)?(?:[^\W\d]+)?\b', NumberToken),
-        # 2.[e5][years]
-        (r'\d+\.(?:(?:e\d+)?(?:[^\W\d]+)?\b)?', NumberToken),
-        # 2[e5][years]
-        (r'\d+(?:e\d+)?(?:[^\W\d]+)?\b', NumberToken),
+        # [2].3[e[-]5][years]
+        (r'\d*\.\d+(?:e-?\d+)?(?:[^\W\d]+)?\b', NumberToken),
+        # 2.[e[-]5][years]
+        (r'\d+\.(?:(?:e-?\d+)?(?:[^\W\d]+)?\b)?', NumberToken),
+        # 2[e[-]5][years]
+        (r'\d+(?:e-?\d+)?(?:[^\W\d]+)?\b', NumberToken),
     ]:
         lexer.add(_regex(pattern), number_class)
 
