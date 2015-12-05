@@ -97,17 +97,21 @@ def test_operators(string, token):
 
 @pytest.mark.parametrize('string, token', [
     make_test_case('23', tokens.NumberToken),
-    make_test_case('2.3', tokens.NumberToken),
-    make_test_case('2.', tokens.NumberToken),
-    make_test_case('2e5', tokens.NumberToken),
-    make_test_case('2.5e5', tokens.NumberToken),
-    make_test_case('2k', tokens.NumberToken),
-    make_test_case('2.5year', tokens.NumberToken),
-    make_test_case('2.year', tokens.NumberToken),
-    make_test_case('.2', tokens.NumberToken),
-    make_test_case('.2year', tokens.NumberToken),
-    make_test_case('.2e5', tokens.NumberToken),
-    make_test_case('2e5days', tokens.NumberToken),
+    make_test_case('23days', tokens.NumberToken),
+    make_test_case('23e52', tokens.NumberToken),
+    make_test_case('23e52days', tokens.NumberToken),
+    make_test_case('.23', tokens.NumberToken),
+    make_test_case('.23days', tokens.NumberToken),
+    make_test_case('.23e52', tokens.NumberToken),
+    make_test_case('.23e52days', tokens.NumberToken),
+    make_test_case('23.', tokens.NumberToken),
+    make_test_case('23.days', tokens.NumberToken),
+    make_test_case('23.e52', tokens.NumberToken),
+    make_test_case('23.e52days', tokens.NumberToken),
+    make_test_case('23.52', tokens.NumberToken),
+    make_test_case('23.52days', tokens.NumberToken),
+    make_test_case('23.52e52', tokens.NumberToken),
+    make_test_case('23.52e52days', tokens.NumberToken),
 ])
 def test_number_literals(string, token):
     assert_tokenizes_to(string, [token])
@@ -180,7 +184,8 @@ def assert_classes_equal(objects, expected_classes):
     'SELECT <=>',  # unknown operator
     "SELECT 'x",  # unclosed single quote
     "SELECT 'x''",  # unclosed single quote ('' is not a string end)
-    "2path2",  # bad literal
+    '2path2',  # bad literal
+    # TODO: what about '23.52.e52' should it raise an Error
 ])
 def test_bad_queries(string):
     with pytest.raises(tokens.LexerError):
