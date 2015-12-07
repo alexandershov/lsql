@@ -76,7 +76,11 @@ class SelectExpr(Expr):
         schema = OrderedDict()
         new_scope = MergedScope(table_type.schema, scope)
         for column_expr in self.column_exprs:
-            schema[column_expr] = column_expr.get_type(new_scope)
+            # TODO: handle 'SELECT name AS other_name
+            if isinstance(column_expr, NameExpr):
+                schema[column_expr.name] = column_expr.get_type(new_scope)
+            else:
+                schema[str(column_expr)] = column_expr.get_type(new_scope)
         self.where_expr.get_type()  # check type
         if self.limit_expr.get_type(scope) != LsqlInt:
             raise LsqlTypeError('{!s} is not a integer'.format(self.limit_expr))
