@@ -147,6 +147,7 @@ def test_string_literals(string, token):
 # TODO: check token contents
 @pytest.mark.parametrize('string, expected_token_classes', [
     ('-3', [lexer.MinusToken, lexer.NumberToken]),
+    ('+3', [lexer.PlusToken, lexer.NumberToken]),
     ("SELECT length(LINES) AS num_lines "
      "FROM '/tmp' "
      "WHERE ext = 'py' AND size > 3kb OR age(mtime) >= 1.5year "
