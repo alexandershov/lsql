@@ -125,7 +125,9 @@ def test_operators(string, token):
     make_test_case('23.52e+52', lexer.NumberToken),
     make_test_case('23.52e52days', lexer.NumberToken),
     make_test_case('23.52e-52days', lexer.NumberToken),
-    # different case
+    make_test_case('23.52e-52days', lexer.NumberToken),
+    make_test_case('23.52e+52days', lexer.NumberToken),
+    # checking that mixing upper/lower case is ok
     make_test_case('23.52E-52dAys', lexer.NumberToken),
 ])
 def test_number_literals(string, token):
