@@ -435,11 +435,11 @@ def _add_number_literals(lexer):
     # TODO: check this regexes
     for pattern, number_class in [
         # [2].3[e[-]5][years]
-        (r'(?P<int>\d*)\.(?P<float>\d+)(?P<exp>e-?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
+        (r'(?P<int>\d*)\.(?P<float>\d+)(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
         # 2.[e[-]5][years]
-        (r'(?P<int>\d+)\.(?:(?P<exp>e-?\d+)?(?P<suffix>[^\W\d]+)?\b)?', NumberToken),
+        (r'(?P<int>\d+)\.(?:(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b)?', NumberToken),
         # 2[e[-]5][years]
-        (r'(?P<int>\d+)(?P<exp>e-?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
+        (r'(?P<int>\d+)(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
     ]:
         lexer.add(_regex(pattern), number_class)
 
