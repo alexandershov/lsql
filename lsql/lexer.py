@@ -326,7 +326,7 @@ def _keyword(s):
 
 
 def _regex(pattern, extra_flags=0):
-    return re.compile(pattern, re.U | extra_flags)
+    return re.compile(pattern, re.UNICODE | extra_flags)
 
 
 def _make_default_lexer():
@@ -441,7 +441,7 @@ def _add_number_literals(lexer):
         # 2[e[-]5][years]
         (r'(?P<int>\d+)(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
     ]:
-        lexer.add(_regex(pattern), number_class)
+        lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), number_class)
 
 
 def _add_whitespace(lexer):

@@ -62,6 +62,7 @@ class MergedScope(object):
 
 
 class SelectExpr(Expr):
+    # TODO: add group by, offset
     def __init__(self, column_exprs, from_expr, where_expr, limit_expr):
         self.column_exprs = column_exprs
         self.from_expr = from_expr
@@ -69,7 +70,7 @@ class SelectExpr(Expr):
         self.limit_expr = limit_expr
 
     def get_type(self, scope):
-        # scope should be globals
+        # scope is globals
         table_type = self.from_expr.get_type()
         if not isinstance(table_type, LsqlTableType):
             raise LsqlTypeError("{!s} doesn't return a table".format(self.from_expr))
