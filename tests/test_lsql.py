@@ -82,7 +82,7 @@ def test_rlike_operator(where, results):
     ("text RILIKE '.*VERY.*'", [NAME_MD]),
     ("text RILIKE '.*.BADADUM.*'", []),
 ])
-def test_rlike_operator(where, results):
+def test_rilike_operator(where, results):
     assert get_results(where=where) == results
 
 

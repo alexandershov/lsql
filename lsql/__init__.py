@@ -156,8 +156,8 @@ class Interval(int):
         total_seconds = int(self)
         for n, name in parts:
             if total_seconds:
-                x, total_seconds = divmod(total_seconds, n)
-                human_parts.append((x, name))
+                num_of_name, total_seconds = divmod(total_seconds, n)
+                human_parts.append((num_of_name, name))
         max_parts = 3
         human_parts = human_parts[:max_parts]
         without_zeroes = [inflect(x, name) for x, name in human_parts if x]
