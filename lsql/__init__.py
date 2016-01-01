@@ -551,7 +551,7 @@ def get_grammar():
             + Optional(limit_clause))
 
 
-def main():
+def _main():
     args = parse_args()
     init()
     try:

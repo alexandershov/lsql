@@ -1,6 +1,6 @@
 import argparse
 
-from lsql.expr import BUILTIN_SCOPE
+from lsql.expr import BUILTIN_CONTEXT
 from lsql.lexer import tokenize
 from lsql.parser import parse
 
@@ -16,14 +16,14 @@ def main():
         nargs='?',
     )
     args = parser.parse_args()
-    table = _run_query(args.query_string, args.directory)
+    table = run_query(args.query_string, args.directory)
     _show_table(table)
 
 
-def _run_query(query_string, directory):
+def run_query(query_string, directory):
     tokens = tokenize(unicode(query_string, 'utf-8'))
     query = parse(tokens)
-    return query.get_value(BUILTIN_SCOPE, directory)
+    return query.get_value(BUILTIN_CONTEXT, directory)
 
 
 def _show_table(table):

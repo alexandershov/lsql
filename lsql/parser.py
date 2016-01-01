@@ -7,7 +7,6 @@ from lsql import expr
 from lsql import lexer
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)  # TODO(aershov182): remove this line
 
 
 class Parser(object):

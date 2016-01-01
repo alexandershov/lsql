@@ -299,3 +299,6 @@ def get_results(select='name', from_clause=FROM_CLAUSE, where='', order='', limi
 
 def assert_same_items(seq_x, seq_y):
     assert sorted(seq_x) == sorted(seq_y)
+
+
+

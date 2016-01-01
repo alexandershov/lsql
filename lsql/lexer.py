@@ -4,6 +4,8 @@ import logging
 
 import re
 
+from lsql import expr
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -217,7 +219,8 @@ class StringToken(Token):
 
 
 class NameToken(Token):
-    pass
+    def prefix(self, parser):
+        return expr.NameExpr(self.text)
 
 
 class OperatorToken(Token):
@@ -307,11 +310,34 @@ class LexerError(Exception):
 
 
 class BeginQueryToken(Token):
-    pass
+    def prefix(self, parser):
+        # TODO(aershov182): maybe get rid of this class and move this logic to
+        # Parser.parse()
+        select_expr = None
+        from_expr = None
+        if isinstance(parser.token, SelectToken):
+            parser.advance()
+            select_expr = get_delimited_exprs(parser, CommaToken)
+        if isinstance(parser.token, FromToken):
+            parser.advance()
+            from_expr = parser.expr()
+        return expr.QueryExpr(
+            select_expr=select_expr,
+            from_expr=from_expr
+        )
+
+
+def get_delimited_exprs(parser, delimiter_token_cls):
+    exprs = [parser.expr()]
+    while isinstance(parser.token, delimiter_token_cls):
+        exprs.append(parser.expr())
+    return exprs
 
 
 class EndQueryToken(Token):
-    pass
+    @property
+    def right_bp(self):
+        return 0
 
 
 class Lexer(object):
@@ -424,6 +450,7 @@ def _add_keywords(lexer):
 
 def _add_names(lexer):
     lexer.add(_regex(r'[^\W\d]\w*'), NameToken)
+
 
 # populated in _add_operators
 _OPERATOR_CHARS = set()
