@@ -483,17 +483,22 @@ class FunctionExpr(Expr):
         )
 
 
-class AndExpr(FunctionExpr):
-    def __init__(self, arg_exprs):
-        super(AndExpr, self).__init__('and', arg_exprs)
+class AndExpr(Expr):
+    def __init__(self, left_expr, right_expr):
+        self.left_expr = left_expr
+        self.right_expr = right_expr
 
     def get_value(self, context):
-        return all(arg_expr.get_value(context) for arg_expr in self.arg_exprs)
+        return all(arg_expr.get_value(context)
+                   for arg_expr in [self.left_expr, self.right_expr])
 
 
-class OrExpr(FunctionExpr):
-    def __init__(self, arg_exprs):
-        super(OrExpr, self).__init__('or', arg_exprs)
+# TODO(aershov182): DRY it up with AndExpr
+class OrExpr(Expr):
+    def __init__(self, left_expr, right_expr):
+        self.left_expr = left_expr
+        self.right_expr = right_expr
 
     def get_value(self, context):
-        return any(arg_expr.get_value(context) for arg_expr in self.arg_exprs)
+        return any(arg_expr.get_value(context)
+                   for arg_expr in [self.left_expr, self.right_expr])

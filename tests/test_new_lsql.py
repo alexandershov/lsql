@@ -51,6 +51,8 @@ def test_math(query, expected_results):
 @pytest.mark.parametrize('query, expected_results', [
     ("select NULL", ((expr.NULL,),) * 4),
     ("select name WHERE ext = 'py'", [('small.py',)]),
+    ("select name WHERE ext = 'py' OR no_ext = 'README'",
+     [('small.py',), ('README.md',)]),
 ])
 def test_query(query, expected_results):
     assert_same_items(

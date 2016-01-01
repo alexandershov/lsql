@@ -58,7 +58,10 @@ class KeywordToken(Token):
 
 # TODO: make it operator token?
 class AndToken(KeywordToken):
-    pass
+    right_bp = 200
+
+    def suffix(self, value, parser):
+        return expr.AndExpr(value, parser.expr(self.right_bp))
 
 
 class AsToken(KeywordToken):
@@ -185,7 +188,10 @@ class OffsetToken(KeywordToken):
 
 # TODO: make it operator token?
 class OrToken(KeywordToken):
-    pass
+    right_bp = 100
+
+    def suffix(self, value, parser):
+        return expr.OrExpr(value, parser.expr(self.right_bp))
 
 
 class OrderToken(KeywordToken):
@@ -328,27 +334,27 @@ class DivToken(OperatorToken):
 
 # TODO(aershov182): more consistent bps (multipliers of 100)
 class EqToken(OperatorToken):
-    right_bp = 50
+    right_bp = 250
     function_name = '='
 
 
 class GtToken(OperatorToken):
-    right_bp = 60
+    right_bp = 260
     function_name = '>'
 
 
 class GteToken(OperatorToken):
-    right_bp = 60
+    right_bp = 260
     function_name = '>='
 
 
 class LtToken(OperatorToken):
-    right_bp = 60
+    right_bp = 260
     function_name = '<'
 
 
 class LteToken(OperatorToken):
-    right_bp = 60
+    right_bp = 260
     function_name = '<='
 
 
@@ -371,7 +377,7 @@ class MulToken(OperatorToken):
 
 
 class NeToken(OperatorToken):
-    right_bp = 60
+    right_bp = 260
     function_name = '<>'
 
 
