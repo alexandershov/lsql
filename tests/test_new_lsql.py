@@ -67,7 +67,7 @@ def test_math(query, expected_results):
         ('LICENSE', 1),
         ('small', expr.NULL),
         ('README.md', 1),
-    ])
+    ]),
 ])
 def test_query(query, expected_results):
     assert_same_items(

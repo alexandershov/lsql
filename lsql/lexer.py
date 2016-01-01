@@ -476,6 +476,7 @@ class BeginQueryToken(Token):
         if isinstance(parser.token, OffsetToken):
             parser.advance()
             offset_expr = parser.expr()
+        parser.expect(EndQueryToken)
         return expr.QueryExpr(
             select_expr=select_expr,
             from_expr=from_expr,

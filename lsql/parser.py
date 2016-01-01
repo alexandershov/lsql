@@ -14,9 +14,14 @@ class Parser(object):
         self._check_bounds(self._index + 1)
         self._index += 1
 
-    def skip(self, expected_token_class):
+    def expect(self, expected_token_class):
         if not isinstance(self.token, expected_token_class):
-            raise ParserError('expected: {!s}'.format(expected_token_class))
+            raise ParserError('expected: {!s}, got: {!r}'.format(
+                expected_token_class, self.token)
+            )
+
+    def skip(self, expected_token_class):
+        self.expect(expected_token_class)
         self.advance()
 
     def peek(self):

@@ -313,7 +313,7 @@ class QueryExpr(Expr):
         if directory is not None and self.from_expr is not None:
             raise ExprError("You can't specify both directory and from")
         if self.from_expr is None:
-            self.from_expr = StringExpr(directory)
+            self.from_expr = StringExpr(directory or '.')
         if isinstance(self.from_expr, StringExpr):
             self.from_expr = FunctionExpr('files', [self.from_expr])
         if self.where_expr is None:
