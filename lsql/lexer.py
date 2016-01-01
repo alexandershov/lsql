@@ -226,6 +226,54 @@ class WhitespaceToken(Token):
     pass
 
 
+KILO = 1024
+MEGA = KILO * 1024
+GIGA = MEGA * 1024
+
+# unit -> num of bytes in 1 unit
+SIZE_SUFFIXES = {
+    'k': KILO,
+    'kb': KILO,
+    'm': MEGA,
+    'mb': MEGA,
+    'g': GIGA,
+    'gb': GIGA,
+}
+
+SECONDS_IN_DAY = 86400
+# unit -> num of seconds in 1 unit
+TIME_SUFFIXES = {
+    'minute': 60,
+    'minutes': 60,
+    'hour': 3600,
+    'hours': 3600,
+    'day': SECONDS_IN_DAY,
+    'days': SECONDS_IN_DAY,
+    'week': SECONDS_IN_DAY * 7,
+    'weeks': SECONDS_IN_DAY * 7,
+    'month': SECONDS_IN_DAY * 30,
+    'months': SECONDS_IN_DAY * 30,
+    'year': SECONDS_IN_DAY * 365,
+    'years': SECONDS_IN_DAY * 365,
+}
+
+
+def merge_dicts(x, y):
+    """
+    Merge two dicts into one.
+    :type x: dict
+    :type y: dict
+    :return: merged dictionary
+    """
+    merged = x.copy()
+    merged.update(y)
+    return merged
+
+
+LITERAL_SUFFIXES = merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
+
+
+
 class NumberToken(Token):
     @property
     def value(self):
@@ -240,6 +288,10 @@ class NumberToken(Token):
             value += float('0.{}'.format(float_part))
         if exp_part:
             value *= 10 ** float(exp_part)
+        if suffix:
+            if suffix not in LITERAL_SUFFIXES:
+                raise LexerError('unknown suffix: {!r}'.format(suffix), self.start)
+            value *= LITERAL_SUFFIXES[suffix]
         return value
 
     def prefix(self, parser):

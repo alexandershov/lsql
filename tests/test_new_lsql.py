@@ -21,7 +21,10 @@ def test_select_name():
 
 
 @pytest.mark.parametrize('query, expected_results', [
-    ('select 1', ((1,),) * 4)
+    ('select 1', ((1,),) * 4),
+    ('select 1.3', ((1.3,),) * 4),
+    ('select 1.3e2', ((130.0,),) * 4),
+    ('select 2hours', ((7200,),) * 4),
 ])
 def test_number_literal(query, expected_results):
     assert_same_items(
