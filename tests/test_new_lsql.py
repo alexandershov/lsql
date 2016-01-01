@@ -8,6 +8,7 @@ from lsql import main
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 
+# TODO(aershov182): remove assert_same_items/get_results duplication in tests
 
 def test_select_name():
     assert_same_items(
@@ -27,6 +28,29 @@ def test_select_name():
     ('select 2hours', ((7200,),) * 4),
 ])
 def test_number_literal(query, expected_results):
+    assert_same_items(
+        get_results(query),
+        expected_results,
+    )
+
+
+@pytest.mark.parametrize('query, expected_results', [
+    ('select 1 + 3', ((4,),) * 4),
+    ('select 1 + 7 * 3', ((22,),) * 4),
+    ('select (-1-4-3) * 5', ((-40,),) * 4),
+    ('select 8 / (2 * +2)', ((2,),) * 4),
+])
+def test_math(query, expected_results):
+    assert_same_items(
+        get_results(query),
+        expected_results,
+    )
+
+
+@pytest.mark.parametrize('query, expected_results', [
+    ("select name where ext = 'py'", [('small',)]),
+])
+def _test_where(query, expected_results):
     assert_same_items(
         get_results(query),
         expected_results,

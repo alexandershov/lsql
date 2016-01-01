@@ -9,7 +9,6 @@ from lsql import expr
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-
 # binding powers:
 # * OR: 100
 # * AND: 200
@@ -273,7 +272,6 @@ def merge_dicts(x, y):
 LITERAL_SUFFIXES = merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
 
 
-
 class NumberToken(Token):
     @property
     def value(self):
@@ -309,19 +307,22 @@ class NameToken(Token):
 
 
 class OperatorToken(Token):
-    pass
+    function_name = None  # redefine me in subclasses
+
+    # TODO(aershov182): rename `value` to `left`
+    def suffix(self, value, parser):
+        right = parser.expr(self.right_bp)
+        return expr.FunctionExpr(self.function_name, [value, right])
 
 
 class ConcatToken(OperatorToken):
     right_bp = 300
-
-    def suffix(self, value, parser):
-        right = parser.expr()
-        return expr.FunctionExpr('||', [value, right])
+    function_name = '||'
 
 
 class DivToken(OperatorToken):
-    pass
+    right_bp = 500
+    function_name = '/'
 
 
 class EqToken(OperatorToken):
@@ -345,7 +346,11 @@ class LteToken(OperatorToken):
 
 
 class MinusToken(OperatorToken):
-    pass
+    right_bp = 400
+    function_name = '-'
+
+    def prefix(self, parser):
+        return expr.FunctionExpr('negate', [parser.expr(left_bp=10000)])
 
 
 class ModuloToken(OperatorToken):
@@ -353,7 +358,8 @@ class ModuloToken(OperatorToken):
 
 
 class MulToken(OperatorToken):
-    pass
+    right_bp = 500
+    function_name = '*'
 
 
 class NeToken(OperatorToken):
@@ -361,7 +367,11 @@ class NeToken(OperatorToken):
 
 
 class PlusToken(OperatorToken):
-    pass
+    right_bp = 400
+    function_name = '+'
+
+    def prefix(self, parser):
+        return parser.expr(left_bp=10000)
 
 
 class PowerToken(OperatorToken):
@@ -373,11 +383,18 @@ class SpecialToken(Token):
 
 
 class OpeningParenToken(SpecialToken):
-    pass
+    def prefix(self, parser):
+        if isinstance(parser.token, ClosingParenToken):
+            raise LexerError('expression expected', self.start())
+        result = parser.expr()
+        if not isinstance(parser.token, ClosingParenToken):
+            raise LexerError(') expected', parser.token.start)
+        parser.advance()
+        return result
 
 
 class ClosingParenToken(SpecialToken):
-    pass
+    right_bp = 0
 
 
 class CommaToken(SpecialToken):

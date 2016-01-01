@@ -1,12 +1,4 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
-import logging
-
-from lsql import expr
-from lsql import lexer
-
-logger = logging.getLogger(__name__)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 
 class Parser(object):
@@ -30,14 +22,13 @@ class Parser(object):
 
     def expr(self, left_bp=0):
         token = self.token
-        logger.debug('cur token: {!r}'.format(self.token))
         self.advance()
-        value = token.prefix(self)
+        left = token.prefix(self)
         while self.token.right_bp > left_bp:
             token = self.token
             self.advance()
-            value = token.suffix(value, self)
-        return value
+            left = token.suffix(left, self)
+        return left
 
     def _check_bounds(self, index):
         if index < 0 or index >= len(self._tokens):

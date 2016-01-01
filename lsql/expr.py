@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import numbers
 from collections import namedtuple, OrderedDict, Sized
 from datetime import datetime
 from functools import wraps
@@ -250,7 +251,12 @@ BUILTIN_CONTEXT = Context({
     'current_time': _CURRENT_TIME,
     'current_date': _CURRENT_DATE,
     'files': _files_table_function,
-    '||': sql_function(operator.add, [unicode, unicode, unicode])
+    '||': sql_function(operator.add, [unicode, unicode, unicode]),
+    '+': sql_function(operator.add, [numbers.Number, numbers.Number, numbers.Number]),
+    '-': sql_function(operator.sub, [numbers.Number, numbers.Number, numbers.Number]),
+    '*': sql_function(operator.mul, [numbers.Number, numbers.Number, numbers.Number]),
+    '/': sql_function(operator.div, [numbers.Number, numbers.Number, numbers.Number]),
+    'negate': sql_function(operator.neg, [numbers.Number, numbers.Number]),
 })
 
 
