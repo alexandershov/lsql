@@ -306,7 +306,11 @@ class LexerError(Exception):
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
 
 
-class QueryToken(Token):
+class QueryBeginToken(Token):
+    pass
+
+
+class QueryEndToken(Token):
     pass
 
 
@@ -336,11 +340,11 @@ class Lexer(object):
 
     def tokenize(self, string):
         assert isinstance(string, unicode)
-        # yield QueryToken(None)
+        yield QueryBeginToken(string, 0, len(string))
         for token in self.tokenize_with_whitespaces(string):
             if not isinstance(token, WhitespaceToken):
                 yield token
-        # yield EndToken()
+        yield QueryEndToken(string, 0, len(string))
 
 
 def _keyword(s):

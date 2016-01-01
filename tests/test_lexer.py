@@ -18,10 +18,22 @@ class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
 
 
 def make_test_case(string, expected_token_class):
-    return string, expected_token_class(string, 0, len(string))
+    expected_tokens = [
+        lexer.QueryBeginToken(string, 0, len(string)),
+        expected_token_class(string, 0, len(string)),
+        lexer.QueryEndToken(string, 0, len(string)),
+    ]
+    return string, expected_tokens
 
 
-@pytest.mark.parametrize('string, token', [
+def wrap_in_begin_end(token_classes):
+    wrapped = [lexer.QueryBeginToken]
+    wrapped.extend(token_classes)
+    wrapped.append(lexer.QueryEndToken)
+    return wrapped
+
+
+@pytest.mark.parametrize('string, tokens', [
     make_test_case('and', lexer.AndToken),
     make_test_case('as', lexer.AsToken),
     make_test_case('asc', lexer.AscToken),
@@ -62,20 +74,20 @@ def make_test_case(string, expected_token_class):
     make_test_case('update', lexer.UpdateToken),
     make_test_case('where', lexer.WhereToken),
 ])
-def test_keywords(string, token):
-    assert_tokenizes_to(string, [token])
+def test_keywords(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
-@pytest.mark.parametrize('string, token', [
+@pytest.mark.parametrize('string, tokens', [
     make_test_case('path', lexer.NameToken),
     make_test_case('_path', lexer.NameToken),
     make_test_case('path2', lexer.NameToken),
 ])
-def test_names(string, token):
-    assert_tokenizes_to(string, [token])
+def test_names(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
-@pytest.mark.parametrize('string, token', [
+@pytest.mark.parametrize('string, tokens', [
     make_test_case('||', lexer.ConcatToken),
     make_test_case('/', lexer.DivToken),
     make_test_case('=', lexer.EqToken),
@@ -91,11 +103,11 @@ def test_names(string, token):
     make_test_case('+', lexer.PlusToken),
     make_test_case('^', lexer.PowerToken),
 ])
-def test_operators(string, token):
-    assert_tokenizes_to(string, [token])
+def test_operators(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
-@pytest.mark.parametrize('string, token', [
+@pytest.mark.parametrize('string, tokens', [
     make_test_case('23', lexer.NumberToken),
     make_test_case('23days', lexer.NumberToken),
     make_test_case('23e52', lexer.NumberToken),
@@ -130,48 +142,48 @@ def test_operators(string, token):
     # checking that mixing upper/lower case is ok
     make_test_case('23.52E-52dAys', lexer.NumberToken),
 ])
-def test_number_literals(string, token):
-    assert_tokenizes_to(string, [token])
+def test_number_literals(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
-@pytest.mark.parametrize('string, token', [
+@pytest.mark.parametrize('string, tokens', [
     make_test_case(',', lexer.CommaToken),
     make_test_case(')', lexer.ClosingParenToken),
     make_test_case('(', lexer.OpeningParenToken),
     make_test_case('.', lexer.PeriodToken),
 ])
-def test_special_characters(string, token):
-    assert_tokenizes_to(string, [token])
+def test_special_characters(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
-@pytest.mark.parametrize('string, token', [
+@pytest.mark.parametrize('string, tokens', [
     make_test_case("''", lexer.StringToken),
     make_test_case("'test'", lexer.StringToken),
     make_test_case("'te''st'", lexer.StringToken),
 ])
-def test_string_literals(string, token):
-    assert_tokenizes_to(string, [token])
+def test_string_literals(string, tokens):
+    assert_tokenizes_to(string, tokens)
 
 
 # TODO: check token contents
 @pytest.mark.parametrize('string, expected_token_classes', [
-    ('-3', [lexer.MinusToken, lexer.NumberToken]),
-    ('+3', [lexer.PlusToken, lexer.NumberToken]),
+    ('-3', wrap_in_begin_end([lexer.MinusToken, lexer.NumberToken])),
+    ('+3', wrap_in_begin_end([lexer.PlusToken, lexer.NumberToken])),
     ("SELECT length(LINES) AS num_lines "
      "FROM '/tmp' "
      "WHERE ext = 'py' AND size > 3kb OR age(mtime) >= 1.5year "
      "GROUP BY dir "
      "ORDER BY size",
-     [lexer.SelectToken, lexer.NameToken, lexer.OpeningParenToken,
-      lexer.NameToken, lexer.ClosingParenToken, lexer.AsToken, lexer.NameToken,
-      lexer.FromToken, lexer.StringToken,
-      lexer.WhereToken, lexer.NameToken, lexer.EqToken, lexer.StringToken,
-      lexer.AndToken, lexer.NameToken, lexer.GtToken, lexer.NumberToken,
-      lexer.OrToken, lexer.NameToken, lexer.OpeningParenToken, lexer.NameToken,
-      lexer.ClosingParenToken, lexer.GteToken, lexer.NumberToken,
-      lexer.GroupToken, lexer.ByToken, lexer.NameToken,
-      lexer.OrderToken, lexer.ByToken, lexer.NameToken
-      ]),
+     wrap_in_begin_end([lexer.SelectToken, lexer.NameToken, lexer.OpeningParenToken,
+                        lexer.NameToken, lexer.ClosingParenToken, lexer.AsToken, lexer.NameToken,
+                        lexer.FromToken, lexer.StringToken,
+                        lexer.WhereToken, lexer.NameToken, lexer.EqToken, lexer.StringToken,
+                        lexer.AndToken, lexer.NameToken, lexer.GtToken, lexer.NumberToken,
+                        lexer.OrToken, lexer.NameToken, lexer.OpeningParenToken, lexer.NameToken,
+                        lexer.ClosingParenToken, lexer.GteToken, lexer.NumberToken,
+                        lexer.GroupToken, lexer.ByToken, lexer.NameToken,
+                        lexer.OrderToken, lexer.ByToken, lexer.NameToken
+                        ])),
 ])
 def test_full_query(string, expected_token_classes):
     assert_classes_equal(
@@ -181,9 +193,10 @@ def test_full_query(string, expected_token_classes):
 
 
 @pytest.mark.parametrize('string, expected_token_classes', [
-    ('SELECT  path', [lexer.SelectToken, lexer.NameToken]),  # two whitespaces
-    ('SELECT\tpath', [lexer.SelectToken, lexer.NameToken]),
-    ('SELECT\npath', [lexer.SelectToken, lexer.NameToken]),
+    # two whitespaces
+    ('SELECT  path', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
+    ('SELECT\tpath', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
+    ('SELECT\npath', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
 ])
 def test_whitespace(string, expected_token_classes):
     assert_classes_equal(
