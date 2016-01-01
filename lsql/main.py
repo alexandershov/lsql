@@ -28,7 +28,7 @@ def run_query(query_string, directory):
 
 def _show_table(table):
     for row in table:
-        print('\t'.join(row))
+        print('\t'.join(map(str, row)))
 
 
 if __name__ == '__main__':
