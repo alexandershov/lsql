@@ -1,6 +1,42 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
 
 from collections import namedtuple, OrderedDict
+from datetime import datetime
+
+
+# TODO(aershov182): maybe inherit from `dict`?
+class Scope(object):
+    """
+    Case-insensitive scope.
+    """
+
+    def __init__(self, items):
+        """
+        :param items: dictionary str -> value
+        """
+        self._items = items
+
+    def __getitem__(self, item):
+        item = item.upper()
+        return self._items[item]
+
+
+class Null(object):
+    pass
+
+
+NULL = Null()
+
+_CURRENT_TIME = datetime.utcnow()
+_CURRENT_DATE = _CURRENT_TIME.date()
+
+BUILTIN_SCOPE = Scope({
+    'NULL': NULL,
+    'CURRENT_TIME': _CURRENT_TIME,
+    'CURRENT_DATE': _CURRENT_DATE,
+})
+
 
 # TODO: Expr object should probably contain a reference to its location in the string
 # TODO: ... (and the string itself)
@@ -44,8 +80,8 @@ class LsqlFloat(LsqlType, float):
     pass
 
 
-class LsqlBool(LsqlType, bool):
-    pass
+# class LsqlBool(LsqlType, bool):
+#     pass
 
 
 class MergedScope(object):
@@ -73,7 +109,8 @@ class SelectExpr(Expr):
         # scope is globals
         table_type = self.from_expr.get_type()
         if not isinstance(table_type, LsqlTableType):
-            raise LsqlTypeError("{!s} doesn't return a table".format(self.from_expr))
+            raise LsqlTypeError(
+                    "{!s} doesn't return a table".format(self.from_expr))
         schema = OrderedDict()
         new_scope = MergedScope(table_type.schema, scope)
         for column_expr in self.column_exprs:
@@ -84,7 +121,8 @@ class SelectExpr(Expr):
                 schema[str(column_expr)] = column_expr.get_type(new_scope)
         self.where_expr.get_type()  # check type
         if self.limit_expr.get_type(scope) != LsqlInt:
-            raise LsqlTypeError('{!s} is not a integer'.format(self.limit_expr))
+            raise LsqlTypeError(
+                    '{!s} is not a integer'.format(self.limit_expr))
         return LsqlTableType(schema)
 
 
@@ -137,15 +175,18 @@ class FunctionExpr(Expr):
         function = scope[self.function_name]
         if function.signature.args_count != len(self.arg_exprs):
             raise LsqlTypeError(
-                'function {!s} takes {:d} arguments '
-                'but given {:d} arguments', function, function.signature.args_count, len(self.arg_exprs)
+                    'function {!s} takes {:d} arguments '
+                    'but given {:d} arguments', function,
+                    function.signature.args_count, len(self.arg_exprs)
             )
-        for i, (expected_type, expr) in enumerate(zip(function.signature.arg_types, self.arg_exprs)):
+        for i, (expected_type, expr) in enumerate(
+                zip(function.signature.arg_types, self.arg_exprs)):
             actual_type = expr.get_type(scope)
             if actual_type != expected_type:
                 raise LsqlTypeError(
-                    'arg #{:d} of function {!s} should be {!s}, '
-                    'got {!s} instead', i, function, expected_type, actual_type
+                        'arg #{:d} of function {!s} should be {!s}, '
+                        'got {!s} instead', i, function, expected_type,
+                        actual_type
                 )
         return function.signature.return_type
 

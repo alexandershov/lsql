@@ -18,7 +18,7 @@ class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
 
 
 def make_test_case(string, expected_token_class):
-    return string, expected_token_class(Match(string, 0, len(string)))
+    return string, expected_token_class(string, 0, len(string))
 
 
 @pytest.mark.parametrize('string, token', [

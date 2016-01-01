@@ -1,6 +1,13 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
+import logging
 
 from lsql import expr
+from lsql import lexer
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)  # TODO(aershov182): remove this line
 
 
 class Parser(object):
@@ -20,11 +27,11 @@ class Parser(object):
         return self._tokens[self._index]
 
     def parse(self):
-        self.advance()
         return self.expr(left_bp=0)
 
     def expr(self, left_bp=0):
         token = self.token
+        logger.debug('cur token: {!r}'.format(self.token))
         self.advance()
         value = token.prefix(self)
         while self.token.right_bp > left_bp:
@@ -36,3 +43,7 @@ class Parser(object):
     def _check_bounds(self, index):
         if index < 0 or index >= len(self._tokens):
             raise IndexError(index, len(self._tokens))
+
+
+def parse(tokens):
+    return Parser(tokens).parse()

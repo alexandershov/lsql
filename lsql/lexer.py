@@ -9,14 +9,30 @@ logger.addHandler(logging.NullHandler())
 
 
 class Token(object):
-    def __init__(self, match):
-        self._match = match
-        self.text = match.group()
-        self.start = match.start()
-        self.end = match.end()
+    @classmethod
+    def from_match(cls, match):
+        return cls(
+            text=match.group(),
+            start=match.start(),
+            end=match.end(),
+        )
+
+    def __init__(self, text, start, end):
+        self.text = text
+        self.start = start
+        self.end = end
 
     def __repr__(self):
         return '{:s}({!r})'.format(self.__class__.__name__, self.text)
+
+    def prefix(self, parser):
+        raise NotImplementedError(self._get_not_implemented_message('prefix'))
+
+    def suffix(self, value, parser):
+        raise NotImplementedError(self._get_not_implemented_message('suffix'))
+
+    def _get_not_implemented_message(self, method):
+        return 'method {!r} is not implemented by {!r}'.format(method, self)
 
 
 class KeywordToken(Token):
@@ -290,6 +306,10 @@ class LexerError(Exception):
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
 
 
+class QueryToken(Token):
+    pass
+
+
 class Lexer(object):
     def __init__(self):
         self._rules = []  # [(regex, token_class), ...]
@@ -308,7 +328,7 @@ class Lexer(object):
                     logger.debug('failed')
                     continue
                 logger.debug('success!')
-                yield token_class(match)
+                yield token_class.from_match(match)
                 start = match.end()
                 break
             else:
@@ -316,9 +336,11 @@ class Lexer(object):
 
     def tokenize(self, string):
         assert isinstance(string, unicode)
+        # yield QueryToken(None)
         for token in self.tokenize_with_whitespaces(string):
             if not isinstance(token, WhitespaceToken):
                 yield token
+        # yield EndToken()
 
 
 def _keyword(s):
