@@ -32,7 +32,7 @@ class Token(object):
         raise NotImplementedError(self._get_not_implemented_message('suffix'))
 
     def _get_not_implemented_message(self, method):
-        return 'method {!r} is not implemented by {!r}'.format(method, self)
+        return 'not implemented method .{!s}() in {!r}'.format(method, self)
 
 
 class KeywordToken(Token):
@@ -306,11 +306,11 @@ class LexerError(Exception):
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
 
 
-class QueryBeginToken(Token):
+class BeginQueryToken(Token):
     pass
 
 
-class QueryEndToken(Token):
+class EndQueryToken(Token):
     pass
 
 
@@ -340,11 +340,11 @@ class Lexer(object):
 
     def tokenize(self, string):
         assert isinstance(string, unicode)
-        yield QueryBeginToken(string, 0, len(string))
+        yield BeginQueryToken(string, 0, len(string))
         for token in self.tokenize_with_whitespaces(string):
             if not isinstance(token, WhitespaceToken):
                 yield token
-        yield QueryEndToken(string, 0, len(string))
+        yield EndQueryToken(string, 0, len(string))
 
 
 def _keyword(s):

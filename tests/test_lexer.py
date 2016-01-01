@@ -19,17 +19,17 @@ class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
 
 def make_test_case(string, expected_token_class):
     expected_tokens = [
-        lexer.QueryBeginToken(string, 0, len(string)),
+        lexer.BeginQueryToken(string, 0, len(string)),
         expected_token_class(string, 0, len(string)),
-        lexer.QueryEndToken(string, 0, len(string)),
+        lexer.EndQueryToken(string, 0, len(string)),
     ]
     return string, expected_tokens
 
 
 def wrap_in_begin_end(token_classes):
-    wrapped = [lexer.QueryBeginToken]
+    wrapped = [lexer.BeginQueryToken]
     wrapped.extend(token_classes)
-    wrapped.append(lexer.QueryEndToken)
+    wrapped.append(lexer.EndQueryToken)
     return wrapped
 
 
