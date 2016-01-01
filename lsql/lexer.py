@@ -166,7 +166,7 @@ class LikeRegexToken(KeywordToken):
 
 
 class LimitToken(KeywordToken):
-    pass
+    right_bp = 0
 
 
 class NotToken(KeywordToken):
@@ -183,7 +183,7 @@ class NullToken(KeywordToken):
 
 
 class OffsetToken(KeywordToken):
-    pass
+    right_bp = 0
 
 
 # TODO: make it operator token?
@@ -195,7 +195,7 @@ class OrToken(KeywordToken):
 
 
 class OrderToken(KeywordToken):
-    pass
+    right_bp = 0
 
 
 class OuterToken(KeywordToken):
@@ -414,7 +414,7 @@ class ClosingParenToken(SpecialToken):
 
 
 class CommaToken(SpecialToken):
-    pass
+    right_bp = 0
 
 
 class PeriodToken(SpecialToken):
@@ -438,6 +438,9 @@ class BeginQueryToken(Token):
         select_expr = None
         from_expr = None
         where_expr = None
+        order_expr = None
+        limit_expr = None
+        offset_expr = None
         if isinstance(parser.token, SelectToken):
             parser.advance()
             select_expr = get_delimited_exprs(parser, CommaToken)
@@ -447,16 +450,31 @@ class BeginQueryToken(Token):
         if isinstance(parser.token, WhereToken):
             parser.advance()
             where_expr = parser.expr()
+        if isinstance(parser.token, OrderToken):
+            parser.advance()
+            parser.skip(ByToken)
+            # TODO(aershov182): add ASC/DESC
+            order_expr = get_delimited_exprs(parser, CommaToken)
+        if isinstance(parser.token, LimitToken):
+            parser.advance()
+            limit_expr = parser.expr()
+        if isinstance(parser.token, OffsetToken):
+            parser.advance()
+            offset_expr = parser.expr()
         return expr.QueryExpr(
             select_expr=select_expr,
             from_expr=from_expr,
             where_expr=where_expr,
+            order_expr=order_expr,
+            limit_expr=limit_expr,
+            offset_expr=offset_expr,
         )
 
 
 def get_delimited_exprs(parser, delimiter_token_cls):
     exprs = [parser.expr()]
     while isinstance(parser.token, delimiter_token_cls):
+        parser.advance()
         exprs.append(parser.expr())
     return exprs
 

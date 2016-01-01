@@ -9,6 +9,7 @@ from lsql import main
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
 
+
 # TODO(aershov182): remove assert_same_items/get_results duplication in tests
 
 def test_select_name():
@@ -53,6 +54,14 @@ def test_math(query, expected_results):
     ("select name WHERE ext = 'py'", [('small.py',)]),
     ("select name WHERE ext = 'py' OR no_ext = 'README'",
      [('small.py',), ('README.md',)]),
+    ("select name WHERE 3 >= 2 AND type = 'dir'",
+     [('small',)]),
+    ("select name, no_ext ORDER BY name LIMIT 1", [
+        ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
+    ]),
+    ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
+        ('README.md', 'README')
+    ])
 ])
 def test_query(query, expected_results):
     assert_same_items(

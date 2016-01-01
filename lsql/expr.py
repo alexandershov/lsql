@@ -299,10 +299,14 @@ class Expr(object):
 
 
 class QueryExpr(Expr):
-    def __init__(self, select_expr, from_expr, where_expr):
+    def __init__(self, select_expr, from_expr, where_expr, order_expr,
+                 limit_expr, offset_expr):
         self.select_expr = select_expr
         self.from_expr = from_expr
         self.where_expr = where_expr
+        self.order_expr = order_expr
+        self.limit_expr = limit_expr
+        self.offset_expr = offset_expr
 
     def get_value(self, context, directory):
         if directory is not None and self.from_expr is not None:
@@ -313,6 +317,10 @@ class QueryExpr(Expr):
             self.from_expr = FunctionExpr('files', [self.from_expr])
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
+        if self.order_expr is None:
+            self.order_expr = []
+        if self.offset_expr is None:
+            self.offset_expr = LiteralExpr(0)
         rows = []
         from_type = self.from_expr.get_type(context)
         select_context = MergedContext(from_type, context)
@@ -330,6 +338,18 @@ class QueryExpr(Expr):
                     column = expr.get_value(row_context)
                     row.append(column)
                 rows.append(row)
+
+        def key(row):
+            # TODO(aershov182): `ORDER BY` context should depend on select_expr
+            result = [e.get_value(MergedContext(dict(zip(row_type, row)), context))
+                      for e in self.order_expr]
+            return result
+
+        rows = sorted(rows, key=key)
+        rows = rows[self.offset_expr.get_value(context):]
+        if self.limit_expr is not None:
+            rows = rows[:self.limit_expr.get_value(context)]
+
         return Table(row_type, rows)
 
 

@@ -1,6 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 
+class ParserError(Exception):
+    pass
+
+
 class Parser(object):
     def __init__(self, tokens):
         self._tokens = list(tokens)
@@ -9,6 +13,11 @@ class Parser(object):
     def advance(self):
         self._check_bounds(self._index + 1)
         self._index += 1
+
+    def skip(self, expected_token_class):
+        if not isinstance(self.token, expected_token_class):
+            raise ParserError('expected: {!s}'.format(expected_token_class))
+        self.advance()
 
     def peek(self):
         return self._tokens[self._index + 1]
