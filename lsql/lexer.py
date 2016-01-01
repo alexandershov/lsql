@@ -175,7 +175,8 @@ class NotNullToken(KeywordToken):
 
 
 class NullToken(KeywordToken):
-    pass
+    def prefix(self, parser):
+        return expr.LiteralExpr(expr.NULL)
 
 
 class OffsetToken(KeywordToken):

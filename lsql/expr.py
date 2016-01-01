@@ -34,7 +34,8 @@ class Context(object):
 
 
 class Null(object):
-    pass
+    def __repr__(self):
+        return 'NULL'
 
 
 NULL = Null()

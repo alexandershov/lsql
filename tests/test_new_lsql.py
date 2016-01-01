@@ -4,6 +4,7 @@ import pytest
 
 import os
 
+from lsql import expr
 from lsql import main
 
 DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -48,9 +49,9 @@ def test_math(query, expected_results):
 
 
 @pytest.mark.parametrize('query, expected_results', [
-    ("select name where ext = 'py'", [('small',)]),
+    ("select NULL", ((expr.NULL,),) * 4),
 ])
-def _test_where(query, expected_results):
+def test_query(query, expected_results):
     assert_same_items(
         get_results(query),
         expected_results,
