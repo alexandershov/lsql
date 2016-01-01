@@ -61,6 +61,12 @@ def test_math(query, expected_results):
     ]),
     ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
         ('README.md', 'README')
+    ]),
+    ('select name, length(lines)', [
+        ('small.py', 4),
+        ('LICENSE', 1),
+        ('small', expr.NULL),
+        ('README.md', 1),
     ])
 ])
 def test_query(query, expected_results):

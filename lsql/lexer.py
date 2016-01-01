@@ -10,11 +10,15 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # binding powers:
-# * OR: 100
-# * AND: 200
-# * ||: 300
-# * +-: 400
-# * */: 500
+# OR: 100
+# AND: 200
+# =, <>: 250
+# <, <=, >, >=: 260
+# ||: 300
+# +-: 400
+# */: 500
+# ^: 600
+# (: 700
 
 
 _MISSING = object()
@@ -399,6 +403,8 @@ class SpecialToken(Token):
 
 
 class OpeningParenToken(SpecialToken):
+    right_bp = 700
+
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
             raise LexerError('expression expected', self.start())
@@ -408,6 +414,15 @@ class OpeningParenToken(SpecialToken):
         parser.advance()
         return result
 
+    def suffix(self, value, parser):
+        if not isinstance(value, expr.NameExpr):
+            raise LexerError('expected name, got: {!r}'.format(value), self.start)
+        if isinstance(parser.token, ClosingParenToken):
+            args = []
+        else:
+            args = get_delimited_exprs(parser, CommaToken)
+        parser.skip(ClosingParenToken)
+        return expr.FunctionExpr(value.name, args)
 
 class ClosingParenToken(SpecialToken):
     right_bp = 0

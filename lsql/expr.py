@@ -266,6 +266,7 @@ BUILTIN_CONTEXT = Context({
     '<>': sql_function(operator.ne, [numbers.Number, numbers.Number, numbers.Number]),
     '^': sql_function(operator.pow, [numbers.Number, numbers.Number, numbers.Number]),
     '%': sql_function(operator.mod, [numbers.Number, numbers.Number, numbers.Number]),
+    'length': sql_function(len, [Sized, int]),
 })
 
 
