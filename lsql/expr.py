@@ -2,14 +2,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import namedtuple, OrderedDict, Sized
 from datetime import datetime
+from functools import wraps
 from grp import getgrgid
 from pwd import getpwuid
 from stat import S_IXUSR
 import errno
 import os
 
-
 # TODO(aershov182): maybe inherit from `dict`?
+import operator
+
+
 class Context(object):
     """
     Case-insensitive context.
@@ -174,7 +177,7 @@ class Stat(object):
     def __getitem__(self, item):
         name = Stat.ATTR_ALIASES.get(item, item)
         if name not in Stat.ATTRS:
-            raise ExprError('unknown column: {!r}'.format(name))
+            raise KeyError('unknown column: {!r}'.format(name))
         return getattr(self, name)
 
     @property
@@ -228,12 +231,26 @@ def _files_table_function(directory):
 
 _files_table_function.return_type = Stat.get_type()
 
+
+def sql_function(function, signature):
+    @wraps(function)
+    def wrapper(*args):
+        for arg in args:
+            if arg is NULL:
+                return NULL
+        return function(*args)
+
+    wrapper.return_type = signature[-1]
+    return wrapper
+
+
 # TODO(aershov182): probably we don't need to prefix private names with underscore
 BUILTIN_CONTEXT = Context({
     'null': NULL,
     'current_time': _CURRENT_TIME,
     'current_date': _CURRENT_DATE,
-    'files': _files_table_function
+    'files': _files_table_function,
+    '||': sql_function(operator.add, [unicode, unicode, unicode])
 })
 
 
@@ -283,7 +300,7 @@ class QueryExpr(Expr):
         select_context = MergedContext(from_type, context)
         row_type = OrderedDict()
         for i, expr in enumerate(self.select_expr):
-            row_type[get_name(expr, str(i))] = expr.get_type(select_context)
+            row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
         for from_row in self.from_expr.get_value(context):
             row = []
             for expr in self.select_expr:
@@ -374,7 +391,6 @@ class MergedContext(object):
                 pass
         raise KeyError(item)
 
-
     def __repr__(self):
         return 'MergedContext({!s})'.format(
             ', '.join(map(repr, self.contexts))
@@ -403,7 +419,7 @@ class LiteralExpr(Expr):
         self.value = value
 
     def get_type(self, scope):
-        raise NotImplementedError
+        return type(self.value)
 
     def get_value(self, context):
         return self.value

@@ -10,6 +10,17 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
+# binding powers:
+# * OR: 100
+# * AND: 200
+# * ||: 300
+# * +-: 400
+# * */: 500
+
+
+_MISSING = object()
+
+
 class Token(object):
     @classmethod
     def from_match(cls, match):
@@ -17,12 +28,17 @@ class Token(object):
             text=match.group(),
             start=match.start(),
             end=match.end(),
+            match=match,
         )
 
-    def __init__(self, text, start, end):
+    def __init__(self, text, start, end, match=_MISSING):
         self.text = text
         self.start = start
         self.end = end
+        if match == _MISSING:
+            self.match = None
+        else:
+            self.match = match
 
     def __repr__(self):
         return '{:s}({!r})'.format(self.__class__.__name__, self.text)
@@ -211,11 +227,28 @@ class WhitespaceToken(Token):
 
 
 class NumberToken(Token):
-    pass
+    @property
+    def value(self):
+        value = 0
+        int_part = self.match.group('int')
+        float_part = self.match.group('float')
+        exp_part = self.match.group('exp')
+        suffix = self.match.group('suffix')
+        if int_part:
+            value = int(int_part)
+        if float_part:
+            value += float('0.{}'.format(float_part))
+        if exp_part:
+            value *= 10 ** float(exp_part)
+        return value
+
+    def prefix(self, parser):
+        return expr.LiteralExpr(self.value)
 
 
 class StringToken(Token):
-    pass
+    def prefix(self, parser):
+        return expr.LiteralExpr(self.match.group('string'))
 
 
 class NameToken(Token):
@@ -228,7 +261,11 @@ class OperatorToken(Token):
 
 
 class ConcatToken(OperatorToken):
-    pass
+    right_bp = 300
+
+    def suffix(self, value, parser):
+        right = parser.expr()
+        return expr.FunctionExpr('||', [value, right])
 
 
 class DivToken(OperatorToken):
@@ -480,7 +517,7 @@ def _add_operators(lexer):
 
 
 def _add_string_literals(lexer):
-    lexer.add(_regex(r"'([^']|'')*'"), StringToken)
+    lexer.add(_regex(r"'(?P<string>(?:[^']|'')*)'"), StringToken)
 
 
 # [[3].[2]][e[-]10][suffix]
@@ -488,11 +525,11 @@ def _add_number_literals(lexer):
     # TODO: check this regexes
     for pattern, number_class in [
         # [2].3[e[-]5][years]
-        (r'(?P<int>\d*)\.(?P<float>\d+)(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
+        (r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b', NumberToken),
         # 2.[e[-]5][years]
-        (r'(?P<int>\d+)\.(?:(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b)?', NumberToken),
+        (r'(?P<int>\d+)\.(?P<float>)(?:(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b)?', NumberToken),
         # 2[e[-]5][years]
-        (r'(?P<int>\d+)(?P<exp>e[+-]?\d+)?(?P<suffix>[^\W\d]+)?\b', NumberToken),
+        (r'(?P<int>\d+)(?P<float>)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b', NumberToken),
     ]:
         lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), number_class)
 
