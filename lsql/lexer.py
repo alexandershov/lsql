@@ -111,7 +111,7 @@ class ExistsToken(KeywordToken):
 
 
 class FromToken(KeywordToken):
-    pass
+    right_bp = 0
 
 
 class GroupToken(KeywordToken):
@@ -219,7 +219,7 @@ class UpdateToken(KeywordToken):
 
 
 class WhereToken(KeywordToken):
-    pass
+    right_bp = 0
 
 
 class WhitespaceToken(Token):
@@ -326,24 +326,30 @@ class DivToken(OperatorToken):
     function_name = '/'
 
 
+# TODO(aershov182): more consistent bps (multipliers of 100)
 class EqToken(OperatorToken):
-    pass
+    right_bp = 50
+    function_name = '='
 
 
 class GtToken(OperatorToken):
-    pass
+    right_bp = 60
+    function_name = '>'
 
 
 class GteToken(OperatorToken):
-    pass
+    right_bp = 60
+    function_name = '>='
 
 
 class LtToken(OperatorToken):
-    pass
+    right_bp = 60
+    function_name = '<'
 
 
 class LteToken(OperatorToken):
-    pass
+    right_bp = 60
+    function_name = '<='
 
 
 class MinusToken(OperatorToken):
@@ -355,7 +361,8 @@ class MinusToken(OperatorToken):
 
 
 class ModuloToken(OperatorToken):
-    pass
+    right_bp = 500
+    function_name = '%'
 
 
 class MulToken(OperatorToken):
@@ -364,7 +371,8 @@ class MulToken(OperatorToken):
 
 
 class NeToken(OperatorToken):
-    pass
+    right_bp = 60
+    function_name = '<>'
 
 
 class PlusToken(OperatorToken):
@@ -376,7 +384,8 @@ class PlusToken(OperatorToken):
 
 
 class PowerToken(OperatorToken):
-    pass
+    right_bp = 600
+    function_name = '^'
 
 
 class SpecialToken(Token):
@@ -422,15 +431,20 @@ class BeginQueryToken(Token):
         # Parser.parse()
         select_expr = None
         from_expr = None
+        where_expr = None
         if isinstance(parser.token, SelectToken):
             parser.advance()
             select_expr = get_delimited_exprs(parser, CommaToken)
         if isinstance(parser.token, FromToken):
             parser.advance()
             from_expr = parser.expr()
+        if isinstance(parser.token, WhereToken):
+            parser.advance()
+            where_expr = parser.expr()
         return expr.QueryExpr(
             select_expr=select_expr,
-            from_expr=from_expr
+            from_expr=from_expr,
+            where_expr=where_expr,
         )
 
 

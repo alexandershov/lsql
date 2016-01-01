@@ -258,6 +258,14 @@ BUILTIN_CONTEXT = Context({
     '*': sql_function(operator.mul, [numbers.Number, numbers.Number, numbers.Number]),
     '/': sql_function(operator.div, [numbers.Number, numbers.Number, numbers.Number]),
     'negate': sql_function(operator.neg, [numbers.Number, numbers.Number]),
+    '>': sql_function(operator.gt, [numbers.Number, numbers.Number, numbers.Number]),
+    '>=': sql_function(operator.ge, [numbers.Number, numbers.Number, numbers.Number]),
+    '<': sql_function(operator.lt, [numbers.Number, numbers.Number, numbers.Number]),
+    '<=': sql_function(operator.le, [numbers.Number, numbers.Number, numbers.Number]),
+    '=': sql_function(operator.eq, [numbers.Number, numbers.Number, numbers.Number]),
+    '<>': sql_function(operator.ne, [numbers.Number, numbers.Number, numbers.Number]),
+    '^': sql_function(operator.pow, [numbers.Number, numbers.Number, numbers.Number]),
+    '%': sql_function(operator.mod, [numbers.Number, numbers.Number, numbers.Number]),
 })
 
 
@@ -291,9 +299,10 @@ class Expr(object):
 
 
 class QueryExpr(Expr):
-    def __init__(self, select_expr, from_expr):
+    def __init__(self, select_expr, from_expr, where_expr):
         self.select_expr = select_expr
         self.from_expr = from_expr
+        self.where_expr = where_expr
 
     def get_value(self, context, directory):
         if directory is not None and self.from_expr is not None:
@@ -302,6 +311,8 @@ class QueryExpr(Expr):
             self.from_expr = StringExpr(directory)
         if isinstance(self.from_expr, StringExpr):
             self.from_expr = FunctionExpr('files', [self.from_expr])
+        if self.where_expr is None:
+            self.where_expr = LiteralExpr(True)
         rows = []
         from_type = self.from_expr.get_type(context)
         select_context = MergedContext(from_type, context)
@@ -309,14 +320,16 @@ class QueryExpr(Expr):
         for i, expr in enumerate(self.select_expr):
             row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
         for from_row in self.from_expr.get_value(context):
-            row = []
-            for expr in self.select_expr:
-                column = expr.get_value(MergedContext(
-                    Context(from_row),
-                    context
-                ))
-                row.append(column)
-            rows.append(row)
+            row_context = MergedContext(
+                Context(from_row),
+                context
+            )
+            if self.where_expr.get_value(row_context):
+                row = []
+                for expr in self.select_expr:
+                    column = expr.get_value(row_context)
+                    row.append(column)
+                rows.append(row)
         return Table(row_type, rows)
 
 
