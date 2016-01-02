@@ -5,6 +5,7 @@ from collections import defaultdict, namedtuple, OrderedDict, Sized
 from datetime import datetime
 from functools import wraps, total_ordering
 from grp import getgrgid
+from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
 import errno
@@ -70,6 +71,9 @@ class Context(object):
     def __setitem__(self, key, value):
         self._items[key] = value
 
+    def __iter__(self):
+        return iter(self._items)
+
     def __repr__(self):
         return 'Context(items={!r})'.format(self._items)
 
@@ -89,6 +93,9 @@ class EmptyContext(Context):
 
     def __repr__(self):
         return 'EmptyContext()'
+
+    def __iter__(self):
+        pass
 
 
 class MergedContext(object):
@@ -115,6 +122,9 @@ class MergedContext(object):
         return 'MergedContext({!s})'.format(
             ', '.join(map(repr, self.contexts))
         )
+
+    def __iter__(self):
+        return chain.from_iterable(self.contexts)
 
 
 class Visitor(object):
@@ -676,6 +686,8 @@ class QueryExpr(Expr):
                 self.group_expr = GroupExpr([LiteralExpr(1)])
             else:
                 self.group_expr = NullExpr()
+        if has_agg_functions(self.group_expr):
+            raise ExprError("can't have aggregate functions in GROUP BY")
         if self.order_expr is None:
             self.order_expr = ListExpr([])
         if self.offset_expr is None:
@@ -730,6 +742,19 @@ class QueryExpr(Expr):
                     grouped_key.append(column)
                 grouped_key = tuple(grouped_key)
                 grouped[grouped_key].append(row)
+            for group_key, row_group in grouped.viewitems():
+                row_context = MergedContext(
+                    make_agg_context(from_type, row_group),
+                    context
+                )
+                cur_row = []
+                for i, expr in enumerate(self.select_expr):
+                    if expr in self.group_expr.exprs:
+                        column = group_key[i]
+                    else:
+                        column = expr.get_value(row_context)
+                    cur_row.append(column)
+                rows.append(cur_row)
         else:
             for row in filtered_rows:
                 row_context = MergedContext(
@@ -754,6 +779,13 @@ def get_name(expr, default):
     if isinstance(expr, NameExpr):
         return expr.name
     return default
+
+
+def make_agg_context(row_type, row_group):
+    items = {
+        name: (row[name] for row in row_group) for name in row_type
+    }
+    return Context(items)
 
 
 class Table(object):

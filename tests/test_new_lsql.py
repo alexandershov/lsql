@@ -85,7 +85,7 @@ def test_math(query, expected_results):
     ('select name where length(lines) between 2 and 4', [
         ('small.py',),
     ]),
-    # ('select count(*)', [(4,)]),
+    ('select count(name)', [(4,)]),
     # ('select count(*), sum(length(lines))', [(6,)])
 ])
 def test_query(query, expected_results):
