@@ -33,6 +33,24 @@ class Context(object):
         return 'Context(items={!r})'.format(self._items)
 
 
+class MergedContext(object):
+    def __init__(self, *contexts):
+        self.contexts = contexts
+
+    def __getitem__(self, item):
+        for context in self.contexts:
+            try:
+                return context[item]
+            except KeyError:
+                pass
+        raise KeyError(item)
+
+    def __repr__(self):
+        return 'MergedContext({!s})'.format(
+            ', '.join(map(repr, self.contexts))
+        )
+
+
 class FileTableContext(Context):
     @property
     def star_columns(self):
@@ -293,8 +311,12 @@ def sql_function(function, signature):
     return wrapper
 
 
+AGGR_FUNCTIONS = Context({
+
+})
+
 # TODO(aershov182): probably we don't need to prefix private names with underscore
-BUILTIN_CONTEXT = Context({
+BASE_CONTEXT = Context({
     'null': NULL,
     'current_time': _CURRENT_TIME,
     'current_date': _CURRENT_DATE,
@@ -315,6 +337,8 @@ BUILTIN_CONTEXT = Context({
     '%': sql_function(operator.mod, [numbers.Number, numbers.Number, numbers.Number]),
     'length': sql_function(len, [Sized, int]),
 })
+
+BUILTIN_CONTEXT = MergedContext(AGGR_FUNCTIONS, BASE_CONTEXT)
 
 
 # TODO(aershov182): add forbidden argument
@@ -396,6 +420,19 @@ class InExpr(Expr):
         value = self.value_expr.get_value(context)
         seq = [e.get_value(context) for e in self.exprs]
         return value in seq
+
+
+class BetweenExpr(Expr):
+    def __init__(self, value_expr, first_expr, last_expr):
+        self.value_expr = value_expr
+        self.first_expr = first_expr
+        self.last_expr = last_expr
+
+    def get_type(self, scope):
+        return bool
+
+    def get_value(self, context):
+        return self.first_expr.get_value(context) <= self.value_expr.get_value(context) <= self.last_expr.get_value(context)
 
 
 class QueryExpr(Expr):
@@ -528,28 +565,6 @@ class LsqlInt(LsqlType, int):
 
 class LsqlFloat(LsqlType, float):
     pass
-
-
-# class LsqlBool(LsqlType, bool):
-#     pass
-
-
-class MergedContext(object):
-    def __init__(self, *contexts):
-        self.contexts = contexts
-
-    def __getitem__(self, item):
-        for context in self.contexts:
-            try:
-                return context[item]
-            except KeyError:
-                pass
-        raise KeyError(item)
-
-    def __repr__(self):
-        return 'MergedContext({!s})'.format(
-            ', '.join(map(repr, self.contexts))
-        )
 
 
 class NameExpr(Expr):

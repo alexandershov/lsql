@@ -13,7 +13,7 @@ logger.addHandler(logging.NullHandler())
 # IN: 50
 # OR: 100
 # AND: 200
-# =, <>: 250
+# =, <>, BETWEEN: 250
 # <, <=, >, >=: 260
 # ||: 300
 # +-: 400
@@ -79,7 +79,13 @@ class AscToken(KeywordToken):
 
 
 class BetweenToken(KeywordToken):
-    pass
+    right_bp = 250
+
+    def suffix(self, value, parser):
+        first = parser.expr(left_bp=AndToken.right_bp)
+        parser.skip(AndToken)
+        last = parser.expr()
+        return expr.BetweenExpr(value, first, last)
 
 
 class CaseToken(KeywordToken):
@@ -93,6 +99,18 @@ class ByToken(KeywordToken):
 # TODO: make it operator token?
 class ContainsToken(KeywordToken):
     pass
+
+
+class CountToken(KeywordToken):
+    def prefix(self, parser):
+        parser.skip(OpeningParenToken)
+        if isinstance(parser.token, MulToken):
+            arg_expr = expr.LiteralExpr('1')
+            parser.advance()
+        else:
+            arg_expr = parser.expr()
+        parser.skip(ClosingParenToken)
+        return expr.FunctionExpr('count', [arg_expr])
 
 
 class DeleteToken(KeywordToken):
@@ -150,7 +168,6 @@ class InToken(KeywordToken):
         exprs = get_delimited_exprs(parser, CommaToken)
         parser.skip(ClosingParenToken)
         return expr.InExpr(value, exprs)
-
 
 
 class IsToken(KeywordToken):
@@ -434,6 +451,7 @@ class OpeningParenToken(SpecialToken):
         parser.skip(ClosingParenToken)
         return expr.FunctionExpr(value.name, args)
 
+
 class ClosingParenToken(SpecialToken):
     right_bp = 0
 
@@ -608,6 +626,7 @@ def _add_keywords(lexer):
         ('delete', DeleteToken),
         ('desc', DescToken),
         ('drop', DropToken),
+        ('count', CountToken),
         ('else', ElseToken),
         ('end', EndToken),
         ('exists', ExistsToken),
