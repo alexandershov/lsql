@@ -456,9 +456,14 @@ class BeginQueryToken(Token):
         order_expr = None
         limit_expr = None
         offset_expr = None
+        # TODO(aershov182): add .clause() method to tokens
         if isinstance(parser.token, SelectToken):
             parser.advance()
-            select_expr = get_delimited_exprs(parser, CommaToken)
+            if isinstance(parser.token, MulToken):
+                select_expr = expr.StarExpr()
+                parser.advance()
+            else:
+                select_expr = get_delimited_exprs(parser, CommaToken)
         if isinstance(parser.token, FromToken):
             parser.advance()
             from_expr = parser.expr()

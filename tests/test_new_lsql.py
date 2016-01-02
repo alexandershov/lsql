@@ -76,6 +76,11 @@ def test_query(query, expected_results):
     )
 
 
+def test_select_star():
+    # just checking that it works
+    assert len(get_results('select *')) == 4
+
+
 def test_concat():
     assert_same_items(
         get_results("select name || '_test'"), [

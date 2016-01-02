@@ -28,6 +28,7 @@ def run_query(query_string, directory):
 
 def _show_table(table):
     for row in table:
+        # TODO(aershov182): handle unicode
         print('\t'.join(map(str, row)))
 
 

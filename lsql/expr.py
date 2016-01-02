@@ -33,6 +33,12 @@ class Context(object):
         return 'Context(items={!r})'.format(self._items)
 
 
+class FileTableContext(Context):
+    @property
+    def star_columns(self):
+        return Stat.MAIN_ATTRS
+
+
 class Null(object):
     def __repr__(self):
         return 'NULL'
@@ -57,6 +63,14 @@ class Timestamp(int):
         return datetime.datetime.fromtimestamp(self).isoformat()
 
 
+class Mode(object):
+    def __init__(self, mode):
+        self.mode = mode
+
+    def __str__(self):
+        return oct(self.mode)
+
+
 class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
@@ -70,6 +84,8 @@ class Stat(object):
         'ext': 'extension',
         'is_exec': 'is_executable',
     }
+
+    MAIN_ATTRS = ['mode', 'owner', 'size', 'mtime', 'path']
 
     def __init__(self, path, depth):
         self.path = path
@@ -196,7 +212,7 @@ class Stat(object):
     @classmethod
     def get_type(cls):
         # TODO(aershov182): maybe create Scope class (that is the same as Context?)
-        return Context({
+        return FileTableContext({
             'fullpath': unicode,
             'size': int,
             'owner': unicode,
@@ -316,6 +332,12 @@ class QueryExpr(Expr):
             self.from_expr = StringExpr(directory or '.')
         if isinstance(self.from_expr, StringExpr):
             self.from_expr = FunctionExpr('files', [self.from_expr])
+        if isinstance(self.select_expr, StarExpr):
+            from_type = self.from_expr.get_type(context)
+            if hasattr(from_type, 'star_columns'):
+                self.select_expr = [
+                    NameExpr(column) for column in from_type.star_columns
+                ]
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
         if self.order_expr is None:
@@ -453,6 +475,10 @@ class NameExpr(Expr):
 
     def __repr__(self):
         return 'NameExpr(name={!r})'.format(self.name)
+
+
+class StarExpr(Expr):
+    pass
 
 
 class LiteralExpr(Expr):
