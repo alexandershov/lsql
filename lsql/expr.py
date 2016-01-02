@@ -425,17 +425,61 @@ def count_agg(items):
     return result
 
 
+def sum_agg(items):
+    result = 0
+    for item in items:
+        if item is not NULL:
+            result += item
+    return result
+
+
+def min_agg(items):
+    result = NULL
+    for item in items:
+        if result is NULL:
+            result = item
+        elif item is not NULL and item < result:
+            result = item
+    return result
+
+
+def max_agg(items):
+    result = NULL
+    for item in items:
+        if item is not NULL and item > result:
+            result = item
+    return result
+
+
+def avg_agg(items):
+    total = 0
+    count = 0
+    for item in items:
+        if item is not NULL:
+            total += item
+            count += 1
+    return total / count
+
+
 class AnyIterable(LsqlType):
+    pass
+
+
+class NumberIterable(LsqlType):
     pass
 
 
 TYPES = {
     numbers.Number, bool, unicode, int,
-    AnyIterable,
+    AnyIterable, NumberIterable,
 }
 
 AGG_FUNCTIONS = Context({
     'count': agg_function(count_agg, [AnyIterable, int]),
+    'sum': agg_function(sum_agg, [NumberIterable, int]),
+    'max': agg_function(max_agg, [NumberIterable, object]),
+    'min': agg_function(min_agg, [NumberIterable, numbers.Number]),
+    'avg': agg_function(avg_agg, [NumberIterable, numbers.Number]),
 })
 
 # TODO(aershov182): probably we don't need to prefix private names with underscore
@@ -547,7 +591,6 @@ class ListExpr(Expr):
         return True
 
 
-
 ASC = 1
 DESC = -1
 
@@ -646,7 +689,8 @@ class BetweenExpr(Expr):
     def __eq__(self, other):
         if not isinstance(other, BetweenExpr):
             return False
-        return (self.value_expr == other.value_expr) and (self.first_expr == other.first_expr) and (self.last_expr == other.last_expr)
+        return (self.value_expr == other.value_expr) and (self.first_expr == other.first_expr) and (
+        self.last_expr == other.last_expr)
 
 
 class QueryExpr(Expr):
@@ -781,9 +825,24 @@ def get_name(expr, default):
     return default
 
 
+class LazyList(object):
+    def __init__(self, row_group, name):
+        self._iterator = (row[name] for row in row_group)
+        self._list = None
+
+    def __iter__(self):
+        if self._list is None:
+            self._list = list(self._iterator)
+        return iter(self._list)
+
+    def __repr__(self):
+        iter(self)  # materialize list
+        return 'LazyList(iterator=iter({!r}))'.format(self._list)
+
+
 def make_agg_context(row_type, row_group):
     items = {
-        name: (row[name] for row in row_group) for name in row_type
+        name: LazyList(row_group, name) for name in row_type
     }
     return Context(items)
 
@@ -971,4 +1030,3 @@ class OrExpr(Expr):
         if not isinstance(other, OrExpr):
             return False
         return (self.left_expr == other.left_expr) and (self.right_expr == other.right_expr)
-

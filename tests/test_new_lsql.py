@@ -86,7 +86,11 @@ def test_math(query, expected_results):
         ('small.py',),
     ]),
     ('select count(name)', [(4,)]),
-    # ('select count(*), sum(length(lines))', [(6,)])
+    ('select max(size)', [(81,)]),  # small.py
+    ('select min(size)', [(13,)]),  # LICENSE
+    # ('select count(name), sum(length(lines))', [
+    #     (4, 6),
+    # ])
 ])
 def test_query(query, expected_results):
     assert_same_items(
@@ -102,9 +106,13 @@ def test_from():
     )
 
 
-def test_select_star():
+@pytest.mark.parametrize('query, expected_len', [
+    ('select *', 4),
+    ('select avg(size)', 1),
+])
+def test_result_len(query, expected_len):
     # just checking that it works
-    assert len(get_results('select *')) == 4
+    assert len(get_results(query)) == expected_len
 
 
 def test_concat():
