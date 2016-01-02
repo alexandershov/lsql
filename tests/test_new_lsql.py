@@ -59,6 +59,12 @@ def test_math(query, expected_results):
     ('select name order by size limit 1', [
         ('LICENSE',)
     ]),
+    ('select name order by length(lines) DESC, name ASC', [
+        ('small.py',),
+        ('LICENSE',),
+        ('README.md',),
+        ('small',),
+    ]),
     ("select name, no_ext ORDER BY name LIMIT 1", [
         ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
     ]),

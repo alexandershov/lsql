@@ -73,7 +73,8 @@ class AsToken(KeywordToken):
 
 
 class AscToken(KeywordToken):
-    pass
+    right_bp = 0
+    direction = expr.ASC
 
 
 class BetweenToken(KeywordToken):
@@ -98,7 +99,8 @@ class DeleteToken(KeywordToken):
 
 
 class DescToken(KeywordToken):
-    pass
+    right_bp = 0
+    direction = expr.DESC
 
 
 class DropToken(KeywordToken):
@@ -474,7 +476,24 @@ class BeginQueryToken(Token):
             parser.advance()
             parser.skip(ByToken)
             # TODO(aershov182): add ASC/DESC
-            order_expr = get_delimited_exprs(parser, CommaToken)
+            order_by_exprs = []
+            ob_expr = parser.expr()
+            if isinstance(parser.token, (AscToken, DescToken)):
+                direction = parser.token.direction
+                parser.advance()
+            else:
+                direction = expr.ASC
+            order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
+            while isinstance(parser.token, CommaToken):
+                parser.advance()
+                ob_expr = parser.expr()
+                if isinstance(parser.token, (AscToken, DescToken)):
+                    direction = parser.token.direction
+                    parser.advance()
+                else:
+                    direction = expr.ASC
+                order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
+            order_expr = order_by_exprs
         if isinstance(parser.token, LimitToken):
             parser.advance()
             limit_expr = parser.expr()

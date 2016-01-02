@@ -325,6 +325,44 @@ class Expr(object):
         raise NotImplementedError
 
 
+ASC = 1
+DESC = -1
+
+
+class OneOrderByExpr(Expr):
+    def __init__(self, expr, direction):
+        self.expr = expr
+        self.direction = direction
+
+    def get_value(self, context):
+        return self.expr.get_value(context)
+
+    def get_type(self, scope):
+        return self.expr.get_type(scope)
+
+
+@total_ordering
+class OrderByKey(object):
+    def __init__(self, row, exprs):
+        assert len(row) == len(exprs)
+        self.row = row
+        self.exprs = exprs
+
+    def __lt__(self, other):
+        assert len(self.row) == len(other.row)
+        for expr, x, y in zip(self.exprs, self.row, other.row):
+            if expr.direction == ASC:
+                op = operator.lt
+            else:
+                op = operator.gt
+            if op(x, y):
+                return True
+        return False
+
+    def __eq__(self, other):
+        return self.row == other.row
+
+
 class QueryExpr(Expr):
     def __init__(self, select_expr, from_expr, where_expr, order_expr,
                  limit_expr, offset_expr):
@@ -347,11 +385,11 @@ class QueryExpr(Expr):
             if hasattr(from_type, 'star_columns'):
                 self.select_expr = [
                     NameExpr(column) for column in from_type.star_columns
-                ]
+                    ]
             else:
                 self.select_expr = [
                     NameExpr(column) for column in from_type
-                ]
+                    ]
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
         if self.order_expr is None:
@@ -364,11 +402,13 @@ class QueryExpr(Expr):
         row_type = OrderedDict()
         for i, expr in enumerate(self.select_expr):
             row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
+
         def key(row):
             # TODO(aershov182): `ORDER BY` context should depend on select_expr
             result = [e.get_value(MergedContext(row, context))
                       for e in self.order_expr]
-            return result
+            return OrderByKey(result, self.order_expr)
+
         keys = []
         for from_row in self.from_expr.get_value(context):
             row_context = MergedContext(
