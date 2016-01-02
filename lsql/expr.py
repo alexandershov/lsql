@@ -43,6 +43,16 @@ class FileTableContext(Context):
         return ['name']
 
 
+# TODO(aershov182): check that it's correct
+class TaggedUnicode(unicode):
+    def __new__(cls, string, tags):
+        return super(TaggedUnicode, cls).__new__(cls, string)
+
+    def __init__(self, string, tags):
+        super(TaggedUnicode, self).__init__(string)
+        self.tags = tags
+
+
 @total_ordering
 class Null(object):
     def __repr__(self):
@@ -102,18 +112,25 @@ class Stat(object):
     MAIN_ATTRS = ['mode', 'owner', 'size', 'mtime', 'path']
 
     def __init__(self, path, depth):
-        self.path = path
+        self._path = path
         self.depth = depth
         self.__stat = os.lstat(path)
 
     @property
+    def path(self):
+        return TaggedUnicode(self._path, self.get_tags())
+
+    @property
     def fullpath(self):
-        return os.path.normpath(os.path.join(os.getcwd(), self.path))
+        return TaggedUnicode(
+            os.path.normpath(os.path.join(os.getcwd(), self._path)),
+            self.get_tags(),
+        )
 
     @property
     def size(self):
         if self.type == 'dir':
-            return get_dir_size(self.path)
+            return get_dir_size(self._path)
         return self.__stat.st_size
 
     @property
@@ -126,20 +143,20 @@ class Stat(object):
 
     @property
     def dir(self):
-        return os.path.dirname(self.path)
+        return os.path.dirname(self._path)
 
     @property
     def name(self):
-        return os.path.basename(self.path)
+        return TaggedUnicode(os.path.basename(self._path), self.get_tags())
 
     @property
     def extension(self):
-        extension = os.path.splitext(self.path)[1]
+        extension = os.path.splitext(self._path)[1]
         return extension[1:]  # skip dot
 
     @property
     def no_ext(self):
-        return os.path.splitext(self.name)[0]
+        return TaggedUnicode(os.path.splitext(self.name)[0], self.get_tags())
 
     @property
     def mode(self):
@@ -169,13 +186,13 @@ class Stat(object):
 
     @property
     def type(self):
-        if os.path.islink(self.path):
+        if os.path.islink(self._path):
             return 'link'
-        elif os.path.isdir(self.path):
+        elif os.path.isdir(self._path):
             return 'dir'
-        elif os.path.isfile(self.path):
+        elif os.path.isfile(self._path):
             return 'file'
-        elif os.path.ismount(self.path):
+        elif os.path.ismount(self._path):
             return 'mount'
         else:
             return 'unknown'
@@ -196,7 +213,7 @@ class Stat(object):
     def text(self):
         if self.type == 'dir':
             return NULL
-        with open(self.path, 'rb') as fileobj:
+        with open(self._path, 'rb') as fileobj:
             return fileobj.read()
 
     @property
