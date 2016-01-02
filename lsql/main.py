@@ -28,8 +28,10 @@ def main():
 
 def run_query(query_string, directory):
     tokens = tokenize(unicode(query_string, 'utf-8'))
+    # TODO(aershov182): check that user hasn't passed both FROM and directory
+    BUILTIN_CONTEXT['cwd'] = (directory or '.')
     query = parse(tokens)
-    return query.get_value(BUILTIN_CONTEXT, directory)
+    return query.get_value(BUILTIN_CONTEXT)
 
 
 def colored(text, color):

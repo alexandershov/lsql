@@ -29,13 +29,32 @@ class Context(object):
         item = item.lower()
         return self._items[item]
 
+    def __setitem__(self, key, value):
+        self._items[key] = value
+
     def __repr__(self):
         return 'Context(items={!r})'.format(self._items)
 
 
+class EmptyContext(Context):
+    def __init__(self):
+        pass
+
+    def __getitem__(self, item):
+        raise KeyError
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return 'EmptyContext()'
+
+
 class MergedContext(object):
     def __init__(self, *contexts):
-        self.contexts = contexts
+        self.my_context = Context({})
+        self.contexts = [self.my_context]
+        self.contexts.extend(contexts)
 
     def __getitem__(self, item):
         for context in self.contexts:
@@ -45,10 +64,34 @@ class MergedContext(object):
                 pass
         raise KeyError(item)
 
+    def __setitem__(self, key, value):
+        self.my_context[key] = value
+
     def __repr__(self):
         return 'MergedContext({!s})'.format(
             ', '.join(map(repr, self.contexts))
         )
+
+
+class Visitor(object):
+    def visit(self, node):
+        raise NotImplementedError
+
+
+class AggFunctionsVisitor(Visitor):
+    def __init__(self):
+        self.has_agg_functions = False
+
+    def visit(self, node):
+        if isinstance(node, FunctionExpr):
+            if node.function_name in AGGR_FUNCTIONS:
+                self.has_agg_functions = True
+
+
+def has_agg_functions(node):
+    visitor = AggFunctionsVisitor()
+    node.walk(visitor)
+    return visitor.has_agg_functions
 
 
 class FileTableContext(Context):
@@ -369,6 +412,39 @@ class Expr(object):
     def get_type(self, scope):
         raise NotImplementedError
 
+    def walk(self, visitor):
+        raise NotImplementedError
+
+    def get_value(self, context):
+        raise NotImplementedError
+
+    def check_type(self, scope):
+        raise NotImplementedError
+
+
+class NullExpr(Expr):
+    def walk(self, visitor):
+        pass
+
+
+class ListExpr(Expr):
+    def __init__(self, exprs):
+        self.exprs = exprs
+
+    def walk(self, visitor):
+        walk_iterable(visitor, self.exprs)
+
+    def check_type(self, scope):
+        for expr in self.exprs:
+            expr.check_type(scope)
+
+    def __iter__(self):
+        for expr in self.exprs:
+            yield expr
+
+    def __len__(self):
+        return len(self.exprs)
+
 
 ASC = 1
 DESC = -1
@@ -384,6 +460,9 @@ class OneOrderByExpr(Expr):
 
     def get_type(self, scope):
         return self.expr.get_type(scope)
+
+    def walk(self, visitor):
+        self.expr.walk(visitor)
 
 
 @total_ordering
@@ -421,6 +500,15 @@ class InExpr(Expr):
         seq = [e.get_value(context) for e in self.exprs]
         return value in seq
 
+    def walk(self, visitor):
+        self.value_expr.walk(visitor)
+        walk_iterable(visitor, self.exprs)
+
+
+def walk_iterable(visitor, exprs):
+    for expr in exprs:
+        expr.walk(visitor)
+
 
 class BetweenExpr(Expr):
     def __init__(self, value_expr, first_expr, last_expr):
@@ -432,7 +520,13 @@ class BetweenExpr(Expr):
         return bool
 
     def get_value(self, context):
-        return self.first_expr.get_value(context) <= self.value_expr.get_value(context) <= self.last_expr.get_value(context)
+        return self.first_expr.get_value(context) <= self.value_expr.get_value(context) <= self.last_expr.get_value(
+            context)
+
+    def walk(self, visitor):
+        self.value_expr.walk(visitor)
+        self.first_expr.walk(visitor)
+        self.last_expr.walk(visitor)
 
 
 class QueryExpr(Expr):
@@ -444,32 +538,40 @@ class QueryExpr(Expr):
         self.order_expr = order_expr
         self.limit_expr = limit_expr
         self.offset_expr = offset_expr
-
-    def get_value(self, context, directory):
-        if directory is not None and self.from_expr is not None:
-            raise ExprError("You can't specify both directory and from")
         if self.from_expr is None:
-            self.from_expr = LiteralExpr(directory or '.')
-        if isinstance(self.from_expr, LiteralExpr):
+            self.from_expr = NameExpr('cwd')
+        if isinstance(self.from_expr, (NameExpr, LiteralExpr)):
             self.from_expr = FunctionExpr('files', [self.from_expr])
-        from_type = self.from_expr.get_type(context)
+        from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
         if isinstance(self.select_expr, StarExpr):
             if hasattr(from_type, 'star_columns'):
-                self.select_expr = [
-                    NameExpr(column) for column in from_type.star_columns
-                    ]
+                self.select_expr = ListExpr(
+                    [
+                        NameExpr(column) for column in from_type.star_columns
+                        ])
             else:
-                self.select_expr = [
-                    NameExpr(column) for column in from_type
-                    ]
+                self.select_expr = ListExpr(
+                    [
+                        NameExpr(column) for column in from_type
+                        ])
         if self.select_expr is None:
-            self.select_expr = list(map(NameExpr, from_type.default_columns))
+            self.select_expr = ListExpr(list(map(NameExpr, from_type.default_columns)))
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
         if self.order_expr is None:
-            self.order_expr = []
+            self.order_expr = ListExpr([])
         if self.offset_expr is None:
             self.offset_expr = LiteralExpr(0)
+
+    def walk(self, visitor):
+        self.select_expr.walk(visitor)
+        self.from_expr.walk(visitor)
+        self.where_expr.walk(visitor)
+        self.order_expr.walk(visitor)
+        self.limit_expr.walk(visitor)
+        self.offset_expr.walk(visitor)
+
+    def get_value(self, context):
         rows = []
         from_type = self.from_expr.get_type(context)
         select_context = MergedContext(from_type, context)

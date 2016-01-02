@@ -491,7 +491,7 @@ class BeginQueryToken(Token):
                 select_expr = expr.StarExpr()
                 parser.advance()
             else:
-                select_expr = get_delimited_exprs(parser, CommaToken)
+                select_expr = expr.ListExpr(get_delimited_exprs(parser, CommaToken))
         if isinstance(parser.token, FromToken):
             parser.advance()
             from_expr = parser.expr()
@@ -519,7 +519,7 @@ class BeginQueryToken(Token):
                 else:
                     direction = expr.ASC
                 order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
-            order_expr = order_by_exprs
+            order_expr = expr.ListExpr(order_by_exprs)
         if isinstance(parser.token, LimitToken):
             parser.advance()
             limit_expr = parser.expr()
