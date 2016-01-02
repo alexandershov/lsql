@@ -86,6 +86,13 @@ def test_query(query, expected_results):
     )
 
 
+def test_from():
+    assert_same_items(
+        get_results("select 1 FROM '{}'".format(DIR), directory=None),
+        (((1,),) * 4)
+    )
+
+
 def test_select_star():
     # just checking that it works
     assert len(get_results('select *')) == 4
@@ -106,5 +113,5 @@ def assert_same_items(seq_x, seq_y):
     assert sorted(seq_x) == sorted(seq_y)
 
 
-def get_results(query):
-    return list(main.run_query(query, DIR))
+def get_results(query, directory=DIR):
+    return list(main.run_query(query, directory))
