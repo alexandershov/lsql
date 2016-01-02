@@ -384,6 +384,20 @@ class OrderByKey(object):
         return self.row == other.row
 
 
+class InExpr(Expr):
+    def __init__(self, value_expr, exprs):
+        self.value_expr = value_expr
+        self.exprs = exprs
+
+    def get_type(self, scope):
+        return bool
+
+    def get_value(self, context):
+        value = self.value_expr.get_value(context)
+        seq = [e.get_value(context) for e in self.exprs]
+        return value in seq
+
+
 class QueryExpr(Expr):
     def __init__(self, select_expr, from_expr, where_expr, order_expr,
                  limit_expr, offset_expr):

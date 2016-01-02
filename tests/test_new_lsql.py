@@ -78,6 +78,10 @@ def test_math(query, expected_results):
         ('small', expr.NULL),
         ('README.md', 1),
     ]),
+    ("select name where ext IN ('py', 'md')", [
+        ('small.py',),
+        ('README.md',),
+    ])
 ])
 def test_query(query, expected_results):
     assert_same_items(

@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # binding powers:
+# IN: 50
 # OR: 100
 # AND: 200
 # =, <>: 250
@@ -142,7 +143,14 @@ class IlikeToken(KeywordToken):
 
 
 class InToken(KeywordToken):
-    pass
+    right_bp = 50
+
+    def suffix(self, value, parser):
+        parser.skip(OpeningParenToken)
+        exprs = get_delimited_exprs(parser, CommaToken)
+        parser.skip(ClosingParenToken)
+        return expr.InExpr(value, exprs)
+
 
 
 class IsToken(KeywordToken):
