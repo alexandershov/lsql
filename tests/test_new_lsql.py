@@ -56,6 +56,9 @@ def test_math(query, expected_results):
      [('small.py',), ('README.md',)]),
     ("select name WHERE 3 >= 2 AND type = 'dir'",
      [('small',)]),
+    ('select name order by size limit 1', [
+        ('LICENSE',)
+    ]),
     ("select name, no_ext ORDER BY name LIMIT 1", [
         ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
     ]),

@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import numbers
 from collections import namedtuple, OrderedDict, Sized
 from datetime import datetime
-from functools import wraps
+from functools import wraps, total_ordering
 from grp import getgrgid
 from pwd import getpwuid
 from stat import S_IXUSR
@@ -39,9 +39,19 @@ class FileTableContext(Context):
         return Stat.MAIN_ATTRS
 
 
+@total_ordering
 class Null(object):
     def __repr__(self):
         return 'NULL'
+
+    def __nonzero__(self):
+        """
+        Null is always False in boolean context.
+        """
+        return False
+
+    def __lt__(self, other):
+        return True
 
 
 NULL = Null()
@@ -338,6 +348,10 @@ class QueryExpr(Expr):
                 self.select_expr = [
                     NameExpr(column) for column in from_type.star_columns
                 ]
+            else:
+                self.select_expr = [
+                    NameExpr(column) for column in from_type
+                ]
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
         if self.order_expr is None:
@@ -350,11 +364,18 @@ class QueryExpr(Expr):
         row_type = OrderedDict()
         for i, expr in enumerate(self.select_expr):
             row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
+        def key(row):
+            # TODO(aershov182): `ORDER BY` context should depend on select_expr
+            result = [e.get_value(MergedContext(row, context))
+                      for e in self.order_expr]
+            return result
+        keys = []
         for from_row in self.from_expr.get_value(context):
             row_context = MergedContext(
                 Context(from_row),
                 context
             )
+            keys.append(key(from_row))
             if self.where_expr.get_value(row_context):
                 row = []
                 for expr in self.select_expr:
@@ -362,13 +383,7 @@ class QueryExpr(Expr):
                     row.append(column)
                 rows.append(row)
 
-        def key(row):
-            # TODO(aershov182): `ORDER BY` context should depend on select_expr
-            result = [e.get_value(MergedContext(dict(zip(row_type, row)), context))
-                      for e in self.order_expr]
-            return result
-
-        rows = sorted(rows, key=key)
+        rows = [row for _, row in sorted(zip(keys, rows))]
         rows = rows[self.offset_expr.get_value(context):]
         if self.limit_expr is not None:
             rows = rows[:self.limit_expr.get_value(context)]
