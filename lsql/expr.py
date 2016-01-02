@@ -38,6 +38,10 @@ class FileTableContext(Context):
     def star_columns(self):
         return Stat.MAIN_ATTRS
 
+    @property
+    def default_columns(self):
+        return ['name']
+
 
 @total_ordering
 class Null(object):
@@ -380,8 +384,8 @@ class QueryExpr(Expr):
             self.from_expr = StringExpr(directory or '.')
         if isinstance(self.from_expr, StringExpr):
             self.from_expr = FunctionExpr('files', [self.from_expr])
+        from_type = self.from_expr.get_type(context)
         if isinstance(self.select_expr, StarExpr):
-            from_type = self.from_expr.get_type(context)
             if hasattr(from_type, 'star_columns'):
                 self.select_expr = [
                     NameExpr(column) for column in from_type.star_columns
@@ -390,6 +394,8 @@ class QueryExpr(Expr):
                 self.select_expr = [
                     NameExpr(column) for column in from_type
                     ]
+        if self.select_expr is None:
+            self.select_expr = list(map(NameExpr, from_type.default_columns))
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
         if self.order_expr is None:
