@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numbers
-from collections import namedtuple, OrderedDict, Sized
+from collections import defaultdict, namedtuple, OrderedDict, Sized
 from datetime import datetime
 from functools import wraps, total_ordering
 from grp import getgrgid
@@ -12,6 +12,41 @@ import os
 
 # TODO(aershov182): maybe inherit from `dict`?
 import operator
+
+
+class LsqlTypeError(Exception):
+    pass
+
+
+class LsqlNameError(LsqlTypeError):
+    def __init__(self, name):
+        self.name = name
+
+
+# TODO: do we need Lsql* prefix in class names?
+class LsqlType(object):
+    pass
+
+
+class LsqlTableType(LsqlType):
+    def __init__(self, schema):
+        self.schema = schema
+
+
+class LsqlFunction(object):
+    pass
+
+
+class LsqlString(LsqlType, unicode):
+    pass
+
+
+class LsqlInt(LsqlType, int):
+    pass
+
+
+class LsqlFloat(LsqlType, float):
+    pass
 
 
 class Context(object):
@@ -29,6 +64,9 @@ class Context(object):
         item = item.lower()
         return self._items[item]
 
+    def __contains__(self, item):
+        return item in self._items
+
     def __setitem__(self, key, value):
         self._items[key] = value
 
@@ -45,6 +83,9 @@ class EmptyContext(Context):
 
     def __setitem__(self, key, value):
         raise NotImplementedError
+
+    def __contains__(self, item):
+        return False
 
     def __repr__(self):
         return 'EmptyContext()'
@@ -67,6 +108,9 @@ class MergedContext(object):
     def __setitem__(self, key, value):
         self.my_context[key] = value
 
+    def __contains__(self, item):
+        return any((item in context) for context in self.contexts)
+
     def __repr__(self):
         return 'MergedContext({!s})'.format(
             ', '.join(map(repr, self.contexts))
@@ -84,7 +128,7 @@ class AggFunctionsVisitor(Visitor):
 
     def visit(self, node):
         if isinstance(node, FunctionExpr):
-            if node.function_name in AGGR_FUNCTIONS:
+            if node.function_name in AGG_FUNCTIONS:
                 self.has_agg_functions = True
 
 
@@ -354,8 +398,34 @@ def sql_function(function, signature):
     return wrapper
 
 
-AGGR_FUNCTIONS = Context({
+def agg_function(function, signature):
+    @wraps(function)
+    def wrapper(*args):
+        return function(*args)
 
+    wrapper.return_type = signature[-1]
+    return wrapper
+
+
+def count_agg(items):
+    result = 0
+    for item in items:
+        if item is not NULL:
+            result += 1
+    return result
+
+
+class AnyIterable(LsqlType):
+    pass
+
+
+TYPES = {
+    numbers.Number, bool, unicode, int,
+    AnyIterable,
+}
+
+AGG_FUNCTIONS = Context({
+    'count': agg_function(count_agg, [AnyIterable, int]),
 })
 
 # TODO(aershov182): probably we don't need to prefix private names with underscore
@@ -381,7 +451,7 @@ BASE_CONTEXT = Context({
     'length': sql_function(len, [Sized, int]),
 })
 
-BUILTIN_CONTEXT = MergedContext(AGGR_FUNCTIONS, BASE_CONTEXT)
+BUILTIN_CONTEXT = MergedContext(AGG_FUNCTIONS, BASE_CONTEXT)
 
 
 # TODO(aershov182): add forbidden argument
@@ -421,10 +491,19 @@ class Expr(object):
     def check_type(self, scope):
         raise NotImplementedError
 
+    def __eq__(self, other):
+        raise NotImplementedError
+
+    def __ne__(self, other):
+        return not (self == other)
+
 
 class NullExpr(Expr):
     def walk(self, visitor):
         pass
+
+    def __eq__(self, other):
+        return isinstance(other, NullExpr)
 
 
 class ListExpr(Expr):
@@ -432,6 +511,7 @@ class ListExpr(Expr):
         self.exprs = exprs
 
     def walk(self, visitor):
+        visitor.visit(self)
         walk_iterable(visitor, self.exprs)
 
     def check_type(self, scope):
@@ -444,6 +524,18 @@ class ListExpr(Expr):
 
     def __len__(self):
         return len(self.exprs)
+
+    def __repr__(self):
+        return 'ListExpr(exprs={!r})'.format(self.exprs)
+
+    def __eq__(self, other):
+        if not isinstance(other, ListExpr):
+            return False
+        for x, y in zip(self, other):
+            if x != y:
+                return False
+        return True
+
 
 
 ASC = 1
@@ -462,7 +554,13 @@ class OneOrderByExpr(Expr):
         return self.expr.get_type(scope)
 
     def walk(self, visitor):
+        visitor.visit(self)
         self.expr.walk(visitor)
+
+    def __eq__(self, other):
+        if not isinstance(other, OneOrderByExpr):
+            return False
+        return (self.expr == other.expr) and (self.direction == other.direction)
 
 
 @total_ordering
@@ -501,8 +599,14 @@ class InExpr(Expr):
         return value in seq
 
     def walk(self, visitor):
+        visitor.visit(self)
         self.value_expr.walk(visitor)
         walk_iterable(visitor, self.exprs)
+
+    def __eq__(self, other):
+        if not isinstance(other, InExpr):
+            return False
+        return (self.value_expr == other.value_expr) and (self.exprs == other.exprs)
 
 
 def walk_iterable(visitor, exprs):
@@ -524,17 +628,24 @@ class BetweenExpr(Expr):
             context)
 
     def walk(self, visitor):
+        visitor.visit(self)
         self.value_expr.walk(visitor)
         self.first_expr.walk(visitor)
         self.last_expr.walk(visitor)
 
+    def __eq__(self, other):
+        if not isinstance(other, BetweenExpr):
+            return False
+        return (self.value_expr == other.value_expr) and (self.first_expr == other.first_expr) and (self.last_expr == other.last_expr)
+
 
 class QueryExpr(Expr):
-    def __init__(self, select_expr, from_expr, where_expr, order_expr,
+    def __init__(self, select_expr, from_expr, where_expr, group_expr, order_expr,
                  limit_expr, offset_expr):
         self.select_expr = select_expr
         self.from_expr = from_expr
         self.where_expr = where_expr
+        self.group_expr = group_expr
         self.order_expr = order_expr
         self.limit_expr = limit_expr
         self.offset_expr = offset_expr
@@ -558,15 +669,24 @@ class QueryExpr(Expr):
             self.select_expr = ListExpr(list(map(NameExpr, from_type.default_columns)))
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
+        if has_agg_functions(self.where_expr):
+            raise ExprError("can't have aggregate functions in WHERE")
+        if self.group_expr is None:
+            if has_agg_functions(self.select_expr):
+                self.group_expr = GroupExpr([LiteralExpr(1)])
+            else:
+                self.group_expr = NullExpr()
         if self.order_expr is None:
             self.order_expr = ListExpr([])
         if self.offset_expr is None:
             self.offset_expr = LiteralExpr(0)
 
     def walk(self, visitor):
+        visitor.visit(self)
         self.select_expr.walk(visitor)
         self.from_expr.walk(visitor)
         self.where_expr.walk(visitor)
+        self.group_expr.walk(visitor)
         self.order_expr.walk(visitor)
         self.limit_expr.walk(visitor)
         self.offset_expr.walk(visitor)
@@ -585,6 +705,8 @@ class QueryExpr(Expr):
                       for e in self.order_expr]
             return OrderByKey(result, self.order_expr)
 
+        filtered_rows = []
+
         keys = []
         for from_row in self.from_expr.get_value(context):
             row_context = MergedContext(
@@ -593,11 +715,32 @@ class QueryExpr(Expr):
             )
             keys.append(key(from_row))
             if self.where_expr.get_value(row_context):
-                row = []
+                filtered_rows.append(from_row)
+
+        if not isinstance(self.group_expr, NullExpr):
+            grouped = defaultdict(list)  # group -> rows
+            for row in filtered_rows:
+                row_context = MergedContext(
+                    Context(row),
+                    context
+                )
+                grouped_key = []
+                for expr in self.group_expr:
+                    column = expr.get_value(row_context)
+                    grouped_key.append(column)
+                grouped_key = tuple(grouped_key)
+                grouped[grouped_key].append(row)
+        else:
+            for row in filtered_rows:
+                row_context = MergedContext(
+                    Context(row),
+                    context
+                )
+                cur_row = []
                 for expr in self.select_expr:
                     column = expr.get_value(row_context)
-                    row.append(column)
-                rows.append(row)
+                    cur_row.append(column)
+                rows.append(cur_row)
 
         rows = [row for _, row in sorted(zip(keys, rows))]
         rows = rows[self.offset_expr.get_value(context):]
@@ -634,39 +777,29 @@ class FromExpr(Expr):
         self.from_expr = from_expr
 
 
-class LsqlTypeError(Exception):
-    pass
+class GroupExpr(ListExpr):
+    def __init__(self, exprs, having_expr=None):
+        super(GroupExpr, self).__init__(exprs)
+        if having_expr is None:
+            having_expr = LiteralExpr(True)
+        self.having_expr = having_expr
 
+    def check_type(self, scope):
+        super(GroupExpr, self).check_type(scope)
+        self.having_expr.check_type(scope)
 
-class LsqlNameError(LsqlTypeError):
-    def __init__(self, name):
-        self.name = name
+    def walk(self, visitor):
+        super(GroupExpr, self).walk(visitor)
+        self.having_expr.walk(visitor)
 
-
-# TODO: do we need Lsql* prefix in class names?
-class LsqlType(object):
-    pass
-
-
-class LsqlTableType(LsqlType):
-    def __init__(self, schema):
-        self.schema = schema
-
-
-class LsqlFunction(object):
-    pass
-
-
-class LsqlString(LsqlType, unicode):
-    pass
-
-
-class LsqlInt(LsqlType, int):
-    pass
-
-
-class LsqlFloat(LsqlType, float):
-    pass
+    def __eq__(self, other):
+        if not isinstance(other, GroupExpr):
+            return False
+        if self.exprs != other.exprs:
+            return False
+        if self.having_expr != other.having_expr:
+            return False
+        return True
 
 
 class NameExpr(Expr):
@@ -682,12 +815,23 @@ class NameExpr(Expr):
     def get_value(self, context):
         return context[self.name]
 
+    def walk(self, visitor):
+        visitor.visit(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, NameExpr):
+            return False
+        return self.name == other.name
+
     def __repr__(self):
         return 'NameExpr(name={!r})'.format(self.name)
 
 
 class StarExpr(Expr):
-    pass
+    def __eq__(self, other):
+        if not isinstance(other, StarExpr):
+            return False
+        return True
 
 
 class LiteralExpr(Expr):
@@ -702,6 +846,14 @@ class LiteralExpr(Expr):
 
     def __repr__(self):
         return '{!s}(value={!r})'.format(self.__class__.__name__, self.value)
+
+    def __eq__(self, other):
+        if not isinstance(other, LiteralExpr):
+            return False
+        return self.value == other.value
+
+    def walk(self, visitor):
+        visitor.visit(self)
 
 
 class StringExpr(LiteralExpr):
@@ -733,6 +885,15 @@ class FunctionExpr(Expr):
         args = [arg_expr.get_value(context) for arg_expr in self.arg_exprs]
         return function(*args)
 
+    def walk(self, visitor):
+        visitor.visit(self)
+        walk_iterable(visitor, self.arg_exprs)
+
+    def __eq__(self, other):
+        if not isinstance(other, FunctionExpr):
+            return False
+        return (self.function_name == other.function_name) and (self.arg_exprs == other.arg_exprs)
+
     def __repr__(self):
         return 'FunctionExpr(function_name={!r}, arg_exprs={!r})'.format(
             self.function_name, self.arg_exprs
@@ -748,6 +909,16 @@ class AndExpr(Expr):
         return all(arg_expr.get_value(context)
                    for arg_expr in [self.left_expr, self.right_expr])
 
+    def walk(self, visitor):
+        visitor.visit(self)
+        self.left_expr.walk(visitor)
+        self.right_expr.walk(visitor)
+
+    def __eq__(self, other):
+        if not isinstance(other, AndExpr):
+            return False
+        return (self.left_expr == other.left_expr) and (self.right_expr == other.right_expr)
+
 
 # TODO(aershov182): DRY it up with AndExpr
 class OrExpr(Expr):
@@ -758,3 +929,14 @@ class OrExpr(Expr):
     def get_value(self, context):
         return any(arg_expr.get_value(context)
                    for arg_expr in [self.left_expr, self.right_expr])
+
+    def walk(self, visitor):
+        visitor.visit(self)
+        self.left_expr.walk(visitor)
+        self.right_expr.walk(visitor)
+
+    def __eq__(self, other):
+        if not isinstance(other, OrExpr):
+            return False
+        return (self.left_expr == other.left_expr) and (self.right_expr == other.right_expr)
+
