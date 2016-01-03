@@ -53,7 +53,21 @@ def _merge_dicts(x, y):
 LITERAL_SUFFIXES = _merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
 
 
-class ParserError(Exception):
+class BaseError(Exception):
+    pass
+
+
+class ParserError(BaseError):
+    pass
+
+
+class UnexpectedTokenError(ParserError):
+    def __init__(self, expected_token_class, actual_token):
+        self.expected_token_class = expected_token_class
+        self.actual_token = actual_token
+
+
+class UnexpectedEnd(ParserError):
     pass
 
 
@@ -62,21 +76,24 @@ class Parser(object):
         self._tokens = list(tokens)
         self._index = 0
 
-    def advance(self):
-        self._check_bounds(self._index + 1)
-        self._index += 1
-
     def expect(self, expected_token_class):
         if not isinstance(self.token, expected_token_class):
-            raise ParserError('expected: {!s}, got: {!r}'.format(
-                expected_token_class, self.token)
-            )
+            raise UnexpectedTokenError(expected_token_class, self.token)
 
     def skip(self, expected_token_class):
         self.expect(expected_token_class)
         self.advance()
 
+    def advance(self):
+        self._check_bounds(self._index + 1)
+        self._index += 1
+
+    def _check_bounds(self, index):
+        if index >= len(self._tokens):
+            raise UnexpectedEnd('unexpected end of query')
+
     def peek(self):
+        self._check_bounds(self._index + 1)
         return self._tokens[self._index + 1]
 
     @property
@@ -84,7 +101,7 @@ class Parser(object):
         return self._tokens[self._index]
 
     def parse(self):
-        return self.expr(left_bp=0)
+        return self.expr()
 
     def expr(self, left_bp=0):
         token = self.token
@@ -95,10 +112,6 @@ class Parser(object):
             self.advance()
             left = token.suffix(left, self)
         return left
-
-    def _check_bounds(self, index):
-        if index < 0 or index >= len(self._tokens):
-            raise IndexError(index, len(self._tokens))
 
 
 def parse(tokens):
@@ -485,7 +498,7 @@ class PeriodToken(SpecialToken):
     pass
 
 
-class LexerError(Exception):
+class LexerError(BaseError):
     def __init__(self, string, pos):
         self.string = string
         self.pos = pos
