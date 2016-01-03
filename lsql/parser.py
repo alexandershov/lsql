@@ -60,6 +60,16 @@ class BaseError(Exception):
     pass
 
 
+class LexerError(BaseError):
+    def __init__(self, string, pos):
+        self.string = string
+        self.pos = pos
+
+    def __str__(self):
+        substring = self.string[self.pos:self.pos + 20] + '...'
+        return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
+
+
 class ParserError(BaseError):
     pass
 
@@ -72,6 +82,16 @@ class UnexpectedTokenError(ParserError):
 
 class UnexpectedEnd(ParserError):
     pass
+
+
+class UnknownSuffixError(ParserError):
+    def __init__(self, suffix, token):
+        self.suffix = suffix
+        self.token = token
+
+    @property
+    def known_suffixes(self):
+        return LITERAL_SUFFIXES.keys()
 
 
 class Parser(object):
@@ -252,8 +272,8 @@ class KeywordToken(Token):
 
 
 class AndToken(KeywordToken):
-    def suffix(self, value, parser):
-        return expr.AndExpr(value, parser.expr(self.right_bp))
+    def suffix(self, left, parser):
+        return expr.AndExpr(left, parser.expr(self.right_bp))
 
 
 class AsToken(KeywordToken):
@@ -265,12 +285,12 @@ class AscToken(KeywordToken):
 
 
 class BetweenToken(KeywordToken):
-    def suffix(self, value, parser):
-        # TODO(aershov182): check left_bp
+    def suffix(self, left, parser):
+        # TODO(aershov182): check left_bp=
         first = parser.expr(left_bp=AndToken.right_bp)
         parser.skip(AndToken)
         last = parser.expr()
-        return expr.BetweenExpr(value, first, last)
+        return expr.BetweenExpr(left, first, last)
 
 
 class CaseToken(KeywordToken):
@@ -343,11 +363,11 @@ class IlikeToken(KeywordToken):
 
 
 class InToken(KeywordToken):
-    def suffix(self, value, parser):
+    def suffix(self, left, parser):
         parser.skip(OpeningParenToken)
         exprs = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return expr.InExpr(value, exprs)
+        return expr.InExpr(left, exprs)
 
 
 class IsToken(KeywordToken):
@@ -400,8 +420,8 @@ class OffsetToken(KeywordToken):
 
 
 class OrToken(KeywordToken):
-    def suffix(self, value, parser):
-        return expr.OrExpr(value, parser.expr(self.right_bp))
+    def suffix(self, left, parser):
+        return expr.OrExpr(left, parser.expr(self.right_bp))
 
 
 class OrderToken(KeywordToken):
@@ -439,7 +459,7 @@ class RilikeToken(KeywordToken):
 class SelectToken(KeywordToken):
     def clause(self, parser):
         if isinstance(parser.token, MulToken):
-            select_expr = expr.StarExpr()
+            select_expr = expr.SelectStarExpr()
             parser.advance()
         else:
             select_expr = expr.ListExpr(parser.parse_delimited_exprs(CommaToken))
@@ -504,10 +524,9 @@ class NameToken(Token):
 class OperatorToken(Token):
     function_name = None  # redefine me in subclasses
 
-    # TODO(aershov182): rename `value` to `left`
-    def suffix(self, value, parser):
+    def suffix(self, left, parser):
         right = parser.expr(self.right_bp)
-        return expr.FunctionExpr(self.function_name, [value, right])
+        return expr.FunctionExpr(self.function_name, [left, right])
 
 
 # TODO(aershov182): use operator_name instead of function_name
@@ -583,15 +602,15 @@ class OpeningParenToken(SpecialToken):
         parser.advance()
         return result
 
-    def suffix(self, value, parser):
-        if not isinstance(value, expr.NameExpr):
-            raise LexerError('expected name, got: {!r}'.format(value), self.start)
+    def suffix(self, left, parser):
+        if not isinstance(left, expr.NameExpr):
+            raise LexerError('expected name, got: {!r}'.format(left), self.start)
         if isinstance(parser.token, ClosingParenToken):
             args = []
         else:
             args = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return expr.FunctionExpr(value.name, args)
+        return expr.FunctionExpr(left.name, args)
 
 
 class ClosingParenToken(SpecialToken):
@@ -604,26 +623,6 @@ class CommaToken(SpecialToken):
 
 class PeriodToken(SpecialToken):
     pass  # not implemented yet
-
-
-class LexerError(BaseError):
-    def __init__(self, string, pos):
-        self.string = string
-        self.pos = pos
-
-    def __str__(self):
-        substring = self.string[self.pos:self.pos + 20] + '...'
-        return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
-
-
-class UnknownSuffixError(ParserError):
-    def __init__(self, suffix, token):
-        self.suffix = suffix
-        self.token = token
-
-    @property
-    def known_suffixes(self):
-        return LITERAL_SUFFIXES.keys()
 
 
 class EndQueryToken(Token):
@@ -774,7 +773,7 @@ def _add_string_literals(lexer):
 
 
 def _add_number_literals(lexer):
-    # TODO: check (just read, they're tested properly) these regexes
+    # TODO: check that regexes are in sync with NumberToken
     patterns = [
         # [2].3[e[-]5][years]
         r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b',

@@ -662,7 +662,7 @@ class QueryExpr(Expr):
         if isinstance(self.from_expr, (NameExpr, LiteralExpr)):
             self.from_expr = FunctionExpr('files', [self.from_expr])
         from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
-        if isinstance(self.select_expr, StarExpr):
+        if isinstance(self.select_expr, SelectStarExpr):
             if hasattr(from_type, 'star_columns'):
                 self.select_expr = ListExpr(
                     [
@@ -831,9 +831,9 @@ class NameExpr(Expr):
         return 'NameExpr(name={!r})'.format(self.name)
 
 
-class StarExpr(Expr):
+class SelectStarExpr(Expr):
     def __eq__(self, other):
-        if not isinstance(other, StarExpr):
+        if not isinstance(other, SelectStarExpr):
             return False
         return True
 
