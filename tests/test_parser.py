@@ -1,27 +1,28 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
+
 import pytest
 
 from lsql import parser
 
 
-class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
+class Match(namedtuple('Match', ['string', 'start_', 'end_'])):
     def start(self):
-        return self.pos
+        return self.start_
 
     def end(self):
-        return self.endpos
+        return self.end_
 
     def group(self):
-        return self.string[self.pos:self.endpos]
+        return self.string[self.start_:self.end_]
 
 
 def make_test_case(string, expected_token_class):
     expected_tokens = [
-        parser.BeginQueryToken(string, 0, len(string)),
-        expected_token_class(string, 0, len(string)),
-        parser.EndQueryToken(string, 0, len(string)),
+        parser.BeginQueryToken(Match(string=string, start_=0, end_=0)),
+        expected_token_class(Match(string=string, start_=0, end_=len(string))),
+        parser.EndQueryToken(Match(string=string, start_=len(string), end_=len(string))),
     ]
     return string, expected_tokens
 

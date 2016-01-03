@@ -106,10 +106,24 @@ def parse(tokens):
 
 
 logger = logging.getLogger(__name__)
-_MISSING = object()
 
 
 class Token(object):
+    def __init__(self, match):
+        self.match = match
+
+    @property
+    def text(self):
+        return self.match.group()
+
+    @property
+    def start(self):
+        return self.match.start()
+
+    @property
+    def end(self):
+        return self.match.end()
+
     @property
     def right_bp(self):
         cls = self.__class__
@@ -125,24 +139,6 @@ class Token(object):
             return LEFT_BINDING_POWERS[cls]
         except KeyError:
             raise NotImplementedError('please add {} to LEFT_BINDING_POWERS'.format(cls.__name__))
-
-    @classmethod
-    def from_match(cls, match):
-        return cls(
-            text=match.group(),
-            start=match.start(),
-            end=match.end(),
-            match=match,
-        )
-
-    def __init__(self, text, start, end, match=_MISSING):
-        self.text = text
-        self.start = start
-        self.end = end
-        if match == _MISSING:
-            self.match = None
-        else:
-            self.match = match
 
     def __repr__(self):
         return '{:s}({!r})'.format(self.__class__.__name__, self.text)
@@ -176,6 +172,7 @@ class AscToken(KeywordToken):
 
 class BetweenToken(KeywordToken):
     def suffix(self, value, parser):
+        # TODO(aershov182): check left_bp
         first = parser.expr(left_bp=AndToken.right_bp)
         parser.skip(AndToken)
         last = parser.expr()
@@ -350,7 +347,7 @@ class NumberToken(Token):
     @property
     def value(self):
         result = 0
-        # match of some regex from _add_number_literals
+        # self.match is a match of some regex from _add_number_literals
         int_part = self.match.group('int')
         float_part = self.match.group('float')
         exp_part = self.match.group('exp')
@@ -580,9 +577,7 @@ def get_delimited_exprs(parser, delimiter_token_cls):
 
 
 class EndQueryToken(Token):
-    @property
-    def right_bp(self):
-        return 0
+    pass
 
 
 class Lexer(object):
@@ -594,6 +589,8 @@ class Lexer(object):
 
     def tokenize_with_whitespaces(self, string):
         start = 0
+        begin_re = _regex('^')
+        yield BeginQueryToken(begin_re.match(string))
         while start < len(string):
             for regex, token_class in self._rules:
                 logger.debug('matching regex {!r} with string {!r} at position {:d}'.format(
@@ -603,19 +600,19 @@ class Lexer(object):
                     logger.debug('failed')
                     continue
                 logger.debug('success!')
-                yield token_class.from_match(match)
+                yield token_class(match)
                 start = match.end()
                 break
             else:
                 raise LexerError(string, start)
+        end_re = _regex('$')
+        yield EndQueryToken(end_re.match(string, pos=start))
 
     def tokenize(self, string):
         assert isinstance(string, unicode)
-        yield BeginQueryToken(string, 0, len(string))
         for token in self.tokenize_with_whitespaces(string):
             if not isinstance(token, WhitespaceToken):
                 yield token
-        yield EndQueryToken(string, 0, len(string))
 
 
 def _keyword(s):
@@ -755,7 +752,7 @@ def _get_right_binding_powers():
     # increasing precedence levels, first level is zero
     right_token_groups = [
         [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
-         AscToken, DescToken, LimitToken, OffsetToken],
+         AscToken, DescToken, LimitToken, OffsetToken, EndQueryToken],
 
         [OrToken],
         [AndToken],
