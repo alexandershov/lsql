@@ -5,6 +5,8 @@ import re
 
 from lsql import expr
 
+logger = logging.getLogger(__name__)
+
 KILO = 1024
 MEGA = KILO * 1024
 GIGA = MEGA * 1024
@@ -118,11 +120,13 @@ def parse(tokens):
     return Parser(tokens).parse()
 
 
-logger = logging.getLogger(__name__)
-
-
 class Token(object):
     def __init__(self, match):
+        """
+        :param match: Regex match object.
+        :return:
+        """
+        assert match is not None
         self.match = match
 
     @property
@@ -131,19 +135,13 @@ class Token(object):
 
     @property
     def start(self):
+        """Starting position (inclusive) of the token in the string."""
         return self.match.start()
 
     @property
     def end(self):
+        """Ending position (non-inclusive) of the token in the string."""
         return self.match.end()
-
-    @property
-    def right_bp(self):
-        cls = self.__class__
-        try:
-            return RIGHT_BINDING_POWERS[cls]
-        except KeyError:
-            raise NotImplementedError('please add {} to RIGHT_BINDING_POWERS'.format(cls.__name__))
 
     @property
     def left_bp(self):
@@ -153,17 +151,56 @@ class Token(object):
         except KeyError:
             raise NotImplementedError('please add {} to LEFT_BINDING_POWERS'.format(cls.__name__))
 
-    def __repr__(self):
-        return '{:s}({!r})'.format(self.__class__.__name__, self.text)
+    @property
+    def right_bp(self):
+        cls = self.__class__
+        try:
+            return RIGHT_BINDING_POWERS[cls]
+        except KeyError:
+            raise NotImplementedError('please add {} to RIGHT_BINDING_POWERS'.format(cls.__name__))
 
     def prefix(self, parser):
+        """
+        Called when token is encountered in prefix position.
+        :type parser: lsql.parser.Parser
+        :rtype: lsql.expr.Expr
+
+        Examples (^ means current token position):
+
+        * In this case we call MinusToken().prefix(parser):
+          -3
+          ^
+
+        * In this case we call NumberToken(4).prefix(parser):
+          2 - 4
+              ^
+        """
         raise NotImplementedError(self._get_not_implemented_message('prefix'))
 
-    def suffix(self, value, parser):
+    def suffix(self, left, parser):
+        """
+        Called when token is encountered in suffix position.
+
+        :param left: Expression to the left of the token.
+        :type left: lsql.expr.Expr
+        :type parser: lsql.parser.Parser
+        :rtype: lsql.expr.Expr
+
+        Example (^ means current token position):
+
+        * In this case we call MinusToken().suffix(LiteralExpr(2), parser):
+          2 - 4
+            ^
+        """
         raise NotImplementedError(self._get_not_implemented_message('suffix'))
 
     def _get_not_implemented_message(self, method):
         return 'not implemented method .{!s}() in {!r}'.format(method, self)
+
+    def __repr__(self):
+        return '{:s}(text={!r}, start={!r}, end={!r})'.format(
+            self.__class__.__name__, self.text, self.start, self.end
+        )
 
 
 class KeywordToken(Token):
@@ -761,6 +798,16 @@ def _operator(s):
     return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(chars)))
 
 
+def _get_left_binding_powers():
+    # increasing precedence levels
+    left_token_groups = [
+        [],  # empty group, so next group will have non-zero precedence level
+        [PlusToken, MinusToken],  # unary plus/minus
+    ]
+    # huge multiplier, because unary plus/minus should have high precedence level
+    return _get_binding_powers(left_token_groups, mul=10000)
+
+
 def _get_right_binding_powers():
     # increasing precedence levels, first level is zero
     right_token_groups = [
@@ -783,16 +830,6 @@ def _get_right_binding_powers():
     return _get_binding_powers(right_token_groups)
 
 
-def _get_left_binding_powers():
-    # increasing precedence levels
-    left_token_groups = [
-        [],  # empty group, so next group will have non-zero precedence level
-        [PlusToken, MinusToken],  # unary plus/minus
-    ]
-    # huge multiplier, because unary plus/minus should have high precedence level
-    return _get_binding_powers(left_token_groups, mul=10000)
-
-
 # multiply by 100 so we can add some inbetweener precedence level
 def _get_binding_powers(token_groups, mul=100):
     powers = {}
@@ -803,7 +840,7 @@ def _get_binding_powers(token_groups, mul=100):
     return powers
 
 
-RIGHT_BINDING_POWERS = _get_right_binding_powers()
 LEFT_BINDING_POWERS = _get_left_binding_powers()
+RIGHT_BINDING_POWERS = _get_right_binding_powers()
 
 tokenize = _make_default_lexer().tokenize
