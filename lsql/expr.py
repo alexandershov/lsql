@@ -11,7 +11,7 @@ from stat import S_IXUSR
 import errno
 import os
 
-# TODO(aershov182): maybe inherit from `dict`?
+
 import operator
 
 
@@ -50,6 +50,7 @@ class LsqlFloat(LsqlType, float):
     pass
 
 
+# TODO(aershov182): maybe inherit from `dict`?
 class Context(object):
     """
     Case-insensitive context.

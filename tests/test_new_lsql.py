@@ -86,8 +86,6 @@ def test_math(query, expected_results):
         ('small.py',),
     ]),
     ('select count(name)', [(4,)]),
-    ('select max(size)', [(81,)]),  # small.py
-    ('select min(size)', [(13,)]),  # LICENSE
     # ('select count(name), sum(length(lines))', [
     #     (4, 6),
     # ])
