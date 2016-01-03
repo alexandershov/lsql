@@ -103,7 +103,47 @@ class Parser(object):
         return self._tokens[self._index]
 
     def parse(self):
-        return self.expr()
+        select_expr = None
+        from_expr = None
+        where_expr = None
+        order_expr = None
+        limit_expr = None
+        offset_expr = None
+        # TODO(aershov182): DRY it up maybe?
+        if isinstance(self.token, SelectToken):
+            token = self.token
+            self.advance()
+            select_expr = token.clause(self)
+        if isinstance(self.token, FromToken):
+            token = self.token
+            self.advance()
+            from_expr = token.clause(self)
+        if isinstance(self.token, WhereToken):
+            token = self.token
+            self.advance()
+            where_expr = token.clause(self)
+        if isinstance(self.token, OrderToken):
+            token = self.token
+            self.advance()
+            order_expr = token.clause(self)
+        if isinstance(self.token, LimitToken):
+            token = self.token
+            self.advance()
+            limit_expr = token.clause(self)
+        if isinstance(self.token, OffsetToken):
+            token = self.token
+            self.advance()
+            offset_expr = token.clause(self)
+
+        self.expect(EndQueryToken)
+        return expr.QueryExpr(
+            select_expr=select_expr,
+            from_expr=from_expr,
+            where_expr=where_expr,
+            order_expr=order_expr,
+            limit_expr=limit_expr,
+            offset_expr=offset_expr,
+        )
 
     def expr(self, left_bp=0):
         token = self.token
@@ -196,7 +236,7 @@ class Token(object):
 
     def clause(self, parser):
         """
-        Called in special cases. For example BeginQueryToken will call .clause() on
+        Called in special cases. For example Parser.parse() will call .clause() on
         SelectToken, FromToken, WhereToken etc.
 
         :type parser: lsql.parser.Parser
@@ -597,52 +637,6 @@ class UnknownSuffixError(ParserError):
         return LITERAL_SUFFIXES.keys()
 
 
-class BeginQueryToken(Token):
-    def prefix(self, parser):
-        # TODO(aershov182): maybe get rid of this class and move this logic to
-        # Parser.parse()
-        select_expr = None
-        from_expr = None
-        where_expr = None
-        order_expr = None
-        limit_expr = None
-        offset_expr = None
-        # TODO(aershov182): add .clause() method to tokens
-        if isinstance(parser.token, SelectToken):
-            token = parser.token
-            parser.advance()
-            select_expr = token.clause(parser)
-        if isinstance(parser.token, FromToken):
-            token = parser.token
-            parser.advance()
-            from_expr = token.clause(parser)
-        if isinstance(parser.token, WhereToken):
-            token = parser.token
-            parser.advance()
-            where_expr = token.clause(parser)
-        if isinstance(parser.token, OrderToken):
-            token = parser.token
-            parser.advance()
-            order_expr = token.clause(parser)
-        if isinstance(parser.token, LimitToken):
-            token = parser.token
-            parser.advance()
-            limit_expr = token.clause(parser)
-        if isinstance(parser.token, OffsetToken):
-            token = parser.token
-            parser.advance()
-            offset_expr = token.clause(parser)
-        parser.expect(EndQueryToken)
-        return expr.QueryExpr(
-            select_expr=select_expr,
-            from_expr=from_expr,
-            where_expr=where_expr,
-            order_expr=order_expr,
-            limit_expr=limit_expr,
-            offset_expr=offset_expr,
-        )
-
-
 def get_delimited_exprs(parser, delimiter_token_cls):
     exprs = [parser.expr()]
     while isinstance(parser.token, delimiter_token_cls):
@@ -664,8 +658,6 @@ class Lexer(object):
 
     def tokenize_with_whitespaces(self, string):
         start = 0
-        begin_re = _regex('^')
-        yield BeginQueryToken(begin_re.match(string))
         while start < len(string):
             for regex, token_class in self._rules:
                 logger.debug('matching regex {!r} with string {!r} at position {:d}'.format(

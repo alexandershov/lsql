@@ -20,16 +20,14 @@ class Match(namedtuple('Match', ['string', 'start_', 'end_'])):
 
 def make_test_case(string, expected_token_class):
     expected_tokens = [
-        parser.BeginQueryToken(Match(string=string, start_=0, end_=0)),
         expected_token_class(Match(string=string, start_=0, end_=len(string))),
         parser.EndQueryToken(Match(string=string, start_=len(string), end_=len(string))),
     ]
     return string, expected_tokens
 
 
-def wrap_in_begin_end(token_classes):
-    wrapped = [parser.BeginQueryToken]
-    wrapped.extend(token_classes)
+def add_end_query_token(token_classes):
+    wrapped = list(token_classes)
     wrapped.append(parser.EndQueryToken)
     return wrapped
 
@@ -168,25 +166,25 @@ def test_string_literals(string, tokens):
 
 # TODO: check token contents
 @pytest.mark.parametrize('string, expected_token_classes', [
-    ('-3', wrap_in_begin_end([parser.MinusToken, parser.NumberToken])),
-    ('+3', wrap_in_begin_end([parser.PlusToken, parser.NumberToken])),
+    ('-3', add_end_query_token([parser.MinusToken, parser.NumberToken])),
+    ('+3', add_end_query_token([parser.PlusToken, parser.NumberToken])),
     ("SELECT length(LINES) AS num_lines "
      "FROM '/tmp' "
      "WHERE ext = 'py' AND size > 3kb OR age(mtime) >= 1.5year "
      "GROUP BY dir "
      "ORDER BY size",
-     wrap_in_begin_end([parser.SelectToken, parser.NameToken, parser.OpeningParenToken,
-                        parser.NameToken, parser.ClosingParenToken, parser.AsToken,
-                        parser.NameToken,
-                        parser.FromToken, parser.StringToken,
-                        parser.WhereToken, parser.NameToken, parser.EqToken, parser.StringToken,
-                        parser.AndToken, parser.NameToken, parser.GtToken, parser.NumberToken,
-                        parser.OrToken, parser.NameToken, parser.OpeningParenToken,
-                        parser.NameToken,
-                        parser.ClosingParenToken, parser.GteToken, parser.NumberToken,
-                        parser.GroupToken, parser.ByToken, parser.NameToken,
-                        parser.OrderToken, parser.ByToken, parser.NameToken
-                        ])),
+     add_end_query_token([parser.SelectToken, parser.NameToken, parser.OpeningParenToken,
+                          parser.NameToken, parser.ClosingParenToken, parser.AsToken,
+                          parser.NameToken,
+                          parser.FromToken, parser.StringToken,
+                          parser.WhereToken, parser.NameToken, parser.EqToken, parser.StringToken,
+                          parser.AndToken, parser.NameToken, parser.GtToken, parser.NumberToken,
+                          parser.OrToken, parser.NameToken, parser.OpeningParenToken,
+                          parser.NameToken,
+                          parser.ClosingParenToken, parser.GteToken, parser.NumberToken,
+                          parser.GroupToken, parser.ByToken, parser.NameToken,
+                          parser.OrderToken, parser.ByToken, parser.NameToken
+                          ])),
 ])
 def test_full_query(string, expected_token_classes):
     assert_classes_equal(
@@ -197,9 +195,9 @@ def test_full_query(string, expected_token_classes):
 
 @pytest.mark.parametrize('string, expected_token_classes', [
     # two whitespaces
-    ('SELECT  path', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
-    ('SELECT\tpath', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
-    ('SELECT\npath', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
+    ('SELECT  path', add_end_query_token([parser.SelectToken, parser.NameToken])),
+    ('SELECT\tpath', add_end_query_token([parser.SelectToken, parser.NameToken])),
+    ('SELECT\npath', add_end_query_token([parser.SelectToken, parser.NameToken])),
 ])
 def test_whitespace(string, expected_token_classes):
     assert_classes_equal(
