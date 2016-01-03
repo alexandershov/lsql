@@ -10,7 +10,7 @@ import pytest
 
 import lsql
 
-DIR = os.path.join(os.path.dirname(__file__), 'data')
+DIR = os.path.join(os.path.dirname(__file__), 'data', 'base')
 
 FROM_CLAUSE = "FROM '{}'".format(DIR)
 
@@ -22,10 +22,10 @@ NAME_MD = [lsql.colored('README.md', Fore.RESET)]
 NAME_PY = [lsql.colored('small.py', Fore.RESET)]
 NAME_DIR = [lsql.colored('small', Fore.RESET)]
 NAME_LIC = [lsql.colored('LICENSE', Fore.RESET)]
-PATH_PY = [lsql.colored('tests/data/small.py', Fore.RESET)]
-PATH_MD = [lsql.colored('tests/data/README.md', Fore.RESET)]
-PATH_DIR = [lsql.colored('tests/data/small', Fore.RESET)]
-PATH_LIC = [lsql.colored('tests/data/small/LICENSE', Fore.RESET)]
+PATH_PY = [lsql.colored('tests/data/base/small.py', Fore.RESET)]
+PATH_MD = [lsql.colored('tests/data/base/README.md', Fore.RESET)]
+PATH_DIR = [lsql.colored('tests/data/base/small', Fore.RESET)]
+PATH_LIC = [lsql.colored('tests/data/base/small/LICENSE', Fore.RESET)]
 
 
 def test_name_column():
@@ -242,7 +242,10 @@ def test_type_column():
 def test_dir_column():
     assert_same_items(
         get_results(select='dir'),
-        [['tests/data'], ['tests/data'], ['tests/data'], ['tests/data/small']]
+        [
+            ['tests/data/base'], ['tests/data/base'], ['tests/data/base'],
+            ['tests/data/base/small']
+        ]
     )
 
 

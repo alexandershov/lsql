@@ -161,11 +161,11 @@ class FileTableContext(Context):
 
 # TODO(aershov182): check that it's correct
 class TaggedUnicode(unicode):
-    def __new__(cls, string, tags):
-        return super(TaggedUnicode, cls).__new__(cls, string)
+    def __new__(cls, string, tags, encoding='utf-8', errors='strict'):
+        return super(TaggedUnicode, cls).__new__(cls, string, encoding, errors)
 
-    def __init__(self, string, tags):
-        super(TaggedUnicode, self).__init__(string)
+    def __init__(self, string, tags, encoding='utf-8', errors='strict'):
+        super(TaggedUnicode, self).__init__(string, encoding, errors)
         self.tags = tags
 
 
@@ -262,8 +262,12 @@ class Stat(object):
         return os.path.dirname(self._path)
 
     @property
+    def _name(self):
+        return os.path.basename(self._path)
+
+    @property
     def name(self):
-        return TaggedUnicode(os.path.basename(self._path), self.get_tags())
+        return TaggedUnicode(self._name, self.get_tags())
 
     @property
     def extension(self):
@@ -272,7 +276,7 @@ class Stat(object):
 
     @property
     def no_ext(self):
-        return TaggedUnicode(os.path.splitext(self.name)[0], self.get_tags())
+        return TaggedUnicode(os.path.splitext(self._name)[0], self.get_tags())
 
     @property
     def mode(self):

@@ -7,7 +7,7 @@ import os
 from lsql import expr
 from lsql import main
 
-DIR = os.path.join(os.path.dirname(__file__), 'data')
+BASE_DIR = os.path.join(os.path.dirname(__file__), 'data', 'base')
 
 
 # TODO(aershov182): remove assert_same_items/get_results duplication in tests
@@ -99,7 +99,7 @@ def test_query(query, expected_results):
 
 def test_from():
     assert_same_items(
-        get_results("select 1 FROM '{}'".format(DIR), directory=None),
+        get_results("select 1 FROM '{}'".format(BASE_DIR), directory=None),
         (((1,),) * 4)
     )
 
@@ -128,5 +128,5 @@ def assert_same_items(seq_x, seq_y):
     assert sorted(seq_x) == sorted(seq_y)
 
 
-def get_results(query, directory=DIR):
+def get_results(query, directory=BASE_DIR):
     return list(main.run_query(query, directory))
