@@ -248,7 +248,7 @@ class Token(object):
 
 
 class KeywordToken(Token):
-    pass
+    """Base class for keyword tokens."""
 
 
 class AndToken(KeywordToken):
@@ -274,7 +274,7 @@ class BetweenToken(KeywordToken):
 
 
 class CaseToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class ByToken(KeywordToken):
@@ -282,7 +282,7 @@ class ByToken(KeywordToken):
 
 
 class ContainsToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class CountToken(KeywordToken):
@@ -306,19 +306,19 @@ class DescToken(KeywordToken):
 
 
 class DropToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class ElseToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class EndToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class ExistsToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class FromToken(KeywordToken):
@@ -327,19 +327,19 @@ class FromToken(KeywordToken):
 
 
 class GroupToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class HavingToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class IcontainsToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class IlikeToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class InToken(KeywordToken):
@@ -351,29 +351,29 @@ class InToken(KeywordToken):
 
 
 class IsToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class IsNullToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class JoinToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class LeftToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 # TODO(aershov182): maybe make it operator token. And similar (ContainsToken) tokens too?
 class LikeToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 # alias for rlike
 class LikeRegexToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class LimitToken(KeywordToken):
@@ -382,11 +382,11 @@ class LimitToken(KeywordToken):
 
 
 class NotToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class NotNullToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class NullToken(KeywordToken):
@@ -425,15 +425,15 @@ def _parse_one_order_by_clause(parser):
 
 
 class OuterToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class RlikeToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class RilikeToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class SelectToken(KeywordToken):
@@ -447,11 +447,11 @@ class SelectToken(KeywordToken):
 
 
 class ThenToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class UpdateToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class WhereToken(KeywordToken):
@@ -570,7 +570,7 @@ class PowerToken(OperatorToken):
 
 
 class SpecialToken(Token):
-    pass
+    """Base class for special tokens: parens, commas, periods etc."""
 
 
 class OpeningParenToken(SpecialToken):
@@ -603,7 +603,7 @@ class CommaToken(SpecialToken):
 
 
 class PeriodToken(SpecialToken):
-    pass
+    pass  # not implemented yet
 
 
 class LexerError(BaseError):
