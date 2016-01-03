@@ -5,8 +5,7 @@ from collections import OrderedDict
 from colorama import Fore
 
 from lsql.expr import BUILTIN_CONTEXT, TaggedUnicode
-from lsql.lexer import tokenize
-from lsql.parser import parse
+from lsql.parser import parse, tokenize
 
 BROWN = '\x1b[33m'
 

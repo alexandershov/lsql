@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import namedtuple
 import pytest
 
-from lsql import lexer
+from lsql import parser
 
 
 class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
@@ -19,147 +19,147 @@ class Match(namedtuple('TestMatch', ['string', 'pos', 'endpos'])):
 
 def make_test_case(string, expected_token_class):
     expected_tokens = [
-        lexer.BeginQueryToken(string, 0, len(string)),
+        parser.BeginQueryToken(string, 0, len(string)),
         expected_token_class(string, 0, len(string)),
-        lexer.EndQueryToken(string, 0, len(string)),
+        parser.EndQueryToken(string, 0, len(string)),
     ]
     return string, expected_tokens
 
 
 def wrap_in_begin_end(token_classes):
-    wrapped = [lexer.BeginQueryToken]
+    wrapped = [parser.BeginQueryToken]
     wrapped.extend(token_classes)
-    wrapped.append(lexer.EndQueryToken)
+    wrapped.append(parser.EndQueryToken)
     return wrapped
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case('and', lexer.AndToken),
-    make_test_case('as', lexer.AsToken),
-    make_test_case('asc', lexer.AscToken),
-    make_test_case('between', lexer.BetweenToken),
-    make_test_case('by', lexer.ByToken),
-    make_test_case('case', lexer.CaseToken),
-    make_test_case('contains', lexer.ContainsToken),
-    make_test_case('delete', lexer.DeleteToken),
-    make_test_case('desc', lexer.DescToken),
-    make_test_case('drop', lexer.DropToken),
-    make_test_case('else', lexer.ElseToken),
-    make_test_case('end', lexer.EndToken),
-    make_test_case('exists', lexer.ExistsToken),
-    make_test_case('from', lexer.FromToken),
-    make_test_case('group', lexer.GroupToken),
-    make_test_case('having', lexer.HavingToken),
-    make_test_case('icontains', lexer.IcontainsToken),
-    make_test_case('ilike', lexer.IlikeToken),
-    make_test_case('in', lexer.InToken),
-    make_test_case('is', lexer.IsToken),
-    make_test_case('isnull', lexer.IsNullToken),
-    make_test_case('join', lexer.JoinToken),
-    make_test_case('left', lexer.LeftToken),
-    make_test_case('like', lexer.LikeToken),
-    make_test_case('like_regex', lexer.LikeRegexToken),
-    make_test_case('limit', lexer.LimitToken),
-    make_test_case('not', lexer.NotToken),
-    make_test_case('notnull', lexer.NotNullToken),
-    make_test_case('null', lexer.NullToken),
-    make_test_case('offset', lexer.OffsetToken),
-    make_test_case('or', lexer.OrToken),
-    make_test_case('order', lexer.OrderToken),
-    make_test_case('outer', lexer.OuterToken),
-    make_test_case('rilike', lexer.RilikeToken),
-    make_test_case('rlike', lexer.RlikeToken),
-    make_test_case('select', lexer.SelectToken),
-    make_test_case('then', lexer.ThenToken),
-    make_test_case('update', lexer.UpdateToken),
-    make_test_case('where', lexer.WhereToken),
+    make_test_case('and', parser.AndToken),
+    make_test_case('as', parser.AsToken),
+    make_test_case('asc', parser.AscToken),
+    make_test_case('between', parser.BetweenToken),
+    make_test_case('by', parser.ByToken),
+    make_test_case('case', parser.CaseToken),
+    make_test_case('contains', parser.ContainsToken),
+    make_test_case('delete', parser.DeleteToken),
+    make_test_case('desc', parser.DescToken),
+    make_test_case('drop', parser.DropToken),
+    make_test_case('else', parser.ElseToken),
+    make_test_case('end', parser.EndToken),
+    make_test_case('exists', parser.ExistsToken),
+    make_test_case('from', parser.FromToken),
+    make_test_case('group', parser.GroupToken),
+    make_test_case('having', parser.HavingToken),
+    make_test_case('icontains', parser.IcontainsToken),
+    make_test_case('ilike', parser.IlikeToken),
+    make_test_case('in', parser.InToken),
+    make_test_case('is', parser.IsToken),
+    make_test_case('isnull', parser.IsNullToken),
+    make_test_case('join', parser.JoinToken),
+    make_test_case('left', parser.LeftToken),
+    make_test_case('like', parser.LikeToken),
+    make_test_case('like_regex', parser.LikeRegexToken),
+    make_test_case('limit', parser.LimitToken),
+    make_test_case('not', parser.NotToken),
+    make_test_case('notnull', parser.NotNullToken),
+    make_test_case('null', parser.NullToken),
+    make_test_case('offset', parser.OffsetToken),
+    make_test_case('or', parser.OrToken),
+    make_test_case('order', parser.OrderToken),
+    make_test_case('outer', parser.OuterToken),
+    make_test_case('rilike', parser.RilikeToken),
+    make_test_case('rlike', parser.RlikeToken),
+    make_test_case('select', parser.SelectToken),
+    make_test_case('then', parser.ThenToken),
+    make_test_case('update', parser.UpdateToken),
+    make_test_case('where', parser.WhereToken),
 ])
 def test_keywords(string, tokens):
     assert_tokenizes_to(string, tokens)
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case('path', lexer.NameToken),
-    make_test_case('_path', lexer.NameToken),
-    make_test_case('path2', lexer.NameToken),
+    make_test_case('path', parser.NameToken),
+    make_test_case('_path', parser.NameToken),
+    make_test_case('path2', parser.NameToken),
 ])
 def test_names(string, tokens):
     assert_tokenizes_to(string, tokens)
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case('||', lexer.ConcatToken),
-    make_test_case('/', lexer.DivToken),
-    make_test_case('=', lexer.EqToken),
-    make_test_case('>', lexer.GtToken),
-    make_test_case('>=', lexer.GteToken),
-    make_test_case('<', lexer.LtToken),
-    make_test_case('<=', lexer.LteToken),
-    make_test_case('-', lexer.MinusToken),
-    make_test_case('%', lexer.ModuloToken),
-    make_test_case('*', lexer.MulToken),
-    make_test_case('<>', lexer.NeToken),
-    make_test_case('!=', lexer.NeToken),
-    make_test_case('+', lexer.PlusToken),
-    make_test_case('^', lexer.PowerToken),
+    make_test_case('||', parser.ConcatToken),
+    make_test_case('/', parser.DivToken),
+    make_test_case('=', parser.EqToken),
+    make_test_case('>', parser.GtToken),
+    make_test_case('>=', parser.GteToken),
+    make_test_case('<', parser.LtToken),
+    make_test_case('<=', parser.LteToken),
+    make_test_case('-', parser.MinusToken),
+    make_test_case('%', parser.ModuloToken),
+    make_test_case('*', parser.MulToken),
+    make_test_case('<>', parser.NeToken),
+    make_test_case('!=', parser.NeToken),
+    make_test_case('+', parser.PlusToken),
+    make_test_case('^', parser.PowerToken),
 ])
 def test_operators(string, tokens):
     assert_tokenizes_to(string, tokens)
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case('23', lexer.NumberToken),
-    make_test_case('23days', lexer.NumberToken),
-    make_test_case('23e52', lexer.NumberToken),
-    make_test_case('23e-52', lexer.NumberToken),
-    make_test_case('23e+52', lexer.NumberToken),
-    make_test_case('23e52days', lexer.NumberToken),
-    make_test_case('23e-52days', lexer.NumberToken),
-    make_test_case('.23', lexer.NumberToken),
-    make_test_case('.23days', lexer.NumberToken),
-    make_test_case('.23e52', lexer.NumberToken),
-    make_test_case('.23e-52', lexer.NumberToken),
-    make_test_case('.23e+52', lexer.NumberToken),
-    make_test_case('.23e52days', lexer.NumberToken),
-    make_test_case('.23e-52days', lexer.NumberToken),
-    make_test_case('23.', lexer.NumberToken),
-    make_test_case('23.days', lexer.NumberToken),
-    make_test_case('23.e52', lexer.NumberToken),
-    make_test_case('23.e-52', lexer.NumberToken),
-    make_test_case('23.e+52', lexer.NumberToken),
-    make_test_case('23.e52days', lexer.NumberToken),
-    make_test_case('23.e-52days', lexer.NumberToken),
-    make_test_case('23.e+52days', lexer.NumberToken),
-    make_test_case('23.52', lexer.NumberToken),
-    make_test_case('23.52days', lexer.NumberToken),
-    make_test_case('23.52e52', lexer.NumberToken),
-    make_test_case('23.52e-52', lexer.NumberToken),
-    make_test_case('23.52e+52', lexer.NumberToken),
-    make_test_case('23.52e52days', lexer.NumberToken),
-    make_test_case('23.52e-52days', lexer.NumberToken),
-    make_test_case('23.52e-52days', lexer.NumberToken),
-    make_test_case('23.52e+52days', lexer.NumberToken),
+    make_test_case('23', parser.NumberToken),
+    make_test_case('23days', parser.NumberToken),
+    make_test_case('23e52', parser.NumberToken),
+    make_test_case('23e-52', parser.NumberToken),
+    make_test_case('23e+52', parser.NumberToken),
+    make_test_case('23e52days', parser.NumberToken),
+    make_test_case('23e-52days', parser.NumberToken),
+    make_test_case('.23', parser.NumberToken),
+    make_test_case('.23days', parser.NumberToken),
+    make_test_case('.23e52', parser.NumberToken),
+    make_test_case('.23e-52', parser.NumberToken),
+    make_test_case('.23e+52', parser.NumberToken),
+    make_test_case('.23e52days', parser.NumberToken),
+    make_test_case('.23e-52days', parser.NumberToken),
+    make_test_case('23.', parser.NumberToken),
+    make_test_case('23.days', parser.NumberToken),
+    make_test_case('23.e52', parser.NumberToken),
+    make_test_case('23.e-52', parser.NumberToken),
+    make_test_case('23.e+52', parser.NumberToken),
+    make_test_case('23.e52days', parser.NumberToken),
+    make_test_case('23.e-52days', parser.NumberToken),
+    make_test_case('23.e+52days', parser.NumberToken),
+    make_test_case('23.52', parser.NumberToken),
+    make_test_case('23.52days', parser.NumberToken),
+    make_test_case('23.52e52', parser.NumberToken),
+    make_test_case('23.52e-52', parser.NumberToken),
+    make_test_case('23.52e+52', parser.NumberToken),
+    make_test_case('23.52e52days', parser.NumberToken),
+    make_test_case('23.52e-52days', parser.NumberToken),
+    make_test_case('23.52e-52days', parser.NumberToken),
+    make_test_case('23.52e+52days', parser.NumberToken),
     # checking that mixing upper/lower case is ok
-    make_test_case('23.52E-52dAys', lexer.NumberToken),
+    make_test_case('23.52E-52dAys', parser.NumberToken),
 ])
 def test_number_literals(string, tokens):
     assert_tokenizes_to(string, tokens)
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case(',', lexer.CommaToken),
-    make_test_case(')', lexer.ClosingParenToken),
-    make_test_case('(', lexer.OpeningParenToken),
-    make_test_case('.', lexer.PeriodToken),
+    make_test_case(',', parser.CommaToken),
+    make_test_case(')', parser.ClosingParenToken),
+    make_test_case('(', parser.OpeningParenToken),
+    make_test_case('.', parser.PeriodToken),
 ])
 def test_special_characters(string, tokens):
     assert_tokenizes_to(string, tokens)
 
 
 @pytest.mark.parametrize('string, tokens', [
-    make_test_case("''", lexer.StringToken),
-    make_test_case("'test'", lexer.StringToken),
-    make_test_case("'te''st'", lexer.StringToken),
+    make_test_case("''", parser.StringToken),
+    make_test_case("'test'", parser.StringToken),
+    make_test_case("'te''st'", parser.StringToken),
 ])
 def test_string_literals(string, tokens):
     assert_tokenizes_to(string, tokens)
@@ -167,40 +167,42 @@ def test_string_literals(string, tokens):
 
 # TODO: check token contents
 @pytest.mark.parametrize('string, expected_token_classes', [
-    ('-3', wrap_in_begin_end([lexer.MinusToken, lexer.NumberToken])),
-    ('+3', wrap_in_begin_end([lexer.PlusToken, lexer.NumberToken])),
+    ('-3', wrap_in_begin_end([parser.MinusToken, parser.NumberToken])),
+    ('+3', wrap_in_begin_end([parser.PlusToken, parser.NumberToken])),
     ("SELECT length(LINES) AS num_lines "
      "FROM '/tmp' "
      "WHERE ext = 'py' AND size > 3kb OR age(mtime) >= 1.5year "
      "GROUP BY dir "
      "ORDER BY size",
-     wrap_in_begin_end([lexer.SelectToken, lexer.NameToken, lexer.OpeningParenToken,
-                        lexer.NameToken, lexer.ClosingParenToken, lexer.AsToken, lexer.NameToken,
-                        lexer.FromToken, lexer.StringToken,
-                        lexer.WhereToken, lexer.NameToken, lexer.EqToken, lexer.StringToken,
-                        lexer.AndToken, lexer.NameToken, lexer.GtToken, lexer.NumberToken,
-                        lexer.OrToken, lexer.NameToken, lexer.OpeningParenToken, lexer.NameToken,
-                        lexer.ClosingParenToken, lexer.GteToken, lexer.NumberToken,
-                        lexer.GroupToken, lexer.ByToken, lexer.NameToken,
-                        lexer.OrderToken, lexer.ByToken, lexer.NameToken
+     wrap_in_begin_end([parser.SelectToken, parser.NameToken, parser.OpeningParenToken,
+                        parser.NameToken, parser.ClosingParenToken, parser.AsToken,
+                        parser.NameToken,
+                        parser.FromToken, parser.StringToken,
+                        parser.WhereToken, parser.NameToken, parser.EqToken, parser.StringToken,
+                        parser.AndToken, parser.NameToken, parser.GtToken, parser.NumberToken,
+                        parser.OrToken, parser.NameToken, parser.OpeningParenToken,
+                        parser.NameToken,
+                        parser.ClosingParenToken, parser.GteToken, parser.NumberToken,
+                        parser.GroupToken, parser.ByToken, parser.NameToken,
+                        parser.OrderToken, parser.ByToken, parser.NameToken
                         ])),
 ])
 def test_full_query(string, expected_token_classes):
     assert_classes_equal(
-        list(lexer.tokenize(string)),
+        list(parser.tokenize(string)),
         expected_token_classes
     )
 
 
 @pytest.mark.parametrize('string, expected_token_classes', [
     # two whitespaces
-    ('SELECT  path', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
-    ('SELECT\tpath', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
-    ('SELECT\npath', wrap_in_begin_end([lexer.SelectToken, lexer.NameToken])),
+    ('SELECT  path', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
+    ('SELECT\tpath', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
+    ('SELECT\npath', wrap_in_begin_end([parser.SelectToken, parser.NameToken])),
 ])
 def test_whitespace(string, expected_token_classes):
     assert_classes_equal(
-        list(lexer.tokenize(string)),
+        list(parser.tokenize(string)),
         expected_token_classes
     )
 
@@ -219,12 +221,12 @@ def assert_classes_equal(objects, expected_classes):
     # TODO: what about '23.52.e52' should it raise an Error
 ])
 def test_bad_queries(string):
-    with pytest.raises(lexer.LexerError):
-        list(lexer.tokenize(string))
+    with pytest.raises(parser.LexerError):
+        list(parser.tokenize(string))
 
 
 def assert_tokenizes_to(string, expected_tokens):
-    actual_tokens = list(lexer.tokenize(string))
+    actual_tokens = list(parser.tokenize(string))
     assert len(actual_tokens) == len(expected_tokens)
     for actual, expected in zip(actual_tokens, expected_tokens):
         assert same_tokens(actual, expected)
