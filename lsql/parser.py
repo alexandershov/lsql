@@ -38,6 +38,21 @@ TIME_SUFFIXES = {
 }
 
 
+def _merge_dicts(x, y):
+    """
+    Merge two dicts into one.
+    :type x: dict
+    :type y: dict
+    :return: merged dictionary
+    """
+    merged = x.copy()
+    merged.update(y)
+    return merged
+
+
+LITERAL_SUFFIXES = _merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
+
+
 class ParserError(Exception):
     pass
 
@@ -331,40 +346,28 @@ class WhitespaceToken(Token):
     pass
 
 
-def merge_dicts(x, y):
-    """
-    Merge two dicts into one.
-    :type x: dict
-    :type y: dict
-    :return: merged dictionary
-    """
-    merged = x.copy()
-    merged.update(y)
-    return merged
-
-
-LITERAL_SUFFIXES = merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
-
-
 class NumberToken(Token):
     @property
     def value(self):
-        value = 0
+        result = 0
         int_part = self.match.group('int')
         float_part = self.match.group('float')
         exp_part = self.match.group('exp')
         suffix = self.match.group('suffix')
         if int_part:
-            value = int(int_part)
+            result = int(int_part)
         if float_part:
-            value += float('0.{}'.format(float_part))
+            result += float('0.{}'.format(float_part))
         if exp_part:
-            value *= 10 ** float(exp_part)
+            result *= 10 ** float(exp_part)
         if suffix:
+            # all suffixes in LITERAL_SUFFIXES are lowercase, but we want to have
+            # case-insensitive suffixes: 10mb and 10MB should mean the same thing.
+            suffix = suffix.lower()
             if suffix not in LITERAL_SUFFIXES:
                 raise LexerError('unknown suffix: {!r}'.format(suffix), self.start)
-            value *= LITERAL_SUFFIXES[suffix]
-        return value
+            result *= LITERAL_SUFFIXES[suffix]
+        return result
 
     def prefix(self, parser):
         return expr.LiteralExpr(self.value)
@@ -736,26 +739,12 @@ def _operator(s):
     return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(chars)))
 
 
-# these comments and TODOs are left after automatic refactoring
-
-# binding powers:
-# IN: 50
-# OR: 100
-# AND: 200
-# =, <>, BETWEEN: 250
-# <, <=, >, >=: 260
-# ||: 300
-# +-: 400
-# */: 500
-# ^: 600
-# (: 700
-
-
 def _get_right_binding_powers():
     # increasing precedence levels, first level is zero
     right_token_groups = [
         [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
          AscToken, DescToken, LimitToken, OffsetToken],
+
         [OrToken],
         [AndToken],
         [EqToken, NeToken],
@@ -776,8 +765,9 @@ def _get_left_binding_powers():
     # increasing precedence levels
     left_token_groups = [
         [],  # empty group, so next group will have non-zero precedence level
-        [PlusToken, MinusToken],  # unary plus and minus
+        [PlusToken, MinusToken],  # unary plus/minus
     ]
+    # huge multiplier, because unary plus/minus should have high precedence level
     return _get_binding_powers(left_token_groups, mul=10000)
 
 
