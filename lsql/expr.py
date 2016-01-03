@@ -12,15 +12,6 @@ import operator
 import os
 
 
-class LsqlTypeError(Exception):
-    pass
-
-
-class LsqlNameError(LsqlTypeError):
-    def __init__(self, name):
-        self.name = name
-
-
 # TODO(aershov182): maybe inherit from `dict`?
 class Context(object):
     """
@@ -40,8 +31,8 @@ class Context(object):
     def __contains__(self, item):
         return item in self._items
 
-    def __iter__(self):
-        return iter(self._items)
+    # def __iter__(self):
+    #     return iter(self._items)
 
     def __repr__(self):
         return 'Context(items={!r})'.format(self._items)
@@ -658,12 +649,11 @@ class BetweenExpr(Expr):
 
 
 class QueryExpr(Expr):
-    def __init__(self, select_expr, from_expr, where_expr, group_expr, order_expr,
+    def __init__(self, select_expr, from_expr, where_expr, order_expr,
                  limit_expr, offset_expr):
         self.select_expr = select_expr
         self.from_expr = from_expr
         self.where_expr = where_expr
-        self.group_expr = group_expr
         self.order_expr = order_expr
         self.limit_expr = limit_expr
         self.offset_expr = offset_expr
@@ -687,15 +677,6 @@ class QueryExpr(Expr):
             self.select_expr = ListExpr(list(map(NameExpr, from_type.default_columns)))
         if self.where_expr is None:
             self.where_expr = LiteralExpr(True)
-        if has_agg_functions(self.where_expr):
-            raise ExprError("can't have aggregate functions in WHERE")
-        if self.group_expr is None:
-            if has_agg_functions(self.select_expr):
-                self.group_expr = GroupExpr([LiteralExpr(1)])
-            else:
-                self.group_expr = NullExpr()
-        if has_agg_functions(self.group_expr):
-            raise ExprError("can't have aggregate functions in GROUP BY")
         if self.order_expr is None:
             self.order_expr = ListExpr([])
         if self.offset_expr is None:
@@ -706,7 +687,6 @@ class QueryExpr(Expr):
         self.select_expr.walk(visitor)
         self.from_expr.walk(visitor)
         self.where_expr.walk(visitor)
-        self.group_expr.walk(visitor)
         self.order_expr.walk(visitor)
         self.limit_expr.walk(visitor)
         self.offset_expr.walk(visitor)
@@ -736,44 +716,16 @@ class QueryExpr(Expr):
             keys.append(key(from_row))
             if self.where_expr.get_value(row_context):
                 filtered_rows.append(from_row)
-
-        if not isinstance(self.group_expr, NullExpr):
-            grouped = defaultdict(list)  # group -> rows
-            for row in filtered_rows:
-                row_context = MergedContext(
-                    Context(row),
-                    context
-                )
-                grouped_key = []
-                for expr in self.group_expr:
-                    column = expr.get_value(row_context)
-                    grouped_key.append(column)
-                grouped_key = tuple(grouped_key)
-                grouped[grouped_key].append(row)
-            for group_key, row_group in grouped.viewitems():
-                row_context = MergedContext(
-                    make_agg_context(from_type, row_group),
-                    context
-                )
-                cur_row = []
-                for i, expr in enumerate(self.select_expr):
-                    if expr in self.group_expr.exprs:
-                        column = group_key[i]
-                    else:
-                        column = expr.get_value(row_context)
-                    cur_row.append(column)
-                rows.append(cur_row)
-        else:
-            for row in filtered_rows:
-                row_context = MergedContext(
-                    Context(row),
-                    context
-                )
-                cur_row = []
-                for expr in self.select_expr:
-                    column = expr.get_value(row_context)
-                    cur_row.append(column)
-                rows.append(cur_row)
+        for row in filtered_rows:
+            row_context = MergedContext(
+                Context(row),
+                context
+            )
+            cur_row = []
+            for expr in self.select_expr:
+                column = expr.get_value(row_context)
+                cur_row.append(column)
+            rows.append(cur_row)
 
         rows = [row for _, row in sorted(zip(keys, rows))]
         rows = rows[self.offset_expr.get_value(context):]
@@ -862,10 +814,7 @@ class NameExpr(Expr):
         self.name = name
 
     def get_type(self, scope):
-        try:
-            return scope[self.name]
-        except KeyError:
-            raise LsqlNameError(self.name)
+        return scope[self.name]
 
     def get_value(self, context):
         return context[self.name]

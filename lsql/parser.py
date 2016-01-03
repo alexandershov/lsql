@@ -556,7 +556,6 @@ class BeginQueryToken(Token):
         select_expr = None
         from_expr = None
         where_expr = None
-        group_expr = None
         order_expr = None
         limit_expr = None
         offset_expr = None
@@ -574,16 +573,6 @@ class BeginQueryToken(Token):
         if isinstance(parser.token, WhereToken):
             parser.advance()
             where_expr = parser.expr()
-        if isinstance(parser.token, GroupToken):
-            parser.advance()
-            parser.skip(ByToken)
-            group_expr = expr.GroupExpr(get_delimited_exprs(parser, CommaToken))
-        if isinstance(parser.token, HavingToken):
-            parser.advance()
-            having_expr = parser.expr()
-            if group_expr is None:
-                group_expr = expr.GroupExpr([expr.LiteralExpr(1)])
-            group_expr.having_expr = having_expr
         if isinstance(parser.token, OrderToken):
             parser.advance()
             parser.skip(ByToken)
@@ -617,7 +606,6 @@ class BeginQueryToken(Token):
             select_expr=select_expr,
             from_expr=from_expr,
             where_expr=where_expr,
-            group_expr=group_expr,
             order_expr=order_expr,
             limit_expr=limit_expr,
             offset_expr=offset_expr,
