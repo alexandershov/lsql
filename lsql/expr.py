@@ -8,7 +8,6 @@ from grp import getgrgid
 from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
-import errno
 import os
 
 import operator
@@ -21,32 +20,6 @@ class LsqlTypeError(Exception):
 class LsqlNameError(LsqlTypeError):
     def __init__(self, name):
         self.name = name
-
-
-# TODO: do we need Lsql* prefix in class names?
-class LsqlType(object):
-    pass
-
-
-class LsqlTableType(LsqlType):
-    def __init__(self, schema):
-        self.schema = schema
-
-
-class LsqlFunction(object):
-    pass
-
-
-class LsqlString(LsqlType, unicode):
-    pass
-
-
-class LsqlInt(LsqlType, int):
-    pass
-
-
-class LsqlFloat(LsqlType, float):
-    pass
 
 
 # TODO(aershov182): maybe inherit from `dict`?
@@ -68,9 +41,6 @@ class Context(object):
     def __contains__(self, item):
         return item in self._items
 
-    def __setitem__(self, key, value):
-        self._items[key] = value
-
     def __iter__(self):
         return iter(self._items)
 
@@ -85,9 +55,6 @@ class EmptyContext(Context):
     def __getitem__(self, item):
         raise KeyError
 
-    def __setitem__(self, key, value):
-        raise NotImplementedError
-
     def __contains__(self, item):
         return False
 
@@ -100,9 +67,7 @@ class EmptyContext(Context):
 
 class MergedContext(object):
     def __init__(self, *contexts):
-        self.my_context = Context({})
-        self.contexts = [self.my_context]
-        self.contexts.extend(contexts)
+        self.contexts = contexts
 
     def __getitem__(self, item):
         for context in self.contexts:
@@ -111,9 +76,6 @@ class MergedContext(object):
             except KeyError:
                 pass
         raise KeyError(item)
-
-    def __setitem__(self, key, value):
-        self.my_context[key] = value
 
     def __contains__(self, item):
         return any((item in context) for context in self.contexts)
@@ -464,11 +426,11 @@ def avg_agg(items):
     return total / count
 
 
-class AnyIterable(LsqlType):
+class AnyIterable(object):
     pass
 
 
-class NumberIterable(LsqlType):
+class NumberIterable(object):
     pass
 
 
@@ -511,11 +473,11 @@ BASE_CONTEXT = Context({
 BUILTIN_CONTEXT = MergedContext(AGG_FUNCTIONS, BASE_CONTEXT)
 
 
-# TODO(aershov182): add forbidden argument
+# TODO(aershov182): add forbidden argument and handle case with permissions gracefully
 def walk_with_depth(path, depth=0):
     try:
         names = os.listdir(path)
-    except OSError as exc:
+    except OSError:
         return
     dirs = []
     for name in names:
@@ -948,21 +910,6 @@ class LiteralExpr(Expr):
 
     def walk(self, visitor):
         visitor.visit(self)
-
-
-class StringExpr(LiteralExpr):
-    def get_type(self, scope):
-        return LsqlType
-
-
-class IntExpr(LiteralExpr):
-    def get_type(self, scope):
-        return LsqlInt
-
-
-class FloatExpr(LiteralExpr):
-    def get_type(self, scope):
-        return LsqlFloat
 
 
 class FunctionExpr(Expr):

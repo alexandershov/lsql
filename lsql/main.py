@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from colorama import Fore
 
-from lsql.expr import BUILTIN_CONTEXT, TaggedUnicode
+from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
 
 BROWN = '\x1b[33m'
@@ -28,9 +28,9 @@ def main():
 def run_query(query_string, directory):
     tokens = tokenize(unicode(query_string, 'utf-8'))
     # TODO(aershov182): check that user hasn't passed both FROM and directory
-    BUILTIN_CONTEXT['cwd'] = (directory or '.')
+    cwd_context = Context({'cwd': (directory or '.')})
     query = parse(tokens)
-    return query.get_value(BUILTIN_CONTEXT)
+    return query.get_value(MergedContext(cwd_context, BUILTIN_CONTEXT))
 
 
 def colored(text, color):
@@ -56,12 +56,10 @@ def parse_lscolors(lscolors):
     :return: dictionary {tag -> color}
     """
     if not lscolors:
-        return OrderedDict([
-            ('dir', Fore.RESET),
-            ('link', Fore.RESET),
-            ('exec', Fore.RESET),
-            ('file', Fore.RESET),
-        ])
+        return OrderedDict.fromkeys(
+            ['dir', 'link', 'exec', 'file'],
+            Fore.RESET
+        )
     return OrderedDict([
         ('dir', lscolor_to_termcolor(lscolors[0].lower())),
         ('link', lscolor_to_termcolor(lscolors[2].lower())),
