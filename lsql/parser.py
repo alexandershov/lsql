@@ -155,6 +155,15 @@ class Parser(object):
             left = token.suffix(left, self)
         return left
 
+    def get_delimited_exprs(self, delimiter_token_cls, get_expr=None):
+        if get_expr is None:
+            get_expr = self.expr
+        exprs = [get_expr()]
+        while isinstance(self.token, delimiter_token_cls):
+            self.advance()
+            exprs.append(get_expr())
+        return exprs
+
 
 def parse(tokens):
     return Parser(tokens).parse()
@@ -352,7 +361,7 @@ class IlikeToken(KeywordToken):
 class InToken(KeywordToken):
     def suffix(self, value, parser):
         parser.skip(OpeningParenToken)
-        exprs = get_delimited_exprs(parser, CommaToken)
+        exprs = parser.get_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
         return expr.InExpr(value, exprs)
 
@@ -453,7 +462,7 @@ class SelectToken(KeywordToken):
             select_expr = expr.StarExpr()
             parser.advance()
         else:
-            select_expr = expr.ListExpr(get_delimited_exprs(parser, CommaToken))
+            select_expr = expr.ListExpr(parser.get_delimited_exprs(CommaToken))
         return select_expr
 
 
@@ -600,7 +609,7 @@ class OpeningParenToken(SpecialToken):
         if isinstance(parser.token, ClosingParenToken):
             args = []
         else:
-            args = get_delimited_exprs(parser, CommaToken)
+            args = parser.get_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
         return expr.FunctionExpr(value.name, args)
 
@@ -637,16 +646,11 @@ class UnknownSuffixError(ParserError):
         return LITERAL_SUFFIXES.keys()
 
 
-def get_delimited_exprs(parser, delimiter_token_cls):
-    exprs = [parser.expr()]
-    while isinstance(parser.token, delimiter_token_cls):
-        parser.advance()
-        exprs.append(parser.expr())
-    return exprs
+
 
 
 class EndQueryToken(Token):
-    pass
+    """Sentinel token with zero right binding power. Parsing will not go through it."""
 
 
 class Lexer(object):
