@@ -550,7 +550,7 @@ ASC = 1
 DESC = -1
 
 
-class OneOrderByExpr(Expr):
+class OrderByPartExpr(Expr):
     def __init__(self, expr, direction):
         self.expr = expr
         self.direction = direction
@@ -566,7 +566,7 @@ class OneOrderByExpr(Expr):
         self.expr.walk(visitor)
 
     def __eq__(self, other):
-        if not isinstance(other, OneOrderByExpr):
+        if not isinstance(other, OrderByPartExpr):
             return False
         return (self.expr == other.expr) and (self.direction == other.direction)
 

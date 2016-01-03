@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 import re
+from functools import partial
 
 from lsql import expr
 
@@ -423,25 +424,21 @@ class OrToken(KeywordToken):
 class OrderToken(KeywordToken):
     def clause(self, parser):
         parser.skip(ByToken)
-        order_by_exprs = []
-        ob_expr = parser.expr()
-        if isinstance(parser.token, (AscToken, DescToken)):
-            direction = parser.token.direction
-            parser.advance()
-        else:
-            direction = expr.ASC
-        order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
-        while isinstance(parser.token, CommaToken):
-            parser.advance()
-            ob_expr = parser.expr()
-            if isinstance(parser.token, (AscToken, DescToken)):
-                direction = parser.token.direction
-                parser.advance()
-            else:
-                direction = expr.ASC
-            order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
-        return expr.ListExpr(order_by_exprs)
+        sub_exprs = parser.get_delimited_exprs(
+            CommaToken,
+            partial(_get_one_order_by_clause, parser=parser)
+        )
+        return expr.ListExpr(sub_exprs)
 
+
+def _get_one_order_by_clause(parser):
+    part_expr = parser.expr()
+    if isinstance(parser.token, (AscToken, DescToken)):
+        direction = parser.token.direction
+        parser.advance()
+    else:
+        direction = expr.ASC
+    return expr.OrderByPartExpr(part_expr, direction)
 
 
 class OuterToken(KeywordToken):
@@ -644,9 +641,6 @@ class UnknownSuffixError(ParserError):
     @property
     def known_suffixes(self):
         return LITERAL_SUFFIXES.keys()
-
-
-
 
 
 class EndQueryToken(Token):
