@@ -104,38 +104,12 @@ class Parser(object):
         return self._tokens[self._index]
 
     def parse(self):
-        select_expr = None
-        from_expr = None
-        where_expr = None
-        order_expr = None
-        limit_expr = None
-        offset_expr = None
-        # TODO(aershov182): DRY it up maybe?
-        if isinstance(self.token, SelectToken):
-            token = self.token
-            self.advance()
-            select_expr = token.clause(self)
-        if isinstance(self.token, FromToken):
-            token = self.token
-            self.advance()
-            from_expr = token.clause(self)
-        if isinstance(self.token, WhereToken):
-            token = self.token
-            self.advance()
-            where_expr = token.clause(self)
-        if isinstance(self.token, OrderToken):
-            token = self.token
-            self.advance()
-            order_expr = token.clause(self)
-        if isinstance(self.token, LimitToken):
-            token = self.token
-            self.advance()
-            limit_expr = token.clause(self)
-        if isinstance(self.token, OffsetToken):
-            token = self.token
-            self.advance()
-            offset_expr = token.clause(self)
-
+        select_expr = self._get_clause(SelectToken)
+        from_expr = self._get_clause(FromToken)
+        where_expr = self._get_clause(WhereToken)
+        order_expr = self._get_clause(OrderToken)
+        limit_expr = self._get_clause(LimitToken)
+        offset_expr = self._get_clause(OffsetToken)
         self.expect(EndQueryToken)
         return expr.QueryExpr(
             select_expr=select_expr,
@@ -145,6 +119,13 @@ class Parser(object):
             limit_expr=limit_expr,
             offset_expr=offset_expr,
         )
+
+    def _get_clause(self, token_class, default=None):
+        if isinstance(self.token, token_class):
+            token = self.token
+            self.advance()
+            return token.clause(self)
+        return default
 
     def expr(self, left_bp=0):
         token = self.token
