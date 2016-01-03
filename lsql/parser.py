@@ -213,7 +213,7 @@ class AndToken(KeywordToken):
 
 
 class AsToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class AscToken(KeywordToken):
