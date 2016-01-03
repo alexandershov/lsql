@@ -363,10 +363,10 @@ class NumberToken(Token):
         if suffix:
             # all suffixes in LITERAL_SUFFIXES are lowercase, but we want to have
             # case-insensitive suffixes: 10mb and 10MB should mean the same thing.
-            suffix = suffix.lower()
-            if suffix not in LITERAL_SUFFIXES:
+            try:
+                result *= LITERAL_SUFFIXES[suffix.lower()]
+            except KeyError:
                 raise LexerError('unknown suffix: {!r}'.format(suffix), self.start)
-            result *= LITERAL_SUFFIXES[suffix]
         return result
 
     def prefix(self, parser):
