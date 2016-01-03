@@ -1,3 +1,5 @@
+# coding: utf-8
+
 # TODO(aershov182): when done, replace test_lsql with this file
 
 import pytest
@@ -7,7 +9,16 @@ import os
 from lsql import expr
 from lsql import main
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), 'data', 'base')
+
+def get_fixture_dir(fixture_name):
+    return os.path.join(os.path.dirname(__file__), 'data', fixture_name)
+
+
+def make_full_path(rel_path):
+    return os.path.join(os.getcwd(), rel_path)
+
+
+BASE_DIR = get_fixture_dir('base')
 
 
 # TODO(aershov182): remove assert_same_items/get_results duplication in tests
@@ -121,6 +132,20 @@ def test_concat():
             ('README.md_test',),
             ('small.py_test',),
         ]
+    )
+
+
+@pytest.mark.parametrize('query, expected_results', [
+    ('select fullpath',
+     [(make_full_path(u'tests/data/non-ascii-paths/тест.txt'),)]),
+    ('select path', [(u'tests/data/non-ascii-paths/тест.txt',)]),
+    ('select name', [(u'тест.txt',)]),
+    ('select no_ext', [(u'тест',)]),
+])
+def test_non_ascii_paths(query, expected_results):
+    assert_same_items(
+        get_results(query, directory=get_fixture_dir('non-ascii-paths')),
+        expected_results
     )
 
 

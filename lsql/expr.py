@@ -11,7 +11,6 @@ from stat import S_IXUSR
 import errno
 import os
 
-
 import operator
 
 
@@ -159,7 +158,6 @@ class FileTableContext(Context):
         return ['name']
 
 
-# TODO(aershov182): check that it's correct
 class TaggedUnicode(unicode):
     def __new__(cls, string, tags, encoding='utf-8', errors='strict'):
         return super(TaggedUnicode, cls).__new__(cls, string, encoding, errors)
@@ -695,7 +693,7 @@ class BetweenExpr(Expr):
         if not isinstance(other, BetweenExpr):
             return False
         return (self.value_expr == other.value_expr) and (self.first_expr == other.first_expr) and (
-        self.last_expr == other.last_expr)
+            self.last_expr == other.last_expr)
 
 
 class QueryExpr(Expr):
@@ -848,7 +846,7 @@ class LazyList(object):
 def make_agg_context(row_type, row_group):
     items = {
         name: LazyList(row_group, name) for name in row_type
-    }
+        }
     return Context(items)
 
 
