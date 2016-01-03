@@ -350,6 +350,7 @@ class NumberToken(Token):
     @property
     def value(self):
         result = 0
+        # match of some regex from _add_number_literals
         int_part = self.match.group('int')
         float_part = self.match.group('float')
         exp_part = self.match.group('exp')
@@ -366,7 +367,7 @@ class NumberToken(Token):
             try:
                 result *= LITERAL_SUFFIXES[suffix.lower()]
             except KeyError:
-                raise LexerError('unknown suffix: {!r}'.format(suffix), self.start)
+                raise UnknownSuffixError(suffix, self)
         return result
 
     def prefix(self, parser):
@@ -495,6 +496,16 @@ class LexerError(Exception):
     def __str__(self):
         substring = self.string[self.pos:self.pos + 20] + '...'
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
+
+
+class UnknownSuffixError(ParserError):
+    def __init__(self, suffix, token):
+        self.suffix = suffix
+        self.token = token
+
+    @property
+    def known_suffixes(self):
+        return LITERAL_SUFFIXES.keys()
 
 
 class BeginQueryToken(Token):
@@ -719,15 +730,16 @@ def _add_string_literals(lexer):
 
 def _add_number_literals(lexer):
     # TODO: check (just read, they're tested properly) these regexes
-    for pattern, number_class in [
+    patterns = [
         # [2].3[e[-]5][years]
-        (r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b', NumberToken),
+        r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b',
         # 2.[e[-]5][years]
-        (r'(?P<int>\d+)\.(?P<float>)(?:(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b)?', NumberToken),
+        r'(?P<int>\d+)\.(?P<float>)(?:(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b)?',
         # 2[e[-]5][years]
-        (r'(?P<int>\d+)(?P<float>)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b', NumberToken),
-    ]:
-        lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), number_class)
+        r'(?P<int>\d+)(?P<float>)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b',
+    ]
+    for pattern in patterns:
+        lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), NumberToken)
 
 
 def _add_whitespace(lexer):
