@@ -1,16 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import numbers
 from collections import defaultdict, namedtuple, OrderedDict, Sized
 from datetime import datetime
-from functools import wraps, total_ordering
+from functools import total_ordering, wraps
 from grp import getgrgid
 from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
-import os
-
+import numbers
 import operator
+import os
 
 
 class LsqlTypeError(Exception):
