@@ -1,61 +1,41 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# TODO(aershov182): move lexer.py to this file
 import logging
 import re
 
 from lsql import expr
 
-
-# these comments and TODOs are left after automatic refactoring
-
-# binding powers:
-# IN: 50
-# OR: 100
-# AND: 200
-# =, <>, BETWEEN: 250
-# <, <=, >, >=: 260
-# ||: 300
-# +-: 400
-# */: 500
-# ^: 600
-# (: 700
-
-
-# TODO: make it operator token?
-
-
-# TODO: make it operator token?
-
-
-# TODO: make it operator token?
-# TODO: make it operator token?
-
-
-# TODO: make it operator token?
-# TODO: make it operator token?
-
-
-# TODO: make it operator token?
-
-
-# TODO: make it operator token?
-# TODO: make it operator token?
-
+KILO = 1024
+MEGA = KILO * 1024
+GIGA = MEGA * 1024
 
 # unit -> num of bytes in 1 unit
+SIZE_SUFFIXES = {
+    'k': KILO,
+    'kb': KILO,
+    'm': MEGA,
+    'mb': MEGA,
+    'g': GIGA,
+    'gb': GIGA,
+}
+
+SECONDS_IN_DAY = 86400
 
 # unit -> num of seconds in 1 unit
-
-
-# TODO(aershov182): more consistent bps (multipliers of 100)
-
-
-# populated in _add_operators
-
-
-# [[3].[2]][e[-]10][suffix]
-
+TIME_SUFFIXES = {
+    'minute': 60,
+    'minutes': 60,
+    'hour': 3600,
+    'hours': 3600,
+    'day': SECONDS_IN_DAY,
+    'days': SECONDS_IN_DAY,
+    'week': SECONDS_IN_DAY * 7,
+    'weeks': SECONDS_IN_DAY * 7,
+    'month': SECONDS_IN_DAY * 30,
+    'months': SECONDS_IN_DAY * 30,
+    'year': SECONDS_IN_DAY * 365,
+    'years': SECONDS_IN_DAY * 365,
+}
 
 
 class ParserError(Exception):
@@ -115,6 +95,22 @@ _MISSING = object()
 
 
 class Token(object):
+    @property
+    def right_bp(self):
+        cls = self.__class__
+        try:
+            return RIGHT_BINDING_POWERS[cls]
+        except KeyError:
+            raise NotImplementedError('please add {} to RIGHT_BINDING_POWERS'.format(cls.__name__))
+
+    @property
+    def left_bp(self):
+        cls = self.__class__
+        try:
+            return LEFT_BINDING_POWERS[cls]
+        except KeyError:
+            raise NotImplementedError('please add {} to LEFT_BINDING_POWERS'.format(cls.__name__))
+
     @classmethod
     def from_match(cls, match):
         return cls(
@@ -151,8 +147,6 @@ class KeywordToken(Token):
 
 
 class AndToken(KeywordToken):
-    right_bp = 200
-
     def suffix(self, value, parser):
         return expr.AndExpr(value, parser.expr(self.right_bp))
 
@@ -162,13 +156,10 @@ class AsToken(KeywordToken):
 
 
 class AscToken(KeywordToken):
-    right_bp = 0
     direction = expr.ASC
 
 
 class BetweenToken(KeywordToken):
-    right_bp = 250
-
     def suffix(self, value, parser):
         first = parser.expr(left_bp=AndToken.right_bp)
         parser.skip(AndToken)
@@ -205,7 +196,6 @@ class DeleteToken(KeywordToken):
 
 
 class DescToken(KeywordToken):
-    right_bp = 0
     direction = expr.DESC
 
 
@@ -226,7 +216,7 @@ class ExistsToken(KeywordToken):
 
 
 class FromToken(KeywordToken):
-    right_bp = 0
+    pass
 
 
 class GroupToken(KeywordToken):
@@ -246,8 +236,6 @@ class IlikeToken(KeywordToken):
 
 
 class InToken(KeywordToken):
-    right_bp = 50
-
     def suffix(self, value, parser):
         parser.skip(OpeningParenToken)
         exprs = get_delimited_exprs(parser, CommaToken)
@@ -271,16 +259,18 @@ class LeftToken(KeywordToken):
     pass
 
 
+# TODO(aershov182): maybe make it operator token. And similar (ContainsToken) tokens too?
 class LikeToken(KeywordToken):
     pass
 
 
+# alias for rlike
 class LikeRegexToken(KeywordToken):
     pass
 
 
 class LimitToken(KeywordToken):
-    right_bp = 0
+    pass
 
 
 class NotToken(KeywordToken):
@@ -297,18 +287,16 @@ class NullToken(KeywordToken):
 
 
 class OffsetToken(KeywordToken):
-    right_bp = 0
+    pass
 
 
 class OrToken(KeywordToken):
-    right_bp = 100
-
     def suffix(self, value, parser):
         return expr.OrExpr(value, parser.expr(self.right_bp))
 
 
 class OrderToken(KeywordToken):
-    right_bp = 0
+    pass
 
 
 class OuterToken(KeywordToken):
@@ -336,39 +324,11 @@ class UpdateToken(KeywordToken):
 
 
 class WhereToken(KeywordToken):
-    right_bp = 0
+    pass
 
 
 class WhitespaceToken(Token):
     pass
-
-
-KILO = 1024
-MEGA = KILO * 1024
-GIGA = MEGA * 1024
-SIZE_SUFFIXES = {
-    'k': KILO,
-    'kb': KILO,
-    'm': MEGA,
-    'mb': MEGA,
-    'g': GIGA,
-    'gb': GIGA,
-}
-SECONDS_IN_DAY = 86400
-TIME_SUFFIXES = {
-    'minute': 60,
-    'minutes': 60,
-    'hour': 3600,
-    'hours': 3600,
-    'day': SECONDS_IN_DAY,
-    'days': SECONDS_IN_DAY,
-    'week': SECONDS_IN_DAY * 7,
-    'weeks': SECONDS_IN_DAY * 7,
-    'month': SECONDS_IN_DAY * 30,
-    'months': SECONDS_IN_DAY * 30,
-    'year': SECONDS_IN_DAY * 365,
-    'years': SECONDS_IN_DAY * 365,
-}
 
 
 def merge_dicts(x, y):
@@ -430,73 +390,60 @@ class OperatorToken(Token):
 
 
 class ConcatToken(OperatorToken):
-    right_bp = 300
     function_name = '||'
 
 
 class DivToken(OperatorToken):
-    right_bp = 500
     function_name = '/'
 
 
 class EqToken(OperatorToken):
-    right_bp = 250
     function_name = '='
 
 
 class GtToken(OperatorToken):
-    right_bp = 260
     function_name = '>'
 
 
 class GteToken(OperatorToken):
-    right_bp = 260
     function_name = '>='
 
 
 class LtToken(OperatorToken):
-    right_bp = 260
     function_name = '<'
 
 
 class LteToken(OperatorToken):
-    right_bp = 260
     function_name = '<='
 
 
 class MinusToken(OperatorToken):
-    right_bp = 400
     function_name = '-'
 
     def prefix(self, parser):
-        return expr.FunctionExpr('negate', [parser.expr(left_bp=10000)])
+        return expr.FunctionExpr('negate', [parser.expr(left_bp=self.left_bp)])
 
 
 class ModuloToken(OperatorToken):
-    right_bp = 500
     function_name = '%'
 
 
 class MulToken(OperatorToken):
-    right_bp = 500
     function_name = '*'
 
 
 class NeToken(OperatorToken):
-    right_bp = 260
     function_name = '<>'
 
 
 class PlusToken(OperatorToken):
-    right_bp = 400
     function_name = '+'
 
     def prefix(self, parser):
-        return parser.expr(left_bp=10000)
+        return parser.expr(left_bp=self.left_bp)
 
 
 class PowerToken(OperatorToken):
-    right_bp = 600
     function_name = '^'
 
 
@@ -505,8 +452,6 @@ class SpecialToken(Token):
 
 
 class OpeningParenToken(SpecialToken):
-    right_bp = 700
-
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
             raise LexerError('expression expected', self.start())
@@ -528,11 +473,11 @@ class OpeningParenToken(SpecialToken):
 
 
 class ClosingParenToken(SpecialToken):
-    right_bp = 0
+    pass
 
 
 class CommaToken(SpecialToken):
-    right_bp = 0
+    pass
 
 
 class PeriodToken(SpecialToken):
@@ -739,7 +684,7 @@ def _add_names(lexer):
     lexer.add(_regex(r'[^\W\d]\w*'), NameToken)
 
 
-_OPERATOR_CHARS = set()
+_OPERATOR_CHARS = set()  # populated in _add_operators
 
 
 def _add_operators(lexer):
@@ -770,7 +715,7 @@ def _add_string_literals(lexer):
 
 
 def _add_number_literals(lexer):
-    # TODO: check this regexes
+    # TODO: check (just read, they're tested properly) these regexes
     for pattern, number_class in [
         # [2].3[e[-]5][years]
         (r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b', NumberToken),
@@ -790,5 +735,63 @@ def _operator(s):
     chars = ''.join(_OPERATOR_CHARS)
     return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(chars)))
 
+
+# these comments and TODOs are left after automatic refactoring
+
+# binding powers:
+# IN: 50
+# OR: 100
+# AND: 200
+# =, <>, BETWEEN: 250
+# <, <=, >, >=: 260
+# ||: 300
+# +-: 400
+# */: 500
+# ^: 600
+# (: 700
+
+
+def _get_right_binding_powers():
+    # increasing precedence levels, first level is zero
+    right_token_groups = [
+        [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
+         AscToken, DescToken, LimitToken, OffsetToken],
+        [OrToken],
+        [AndToken],
+        [EqToken, NeToken],
+        [LtToken, LteToken, GtToken, GteToken],
+        [LikeToken, IlikeToken, LikeRegexToken, RlikeToken, RilikeToken, ContainsToken, IcontainsToken],
+        [BetweenToken],
+        [InToken],
+        [ConcatToken],
+        [PlusToken, MinusToken],
+        [MulToken, DivToken, ModuloToken],
+        [PowerToken],
+        [OpeningParenToken],
+    ]
+    return _get_binding_powers(right_token_groups)
+
+
+def _get_left_binding_powers():
+    # increasing precedence levels
+    left_token_groups = [
+        [],  # empty group, so next group will have non-zero precedence level
+        [PlusToken, MinusToken],  # unary plus and minus
+    ]
+    return _get_binding_powers(left_token_groups, mul=10000)
+
+
+# multiply by 100 so we can add some inbetweener precedence level
+def _get_binding_powers(token_groups, mul=100):
+    powers = {}
+    for level, group in enumerate(token_groups):
+        for op in group:
+            assert op not in powers
+            powers[op] = mul * level
+    return powers
+
+
+RIGHT_BINDING_POWERS = _get_right_binding_powers()
+LEFT_BINDING_POWERS = _get_left_binding_powers()
 
 tokenize = _make_default_lexer().tokenize
