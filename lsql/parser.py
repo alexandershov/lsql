@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from functools import partial
 import logging
 import re
-from functools import partial
 
 from lsql import expr
 
@@ -104,13 +104,16 @@ class Parser(object):
         return self._tokens[self._index]
 
     def parse(self):
+        # order of _get_clause calls is important, because order of clauses is important in SQL
         select_expr = self._get_clause(SelectToken)
         from_expr = self._get_clause(FromToken)
         where_expr = self._get_clause(WhereToken)
         order_expr = self._get_clause(OrderToken)
         limit_expr = self._get_clause(LimitToken)
         offset_expr = self._get_clause(OffsetToken)
+
         self.expect(EndQueryToken)
+
         return expr.QueryExpr(
             select_expr=select_expr,
             from_expr=from_expr,
@@ -137,13 +140,13 @@ class Parser(object):
             left = token.suffix(left, self)
         return left
 
-    def get_delimited_exprs(self, delimiter_token_cls, get_expr=None):
-        if get_expr is None:
-            get_expr = self.expr
-        exprs = [get_expr()]
+    def parse_delimited_exprs(self, delimiter_token_cls, parse_fn=None):
+        if parse_fn is None:
+            parse_fn = self.expr
+        exprs = [parse_fn()]
         while isinstance(self.token, delimiter_token_cls):
             self.advance()
-            exprs.append(get_expr())
+            exprs.append(parse_fn())
         return exprs
 
 
@@ -258,7 +261,6 @@ class AsToken(KeywordToken):
 
 
 class AscToken(KeywordToken):
-    # TODO(aershov182): get rid of direction here and in DescToken
     direction = expr.ASC
 
 
@@ -296,7 +298,7 @@ class CountToken(KeywordToken):
 
 
 class DeleteToken(KeywordToken):
-    pass
+    pass  # not implemented yet
 
 
 class DescToken(KeywordToken):
@@ -343,7 +345,7 @@ class IlikeToken(KeywordToken):
 class InToken(KeywordToken):
     def suffix(self, value, parser):
         parser.skip(OpeningParenToken)
-        exprs = parser.get_delimited_exprs(CommaToken)
+        exprs = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
         return expr.InExpr(value, exprs)
 
@@ -405,14 +407,14 @@ class OrToken(KeywordToken):
 class OrderToken(KeywordToken):
     def clause(self, parser):
         parser.skip(ByToken)
-        sub_exprs = parser.get_delimited_exprs(
+        sub_exprs = parser.parse_delimited_exprs(
             CommaToken,
-            partial(_get_one_order_by_clause, parser=parser)
+            partial(_parse_one_order_by_clause, parser=parser)
         )
         return expr.ListExpr(sub_exprs)
 
 
-def _get_one_order_by_clause(parser):
+def _parse_one_order_by_clause(parser):
     part_expr = parser.expr()
     if isinstance(parser.token, (AscToken, DescToken)):
         direction = parser.token.direction
@@ -440,7 +442,7 @@ class SelectToken(KeywordToken):
             select_expr = expr.StarExpr()
             parser.advance()
         else:
-            select_expr = expr.ListExpr(parser.get_delimited_exprs(CommaToken))
+            select_expr = expr.ListExpr(parser.parse_delimited_exprs(CommaToken))
         return select_expr
 
 
@@ -587,7 +589,7 @@ class OpeningParenToken(SpecialToken):
         if isinstance(parser.token, ClosingParenToken):
             args = []
         else:
-            args = parser.get_delimited_exprs(CommaToken)
+            args = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
         return expr.FunctionExpr(value.name, args)
 
