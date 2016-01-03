@@ -194,6 +194,16 @@ class Token(object):
         """
         raise NotImplementedError(self._get_not_implemented_message('suffix'))
 
+    def clause(self, parser):
+        """
+        Called in special cases. For example BeginQueryToken will call .clause() on
+        SelectToken, FromToken, WhereToken etc.
+
+        :type parser: lsql.parser.Parser
+        :rtype: lsql.expr.Expr
+        """
+        raise NotImplementedError(self._get_not_implemented_message('clause'))
+
     def _get_not_implemented_message(self, method):
         return 'not implemented method .{!s}() in {!r}'.format(method, self)
 
@@ -217,6 +227,7 @@ class AsToken(KeywordToken):
 
 
 class AscToken(KeywordToken):
+    # TODO(aershov182): get rid of direction here and in DescToken
     direction = expr.ASC
 
 
@@ -278,7 +289,8 @@ class ExistsToken(KeywordToken):
 
 
 class FromToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        return parser.expr()
 
 
 class GroupToken(KeywordToken):
@@ -332,7 +344,8 @@ class LikeRegexToken(KeywordToken):
 
 
 class LimitToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        return parser.expr()
 
 
 class NotToken(KeywordToken):
@@ -349,7 +362,8 @@ class NullToken(KeywordToken):
 
 
 class OffsetToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        return parser.expr()
 
 
 class OrToken(KeywordToken):
@@ -358,7 +372,27 @@ class OrToken(KeywordToken):
 
 
 class OrderToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        parser.skip(ByToken)
+        order_by_exprs = []
+        ob_expr = parser.expr()
+        if isinstance(parser.token, (AscToken, DescToken)):
+            direction = parser.token.direction
+            parser.advance()
+        else:
+            direction = expr.ASC
+        order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
+        while isinstance(parser.token, CommaToken):
+            parser.advance()
+            ob_expr = parser.expr()
+            if isinstance(parser.token, (AscToken, DescToken)):
+                direction = parser.token.direction
+                parser.advance()
+            else:
+                direction = expr.ASC
+            order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
+        return expr.ListExpr(order_by_exprs)
+
 
 
 class OuterToken(KeywordToken):
@@ -374,7 +408,13 @@ class RilikeToken(KeywordToken):
 
 
 class SelectToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        if isinstance(parser.token, MulToken):
+            select_expr = expr.StarExpr()
+            parser.advance()
+        else:
+            select_expr = expr.ListExpr(get_delimited_exprs(parser, CommaToken))
+        return select_expr
 
 
 class ThenToken(KeywordToken):
@@ -386,7 +426,8 @@ class UpdateToken(KeywordToken):
 
 
 class WhereToken(KeywordToken):
-    pass
+    def clause(self, parser):
+        return parser.expr()
 
 
 class WhitespaceToken(Token):
@@ -440,6 +481,7 @@ class OperatorToken(Token):
         return expr.FunctionExpr(self.function_name, [value, right])
 
 
+# TODO(aershov182): use operator_name instead of function_name
 class ConcatToken(OperatorToken):
     function_name = '||'
 
@@ -567,46 +609,29 @@ class BeginQueryToken(Token):
         offset_expr = None
         # TODO(aershov182): add .clause() method to tokens
         if isinstance(parser.token, SelectToken):
+            token = parser.token
             parser.advance()
-            if isinstance(parser.token, MulToken):
-                select_expr = expr.StarExpr()
-                parser.advance()
-            else:
-                select_expr = expr.ListExpr(get_delimited_exprs(parser, CommaToken))
+            select_expr = token.clause(parser)
         if isinstance(parser.token, FromToken):
+            token = parser.token
             parser.advance()
-            from_expr = parser.expr()
+            from_expr = token.clause(parser)
         if isinstance(parser.token, WhereToken):
+            token = parser.token
             parser.advance()
-            where_expr = parser.expr()
+            where_expr = token.clause(parser)
         if isinstance(parser.token, OrderToken):
+            token = parser.token
             parser.advance()
-            parser.skip(ByToken)
-            # TODO(aershov182): add ASC/DESC
-            order_by_exprs = []
-            ob_expr = parser.expr()
-            if isinstance(parser.token, (AscToken, DescToken)):
-                direction = parser.token.direction
-                parser.advance()
-            else:
-                direction = expr.ASC
-            order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
-            while isinstance(parser.token, CommaToken):
-                parser.advance()
-                ob_expr = parser.expr()
-                if isinstance(parser.token, (AscToken, DescToken)):
-                    direction = parser.token.direction
-                    parser.advance()
-                else:
-                    direction = expr.ASC
-                order_by_exprs.append(expr.OneOrderByExpr(ob_expr, direction))
-            order_expr = expr.ListExpr(order_by_exprs)
+            order_expr = token.clause(parser)
         if isinstance(parser.token, LimitToken):
+            token = parser.token
             parser.advance()
-            limit_expr = parser.expr()
+            limit_expr = token.clause(parser)
         if isinstance(parser.token, OffsetToken):
+            token = parser.token
             parser.advance()
-            offset_expr = parser.expr()
+            offset_expr = token.clause(parser)
         parser.expect(EndQueryToken)
         return expr.QueryExpr(
             select_expr=select_expr,
