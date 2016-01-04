@@ -1,4 +1,4 @@
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from functools import partial
 import logging
@@ -81,7 +81,7 @@ class UnexpectedEnd(ParserError):
     pass
 
 
-class UnknownSuffixError(ParserError):
+class UnknownLiteralSuffixError(ParserError):
     def __init__(self, suffix, token):
         self.suffix = suffix
         self.token = token
@@ -268,11 +268,6 @@ class KeywordToken(Token):
     """Base class for keyword tokens."""
 
 
-class AndToken(KeywordToken):
-    def suffix(self, left, parser):
-        return expr.AndExpr(left, parser.expr(self.right_bp))
-
-
 class AsToken(KeywordToken):
     pass  # not implemented yet
 
@@ -281,10 +276,13 @@ class AscToken(KeywordToken):
     direction = expr.ASC
 
 
+class DescToken(KeywordToken):
+    direction = expr.DESC
+
+
 class BetweenToken(KeywordToken):
     def suffix(self, left, parser):
-        # TODO(aershov182): check left_bp=
-        first = parser.expr(left_bp=AndToken.right_bp)
+        first = parser.expr(left_bp=self.right_bp)
         parser.skip(AndToken)
         last = parser.expr()
         return expr.BetweenExpr(left, first, last)
@@ -303,23 +301,11 @@ class ContainsToken(KeywordToken):
 
 
 class CountToken(KeywordToken):
-    def prefix(self, parser):
-        parser.skip(OpeningParenToken)
-        if isinstance(parser.token, MulToken):
-            arg_expr = expr.LiteralExpr(1)
-            parser.advance()
-        else:
-            arg_expr = parser.expr()
-        parser.skip(ClosingParenToken)
-        return expr.FunctionExpr('count', [arg_expr])
+    pass  # not implemented yet
 
 
 class DeleteToken(KeywordToken):
     pass  # not implemented yet
-
-
-class DescToken(KeywordToken):
-    direction = expr.DESC
 
 
 class DropToken(KeywordToken):
@@ -351,22 +337,6 @@ class HavingToken(KeywordToken):
     pass  # not implemented yet
 
 
-class IcontainsToken(KeywordToken):
-    pass  # not implemented yet
-
-
-class IlikeToken(KeywordToken):
-    pass  # not implemented yet
-
-
-class InToken(KeywordToken):
-    def suffix(self, left, parser):
-        parser.skip(OpeningParenToken)
-        exprs = parser.parse_delimited_exprs(CommaToken)
-        parser.skip(ClosingParenToken)
-        return expr.InExpr(left, exprs)
-
-
 class IsToken(KeywordToken):
     pass  # not implemented yet
 
@@ -383,13 +353,43 @@ class LeftToken(KeywordToken):
     pass  # not implemented yet
 
 
-# TODO(aershov182): maybe make it operator token. And similar (ContainsToken) tokens too?
-class LikeToken(KeywordToken):
+class AndToken(KeywordToken):
+    def suffix(self, left, parser):
+        return expr.AndExpr(left, parser.expr(self.right_bp))
+
+
+class OperatorToken(Token):
+    operator_name = None  # should be redefined in subclasses
+
+    def suffix(self, left, parser):
+        right = parser.expr(self.right_bp)
+        return expr.FunctionExpr(self.operator_name, [left, right])
+
+
+class InToken(OperatorToken):
+    operator_name = 'in'
+
+    def suffix(self, left, parser):
+        parser.skip(OpeningParenToken)
+        exprs = parser.parse_delimited_exprs(CommaToken)
+        parser.skip(ClosingParenToken)
+        return expr.FunctionExpr(self.operator_name, [left, expr.ArrayExpr(exprs)])
+
+
+class LikeToken(OperatorToken):
     pass  # not implemented yet
 
 
 # alias for rlike
-class LikeRegexToken(KeywordToken):
+class LikeRegexToken(OperatorToken):
+    pass  # not implemented yet
+
+
+class IcontainsToken(OperatorToken):
+    pass  # not implemented yet
+
+
+class IlikeToken(OperatorToken):
     pass  # not implemented yet
 
 
@@ -398,7 +398,7 @@ class LimitToken(KeywordToken):
         return parser.expr()
 
 
-class NotToken(KeywordToken):
+class NotToken(OperatorToken):
     pass  # not implemented yet
 
 
@@ -501,7 +501,7 @@ class NumberToken(Token):
             try:
                 result *= LITERAL_SUFFIXES[suffix.lower()]
             except KeyError:
-                raise UnknownSuffixError(suffix, self)
+                raise UnknownLiteralSuffixError(suffix, self)
         return result
 
     def prefix(self, parser):
@@ -518,71 +518,62 @@ class NameToken(Token):
         return expr.NameExpr(self.text)
 
 
-class OperatorToken(Token):
-    function_name = None  # redefine me in subclasses
-
-    def suffix(self, left, parser):
-        right = parser.expr(self.right_bp)
-        return expr.FunctionExpr(self.function_name, [left, right])
-
-
-# TODO(aershov182): use operator_name instead of function_name
 class ConcatToken(OperatorToken):
-    function_name = '||'
+    operator_name = '||'
 
 
 class DivToken(OperatorToken):
-    function_name = '/'
+    operator_name = '/'
 
 
 class EqToken(OperatorToken):
-    function_name = '='
+    operator_name = '='
 
 
 class GtToken(OperatorToken):
-    function_name = '>'
+    operator_name = '>'
 
 
 class GteToken(OperatorToken):
-    function_name = '>='
+    operator_name = '>='
 
 
 class LtToken(OperatorToken):
-    function_name = '<'
+    operator_name = '<'
 
 
 class LteToken(OperatorToken):
-    function_name = '<='
+    operator_name = '<='
 
 
 class MinusToken(OperatorToken):
-    function_name = '-'
+    operator_name = '-'
 
     def prefix(self, parser):
         return expr.FunctionExpr('negate', [parser.expr(left_bp=self.left_bp)])
 
 
 class ModuloToken(OperatorToken):
-    function_name = '%'
+    operator_name = '%'
 
 
 class MulToken(OperatorToken):
-    function_name = '*'
+    operator_name = '*'
 
 
 class NeToken(OperatorToken):
-    function_name = '<>'
+    operator_name = '<>'
 
 
 class PlusToken(OperatorToken):
-    function_name = '+'
+    operator_name = '+'
 
     def prefix(self, parser):
         return parser.expr(left_bp=self.left_bp)
 
 
 class PowerToken(OperatorToken):
-    function_name = '^'
+    operator_name = '^'
 
 
 class SpecialToken(Token):

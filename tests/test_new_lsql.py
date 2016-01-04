@@ -8,6 +8,7 @@ import os
 
 from lsql import expr
 from lsql import main
+from lsql import parser
 
 
 def get_fixture_dir(fixture_name):
@@ -144,6 +145,11 @@ def test_non_ascii_paths(query, expected_results):
         get_results(query, directory=get_fixture_dir('non-ascii-paths')),
         expected_results
     )
+
+
+def test_unknown_literal_suffix():
+    with pytest.raises(parser.UnknownLiteralSuffixError):
+        get_results('select 5badsuffix')
 
 
 def assert_same_items(seq_x, seq_y):

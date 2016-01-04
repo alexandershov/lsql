@@ -442,6 +442,14 @@ BASE_CONTEXT = Context({
     'null': NULL,
     'current_time': _CURRENT_TIME,
     'current_date': _CURRENT_DATE,
+})
+
+
+def in_(x, y):
+    return x in y
+
+
+FUNCTIONS = Context({
     'files': _files_table_function,
     '||': sql_function(operator.add, [unicode, unicode, unicode]),
     '+': sql_function(operator.add, [numbers.Number, numbers.Number, numbers.Number]),
@@ -458,6 +466,7 @@ BASE_CONTEXT = Context({
     '^': sql_function(operator.pow, [numbers.Number, numbers.Number, numbers.Number]),
     '%': sql_function(operator.mod, [numbers.Number, numbers.Number, numbers.Number]),
     'length': sql_function(len, [Sized, int]),
+    'in': sql_function(in_, [object, AnyIterable])
 })
 
 BUILTIN_CONTEXT = MergedContext(AGG_FUNCTIONS, BASE_CONTEXT)
@@ -485,7 +494,7 @@ class ExprError(Exception):
     pass
 
 
-# TODO: Expr object should probably contain a reference to its location in the string
+# TODO: Expr object should contain a reference to its location in the string
 # TODO: ... (and the string itself)
 class Expr(object):
     def get_type(self, scope):
@@ -515,6 +524,7 @@ class NullExpr(Expr):
         return isinstance(other, NullExpr)
 
 
+# TODO(aershov182): rename too similar to ArrayExpr but means a different thing
 class ListExpr(Expr):
     def __init__(self, exprs):
         self.exprs = exprs
@@ -591,30 +601,6 @@ class OrderByKey(object):
 
     def __eq__(self, other):
         return self.row == other.row
-
-
-class InExpr(Expr):
-    def __init__(self, value_expr, exprs):
-        self.value_expr = value_expr
-        self.exprs = exprs
-
-    def get_type(self, scope):
-        return bool
-
-    def get_value(self, context):
-        value = self.value_expr.get_value(context)
-        seq = [e.get_value(context) for e in self.exprs]
-        return value in seq
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.value_expr.walk(visitor)
-        walk_iterable(visitor, self.exprs)
-
-    def __eq__(self, other):
-        if not isinstance(other, InExpr):
-            return False
-        return (self.value_expr == other.value_expr) and (self.exprs == other.exprs)
 
 
 def walk_iterable(visitor, exprs):
@@ -860,19 +846,44 @@ class LiteralExpr(Expr):
         visitor.visit(self)
 
 
+class ArrayExpr(Expr):
+    def __init__(self, exprs):
+        self.exprs = exprs
+
+    def get_type(self, scope):
+        return AnyIterable
+
+    def walk(self, visitor):
+        visitor.visit(self)
+        walk_iterable(visitor, self.exprs)
+
+    def get_value(self, context):
+        return [e.get_value(context) for e in self.exprs]
+
+    def __repr__(self):
+        return '{!s}(exprs={!r})'.format(self.__class__.__name__, self.exprs)
+
+    def __eq__(self, other):
+        if not isinstance(other, ArrayExpr):
+            return False
+        return self.exprs == other.exprs
+
+
 class FunctionExpr(Expr):
     def __init__(self, function_name, arg_exprs):
         self.function_name = function_name
         self.arg_exprs = arg_exprs
 
+    @property
+    def function(self):
+        return FUNCTIONS[self.function_name]
+
     def get_type(self, scope):
-        function = scope[self.function_name]
-        return function.return_type
+        return self.function.return_type
 
     def get_value(self, context):
-        function = context[self.function_name]
         args = [arg_expr.get_value(context) for arg_expr in self.arg_exprs]
-        return function(*args)
+        return self.function(*args)
 
     def walk(self, visitor):
         visitor.visit(self)
