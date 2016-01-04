@@ -60,6 +60,10 @@ LITERAL_SUFFIXES = _merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
 
 
 class LexerError(LsqlError):
+    pass
+
+
+class CantTokenizeError(LexerError):
     def __init__(self, string, pos):
         self.string = string
         self.pos = pos
@@ -644,7 +648,7 @@ class Lexer(object):
                 start = match.end()
                 break
             else:
-                raise LexerError(string, start)
+                raise CantTokenizeError(string, start)
         end_re = _regex('$')
         yield EndQueryToken(end_re.match(string, pos=start))
 

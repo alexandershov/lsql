@@ -9,19 +9,39 @@ from colorama import Fore
 
 from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
-from lsql.expr import DirectoryDoesNotExistError
+from lsql import expr
 from lsql import get_version
+from lsql import parser
 
 FORE_BROWN = '\x1b[33m'
 
 GITHUB = 'https://github.com/alexandershov/lsql'
 
 
-def show_message(text):
-    print(text, file=sys.stderr)
+class Printer(object):
+    def colored(self, color, text, start=0, end=None):
+        return text
+
+    def warning(self, text, start=0, end=None):
+        return text
+
+    def error(self, text, start=0, end=None):
+        return text
+
+    def auto_colored(self, value):
+        return value
+
+    def show_message(self, text):
+        print(text, file=sys.stderr)
+
+    def show_error(self, text, start=0, end=None):
+        self.show_message(self.error(text=text, start=start, end=end))
+
+    def show_warning(self, text, start=0, end=None):
+        self.show_message(self.warning(text=text, start=start, end=end))
 
 
-class Colorizer(object):
+class ColoredPrinter(Printer):
     def __init__(self, tag_colors):
         self._tag_colors = tag_colors
 
@@ -44,51 +64,39 @@ class Colorizer(object):
                     return self.colored(color, value)
         return value
 
-    def show_error(self, text, start=0, end=None):
-        show_message(self.error(text=text, start=start, end=end))
 
-    def show_warning(self, text, start=0, end=None):
-        show_message(self.warning(text=text, start=start, end=end))
-
-
-class FakeColorizer(Colorizer):
-    def __init__(self):
-        pass
-
-    def colored(self, color, text, start=0, end=None):
-        return text
-
-    def warning(self, text, start=0, end=None):
-        return text
-
-    def error(self, text, start=0, end=None):
-        return text
-
-    def auto_colored(self, value):
-        return value
-
-
-def get_colorizer(with_color):
+def _get_printer(with_color):
     if with_color:
-        return Colorizer(parse_lscolors(os.getenv('LSCOLORS') or ''))
-    return FakeColorizer()
+        return ColoredPrinter(parse_lscolors(os.getenv('LSCOLORS') or ''))
+    return Printer()
 
 
 def main():
-    args = _get_parser().parse_args()
-    colorizer = get_colorizer(args.color)
+    args = _get_arg_parser().parse_args()
+    printer = _get_printer(args.color)
     try:
         table = run_query(args.query_string, args.directory)
-        _show_table(table, args.with_header, colorizer)
-    except DirectoryDoesNotExistError as exc:
-        colorizer.show_error("directory '{}' doesn't exist".format(exc.path))
+        _show_table(table, args.with_header, printer)
+    except parser.CantTokenizeError as exc:
+        if exc.string[exc.pos] == "'":
+            printer.show_message('Probably unterminated quoted string at position {:d}:'.format(exc.pos))
+        else:
+            printer.show_message("Can't tokenize query at position {:d}:".format(exc.pos))
+        printer.show_error(exc.string, exc.pos)
+    except parser.UnknownLiteralSuffixError as exc:
+        printer.show_message("Unknown number literal suffix '{}':".format(exc.suffix))
+        # TODO: add link to documentation where all suffixes are described
+        printer.show_error(args.query_string, exc.token.start, exc.token.end)
+        printer.show_message('Known suffixes are: <{}>'.format(', '.join(exc.known_suffixes)))
+    except expr.DirectoryDoesNotExistError as exc:
+        printer.show_error("directory '{}' doesn't exist".format(exc.path))
 
 
-def _get_parser():
-    parser = argparse.ArgumentParser(
+def _get_arg_parser():
+    arg_parser = argparse.ArgumentParser(
             description="It's like /usr/bin/find but with SQL",
     )
-    output_options = parser.add_argument_group(title='output options')
+    output_options = arg_parser.add_argument_group(title='output options')
     output_options.add_argument(
             '-H', '--header', action='store_true',
             help='show header with column names',
@@ -100,18 +108,19 @@ def _get_parser():
             dest='color',
     )
 
-    parser.add_argument(
+    arg_parser.add_argument(
             '--version', action='version', version='%(prog)s version {}'.format(get_version())
     )
-    parser.add_argument(
+    arg_parser.add_argument(
             'query_string',
+            type=unicode,  # TODO: check that it works & error handling when passed non-ascii symbols in command line
             help=(
                 'For example: "where size > 10mb" '
                 'For more examples see {}/README.md'
             ).format(GITHUB),
             metavar='query',
     )
-    parser.add_argument(
+    arg_parser.add_argument(
             'directory',
             help=(
                 "Do query on this directory. "
@@ -119,11 +128,11 @@ def _get_parser():
             ),
             nargs='?',
     )
-    return parser
+    return arg_parser
 
 
 def run_query(query_string, directory):
-    tokens = tokenize(unicode(query_string, 'utf-8'))
+    tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
     cwd_context = Context({'cwd': (directory or '.')})
     query = parse(tokens)

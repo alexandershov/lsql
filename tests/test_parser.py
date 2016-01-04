@@ -220,7 +220,7 @@ def assert_classes_equal(objects, expected_classes):
     # TODO: what about '23.52.e52' should it raise an Error
 ])
 def test_bad_queries(string):
-    with pytest.raises(parser.LexerError):
+    with pytest.raises(parser.CantTokenizeError):
         list(parser.tokenize(string))
 
 
