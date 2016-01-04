@@ -9,6 +9,8 @@ from lsql.errors import LsqlError
 
 logger = logging.getLogger(__name__)
 
+# TODO(aershov182): implement all essential not implemented tokens: NotToken, GroupToken etc.
+
 KILO = 1024
 MEGA = KILO * 1024
 GIGA = MEGA * 1024
@@ -796,15 +798,14 @@ def _get_right_binding_powers():
         [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
          AscToken, DescToken, LimitToken, OffsetToken, EndQueryToken],
 
-        # TODO(aershov182): make precedence levels like in postgres
         [OrToken],
         [AndToken],
-        [EqToken, NeToken],
-        [LtToken, LteToken, GtToken, GteToken],
+        [EqToken],
+        [LtToken, GtToken],
         [LikeToken, IlikeToken, LikeRegexToken, RlikeToken, RilikeToken, ContainsToken, IcontainsToken],
         [BetweenToken],
         [InToken],
-        [ConcatToken],
+        [ConcatToken, LteToken, GteToken, NeToken],
         [PlusToken, MinusToken],
         [MulToken, DivToken, ModuloToken],
         [PowerToken],
