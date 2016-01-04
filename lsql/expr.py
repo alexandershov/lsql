@@ -80,22 +80,6 @@ class Visitor(object):
         raise NotImplementedError
 
 
-class AggFunctionsVisitor(Visitor):
-    def __init__(self):
-        self.has_agg_functions = False
-
-    def visit(self, node):
-        if isinstance(node, FunctionExpr):
-            if node.function_name in AGG_FUNCTIONS:
-                self.has_agg_functions = True
-
-
-def has_agg_functions(node):
-    visitor = AggFunctionsVisitor()
-    node.walk(visitor)
-    return visitor.has_agg_functions
-
-
 class FileTableContext(Context):
     @property
     def star_columns(self):
