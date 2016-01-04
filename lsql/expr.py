@@ -745,28 +745,6 @@ def get_name(expr, default):
     return default
 
 
-class LazyList(object):
-    def __init__(self, row_group, name):
-        self._iterator = (row[name] for row in row_group)
-        self._list = None
-
-    def __iter__(self):
-        if self._list is None:
-            self._list = list(self._iterator)
-        return iter(self._list)
-
-    def __repr__(self):
-        iter(self)  # materialize list
-        return 'LazyList(iterator=iter({!r}))'.format(self._list)
-
-
-def make_agg_context(row_type, row_group):
-    items = {
-        name: LazyList(row_group, name) for name in row_type
-        }
-    return Context(items)
-
-
 class Table(object):
     def __init__(self, row_type, rows):
         self.row_type = row_type
