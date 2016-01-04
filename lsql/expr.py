@@ -11,31 +11,35 @@ import operator
 import os
 
 
-class Context(object):
+class Namespace(object):
     """
-    Context is basically immutable case-insensitive dictionary with unicode keys.
+    Namespace is an immutable case-insensitive dictionary with unicode keys.
     """
 
     def __init__(self, items):
         """
         :param items: dictionary unicode -> value
         """
-        self._items = {self._prepare_key(key): value
+        self._items = {self.prepare_key(key): value
                        for key, value in items.viewitems()}
 
     @classmethod
-    def _prepare_key(cls, key):
+    def prepare_key(cls, key):
         assert isinstance(key, unicode)
         return key.lower()
 
     def __getitem__(self, item):
-        return self._items[self._prepare_key(item)]
+        return self._items[self.prepare_key(item)]
 
     def __contains__(self, item):
-        return self._prepare_key(item) in self._items
+        return self.prepare_key(item) in self._items
 
     def __repr__(self):
-        return 'Context(items={!r})'.format(self._items)
+        return '{}(items={!r})'.format(self.__class__.__name__, self._items)
+
+
+class Context(Namespace):
+    pass
 
 
 class EmptyContext(Context):
@@ -80,7 +84,7 @@ class Visitor(object):
         raise NotImplementedError
 
 
-class FileTableContext(Context):
+class FileTableType(Namespace):
     @property
     def star_columns(self):
         return Stat.MAIN_ATTRS
@@ -88,6 +92,26 @@ class FileTableContext(Context):
     @property
     def default_columns(self):
         return ['name']
+
+    def as_dict(self):
+        return self._items
+
+
+class FileTableContext(Context):
+    def __init__(self, stat):
+        """
+        :type stat: lsql.expr.Stat
+        """
+        self._stat = stat
+
+    def __getitem__(self, item):
+        return self._stat[self.prepare_key(item)]
+
+    def __contains__(self, item):
+        return self.prepare_key(item) in self._stat.ATTRS
+
+    def __repr__(self):
+        return 'FileTableContext(stat={!r})'.format(self._stat)
 
 
 class TaggedUnicode(unicode):
@@ -141,14 +165,13 @@ class Mode(object):
         return oct(self.mode)
 
 
-# TODO(aershov182): don't make it a subclass of Context, add a method .get_context()
-class Stat(Context):
+class Stat(object):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
-        'path', 'fulldir', 'dir', 'name', 'extension', 'no_ext',
+        'path', 'fulldir', 'dir', 'name', 'extension', 'ext', 'no_ext',
         'mode', 'group', 'atime', 'mtime', 'ctime', 'birthtime',
         'depth', 'type', 'device', 'hardlinks', 'inode',
-        'text', 'lines', 'is_executable'
+        'text', 'lines', 'is_executable', 'is_exec'
     ])
 
     ATTR_ALIASES = {
@@ -275,7 +298,6 @@ class Stat(Context):
         return text.splitlines()
 
     def __getitem__(self, item):
-        item = self._prepare_key(item)
         name = Stat.ATTR_ALIASES.get(item, item)
         if name not in Stat.ATTRS:
             raise KeyError('unknown column: {!r}'.format(name))
@@ -294,8 +316,7 @@ class Stat(Context):
 
     @classmethod
     def get_type(cls):
-        # TODO(aershov182): maybe create Scope class (that is the same as Context?)
-        return FileTableContext({
+        return FileTableType({
             'fullpath': unicode,
             'size': int,
             'owner': unicode,
@@ -322,6 +343,9 @@ class Stat(Context):
             'ext': unicode,
             'is_exec': unicode,
         })
+
+    def get_context(self):
+        return FileTableContext(self)
 
 
 def _files_table_function(directory):
@@ -662,14 +686,14 @@ class QueryExpr(Expr):
     def get_value(self, context):
         rows = []
         from_type = self.from_expr.get_type(context)
-        select_context = MergedContext(from_type, context)
+        select_context = MergedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
         for i, expr in enumerate(self.select_expr):
             row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
 
         def key(row):
             # TODO(aershov182): `ORDER BY` context should depend on select_expr
-            result = [e.get_value(MergedContext(row, context))
+            result = [e.get_value(MergedContext(row.get_context(), context))
                       for e in self.order_expr]
             return OrderByKey(result, self.order_expr)
 
@@ -678,7 +702,7 @@ class QueryExpr(Expr):
         keys = []
         for from_row in self.from_expr.get_value(context):
             row_context = MergedContext(
-                from_row,
+                from_row.get_context(),
                 context
             )
             keys.append(key(from_row))
@@ -686,7 +710,7 @@ class QueryExpr(Expr):
                 filtered_rows.append(from_row)
         for row in filtered_rows:
             row_context = MergedContext(
-                row,
+                row.get_context(),
                 context
             )
             cur_row = []
