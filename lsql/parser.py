@@ -520,24 +520,12 @@ class NameToken(Token):
         return expr.NameExpr(self.text)
 
 
-class ConcatToken(OperatorToken):
-    operator_name = '||'
-
-
-class DivToken(OperatorToken):
-    operator_name = '/'
-
-
 class EqToken(OperatorToken):
     operator_name = '='
 
 
-class GtToken(OperatorToken):
-    operator_name = '>'
-
-
-class GteToken(OperatorToken):
-    operator_name = '>='
+class NeToken(OperatorToken):
+    operator_name = '<>'
 
 
 class LtToken(OperatorToken):
@@ -548,30 +536,44 @@ class LteToken(OperatorToken):
     operator_name = '<='
 
 
+class GtToken(OperatorToken):
+    operator_name = '>'
+
+
+class GteToken(OperatorToken):
+    operator_name = '>='
+
+
+class ConcatToken(OperatorToken):
+    operator_name = '||'
+
+
 class MinusToken(OperatorToken):
     operator_name = '-'
 
+    # handles unary minus
     def prefix(self, parser):
         return expr.FunctionExpr('negate', [parser.expr(left_bp=self.left_bp)])
 
 
-class ModuloToken(OperatorToken):
-    operator_name = '%'
+class PlusToken(OperatorToken):
+    operator_name = '+'
+
+    # handles unary plus
+    def prefix(self, parser):
+        return parser.expr(left_bp=self.left_bp)
 
 
 class MulToken(OperatorToken):
     operator_name = '*'
 
 
-class NeToken(OperatorToken):
-    operator_name = '<>'
+class DivToken(OperatorToken):
+    operator_name = '/'
 
 
-class PlusToken(OperatorToken):
-    operator_name = '+'
-
-    def prefix(self, parser):
-        return parser.expr(left_bp=self.left_bp)
+class ModuloToken(OperatorToken):
+    operator_name = '%'
 
 
 class PowerToken(OperatorToken):
@@ -585,16 +587,15 @@ class SpecialToken(Token):
 class OpeningParenToken(SpecialToken):
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
-            raise LexerError('expression expected', self.start())
-        result = parser.expr()
-        if not isinstance(parser.token, ClosingParenToken):
-            raise LexerError(') expected', parser.token.start)
-        parser.advance()
-        return result
+            raise UnexpectedTokenError(None, parser.token)
+        result_expr = parser.expr()
+        parser.skip(ClosingParenToken)
+        return result_expr
 
     def suffix(self, left, parser):
-        if not isinstance(left, expr.NameExpr):
-            raise LexerError('expected name, got: {!r}'.format(left), self.start)
+        # TODO(aershov182): raise some appropriate exception when Expr class will have it's full
+        # TODO(aershov182): ... position in string
+        assert isinstance(left, expr.NameExpr)
         if isinstance(parser.token, ClosingParenToken):
             args = []
         else:
@@ -616,7 +617,7 @@ class PeriodToken(SpecialToken):
 
 
 class EndQueryToken(Token):
-    """Sentinel token with zero right binding power. Parsing will not go through it."""
+    """Sentinel token with right binding power equal to zero. Parsing will not go through it."""
 
 
 class Lexer(object):
@@ -668,22 +669,25 @@ def _make_default_lexer():
     _add_string_literals(lexer)
     _add_number_literals(lexer)
     _add_whitespace(lexer)
-    _add_special(lexer)  # special should go after number_literals because of '.2'
+    # special should go after number_literals because of '.2' which is a NumberToken.
+    # and we don't want it to be a PeriodToken followed by NumberToken
+    _add_special(lexer)
     return lexer
 
 
 def _add_special(lexer):
-    for pattern, special_class in [
+    patterns_with_special_classes = [
         (r'\)', ClosingParenToken),
         (r'\,', CommaToken),
         (r'\(', OpeningParenToken),
         (r'\.', PeriodToken)
-    ]:
+    ]
+    for pattern, special_class in patterns_with_special_classes:
         lexer.add(_regex(pattern), special_class)
 
 
 def _add_keywords(lexer):
-    for pattern, keyword_class in [
+    patterns_with_keyword_classes = [
         ('and', AndToken),
         ('as', AsToken),
         ('asc', AscToken),
@@ -724,7 +728,8 @@ def _add_keywords(lexer):
         ('then', ThenToken),
         ('update', UpdateToken),
         ('where', WhereToken),
-    ]:
+    ]
+    for pattern, keyword_class in patterns_with_keyword_classes:
         lexer.add(_keyword(pattern), keyword_class)
 
 
@@ -736,7 +741,7 @@ _OPERATOR_CHARS = set()  # populated in _add_operators
 
 
 def _add_operators(lexer):
-    pattern_classes = [
+    patterns_with_operator_classes = [
         ('||', ConcatToken),
         ('/', DivToken),
         ('=', EqToken),
@@ -752,9 +757,9 @@ def _add_operators(lexer):
         ('+', PlusToken),
         ('^', PowerToken),
     ]
-    for pattern, _ in pattern_classes:
+    for pattern, _ in patterns_with_operator_classes:
         _OPERATOR_CHARS.update(pattern)
-    for pattern, operator_class in pattern_classes:
+    for pattern, operator_class in patterns_with_operator_classes:
         lexer.add(_operator(pattern), operator_class)
 
 
@@ -764,7 +769,7 @@ def _add_string_literals(lexer):
 
 def _add_number_literals(lexer):
     # TODO: check that regexes are in sync with NumberToken
-    patterns = [
+    number_patterns = [
         # [2].3[e[+-]5][years]
         r'(?P<int>\d*)\.(?P<float>\d+)(?:e(?P<exp>[+-]?\d+))?(?P<suffix>[^\W\d]+)?\b',
         # 2.[e[+-]5][years]
@@ -772,7 +777,7 @@ def _add_number_literals(lexer):
         # 2[e[+-]5][years]
         r'(?P<int>\d+)(?P<float>)(?:e(?P<exp>[+-]?\d+))?(?P<suffix>[^\W\d]+)?\b',
     ]
-    for pattern in patterns:
+    for pattern in number_patterns:
         lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), NumberToken)
 
 
@@ -783,16 +788,6 @@ def _add_whitespace(lexer):
 def _operator(s):
     chars = ''.join(_OPERATOR_CHARS)
     return _regex(r'{}(?![{}])'.format(re.escape(s), re.escape(chars)))
-
-
-def _get_left_binding_powers():
-    # increasing precedence levels
-    left_token_groups = [
-        [],  # empty group, so next group will have non-zero precedence level
-        [PlusToken, MinusToken],  # unary plus/minus
-    ]
-    # huge multiplier, because unary plus/minus should have high precedence level
-    return _get_binding_powers(left_token_groups, mul=10000)
 
 
 def _get_right_binding_powers():
@@ -828,7 +823,12 @@ def _get_binding_powers(token_groups, mul=100):
     return powers
 
 
-LEFT_BINDING_POWERS = _get_left_binding_powers()
+LEFT_BINDING_POWERS = {
+    # unary plus/minus should have max binding power, so '-3 + 2' is parsed as '(-3) + 2'
+    # not '-(3 + 2)'
+    PlusToken: float('inf'),
+    MinusToken: float('inf'),
+}
 RIGHT_BINDING_POWERS = _get_right_binding_powers()
 
 tokenize = _make_default_lexer().tokenize

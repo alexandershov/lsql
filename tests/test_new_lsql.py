@@ -43,6 +43,8 @@ def test_select_name():
     ('2hours', 7200),
     # checking that suffix is case-insensitive
     ('2HoUrS', 7200),
+    ('+3', 3),
+    ('-3', -3),
 ])
 def test_number_literal(select, result):
     query = 'select {} limit 1'.format(select)
