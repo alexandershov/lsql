@@ -10,23 +10,35 @@ from colorama import Fore
 from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
 
-BROWN = '\x1b[33m'
+FORE_BROWN = '\x1b[33m'
+
+GITHUB = 'https://github.com/alexandershov/lsql'
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='SQL over filesystem',
+        description="It's like /usr/bin/find but with SQL",
     )
     # TODO(aershov182): maybe add_argument_group to group options by meaning (visual, behaviour etc)
     parser.add_argument(
-        '-H', action='store_true',
+        '-H', '--header', action='store_true',
         help='show header with column names',
         dest='with_header',
     )
-    parser.add_argument('query_string', metavar='query')
+    parser.add_argument(
+        'query_string',
+        help=(
+            'For example: "where size > 10mb" '
+            'For more examples see {}/README.md'
+        ).format(GITHUB),
+        metavar='query',
+    )
     parser.add_argument(
         'directory',
-        help='query working directory',
+        help=(
+            "Do query on this directory. "
+            "Note that you can't specify FROM clause and directory argument together"
+        ),
         nargs='?',
     )
     args = parser.parse_args()
@@ -83,7 +95,7 @@ def lscolor_to_termcolor(lscolor):
         'b': Fore.RED,
         'c': Fore.GREEN,
         'd': Fore.RESET,
-        'e': BROWN,
+        'e': FORE_BROWN,
         'f': Fore.MAGENTA,
         'g': Fore.CYAN,
         'h': Fore.LIGHTWHITE_EX,
