@@ -52,7 +52,7 @@ def colorize(row):
         colored_row.append(value)
     return colored_row
 
-# TODO: respect background, respect executable
+# TODO: respect background, executable, bold.
 def parse_lscolors(lscolors):
     """
     :param lscolors: value of $LSCOLORS env var

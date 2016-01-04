@@ -10,6 +10,10 @@ import numbers
 import operator
 import os
 
+import errno
+
+from lsql.errors import LsqlError
+
 
 class Namespace(object):
     """
@@ -482,7 +486,10 @@ BUILTIN_CONTEXT = MergedContext(AGG_FUNCTIONS, BASE_CONTEXT)
 def walk_with_depth(path, depth=0):
     try:
         names = os.listdir(path)
-    except OSError:
+    except OSError as exc:
+        # TODO(aershov182): ENOENT or EEXISTS?
+        if exc.errno == errno.ENOENT:
+            raise DirectoryDoesNotExistError(path)
         return
     dirs = []
     for name in names:
@@ -496,8 +503,13 @@ def walk_with_depth(path, depth=0):
                 yield x
 
 
-class ExprError(Exception):
+class ExprError(LsqlError):
     pass
+
+
+class DirectoryDoesNotExistError(ExprError):
+    def __init__(self, dir_path):
+        self.dir_path = dir_path
 
 
 # TODO: Expr object should contain a reference to its location in the string

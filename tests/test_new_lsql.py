@@ -152,6 +152,12 @@ def test_non_ascii_paths(query, expected_results):
     )
 
 
+def test_from_directory_does_not_exist():
+    with pytest.raises(expr.DirectoryDoesNotExistError):
+        get_results('select 1', directory='does not exist!')
+
+
+
 def test_unknown_literal_suffix():
     with pytest.raises(parser.UnknownLiteralSuffixError):
         get_results('select 5badsuffix')
