@@ -1,10 +1,11 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 from functools import partial
 import logging
 import re
 
 from lsql import expr
+from lsql.errors import LsqlError
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +57,7 @@ def _merge_dicts(x, y):
 LITERAL_SUFFIXES = _merge_dicts(SIZE_SUFFIXES, TIME_SUFFIXES)
 
 
-class BaseError(Exception):
-    pass
-
-
-class LexerError(BaseError):
+class LexerError(LsqlError):
     def __init__(self, string, pos):
         self.string = string
         self.pos = pos
@@ -70,7 +67,7 @@ class LexerError(BaseError):
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
 
 
-class ParserError(BaseError):
+class ParserError(LsqlError):
     pass
 
 
@@ -811,6 +808,7 @@ def _get_right_binding_powers():
         [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
          AscToken, DescToken, LimitToken, OffsetToken, EndQueryToken],
 
+        # TODO(aershov182): make precedence levels like in postgres
         [OrToken],
         [AndToken],
         [EqToken, NeToken],
