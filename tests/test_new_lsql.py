@@ -39,6 +39,7 @@ def test_select_name():
     ('select 1', ((1,),) * 4),
     ('select 1.3', ((1.3,),) * 4),
     ('select 1.3e2', ((130.0,),) * 4),
+    ('select 100e-2', ((1.0,),) * 4),
     ('select 2hours', ((7200,),) * 4),
     # checking that suffix is case-insensitive
     ('select 2HoUrS', ((7200,),) * 4),

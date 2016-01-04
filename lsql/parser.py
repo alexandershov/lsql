@@ -358,6 +358,11 @@ class AndToken(KeywordToken):
         return expr.AndExpr(left, parser.expr(self.right_bp))
 
 
+class OrToken(KeywordToken):
+    def suffix(self, left, parser):
+        return expr.OrExpr(left, parser.expr(self.right_bp))
+
+
 class OperatorToken(Token):
     operator_name = None  # should be redefined in subclasses
 
@@ -416,17 +421,12 @@ class OffsetToken(KeywordToken):
         return parser.expr()
 
 
-class OrToken(KeywordToken):
-    def suffix(self, left, parser):
-        return expr.OrExpr(left, parser.expr(self.right_bp))
-
-
 class OrderToken(KeywordToken):
     def clause(self, parser):
         parser.skip(ByToken)
         sub_exprs = parser.parse_delimited_exprs(
             CommaToken,
-            partial(_parse_one_order_by_clause, parser=parser)
+            parse_fn=partial(_parse_one_order_by_clause, parser=parser)
         )
         return expr.ListExpr(sub_exprs)
 
@@ -445,11 +445,11 @@ class OuterToken(KeywordToken):
     pass  # not implemented yet
 
 
-class RlikeToken(KeywordToken):
+class RlikeToken(OperatorToken):
     pass  # not implemented yet
 
 
-class RilikeToken(KeywordToken):
+class RilikeToken(OperatorToken):
     pass  # not implemented yet
 
 
@@ -763,12 +763,12 @@ def _add_string_literals(lexer):
 def _add_number_literals(lexer):
     # TODO: check that regexes are in sync with NumberToken
     patterns = [
-        # [2].3[e[-]5][years]
-        r'(?P<int>\d*)\.(?P<float>\d+)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b',
-        # 2.[e[-]5][years]
-        r'(?P<int>\d+)\.(?P<float>)(?:(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b)?',
-        # 2[e[-]5][years]
-        r'(?P<int>\d+)(?P<float>)(?:e[+-]?(?P<exp>\d+))?(?P<suffix>[^\W\d]+)?\b',
+        # [2].3[e[+-]5][years]
+        r'(?P<int>\d*)\.(?P<float>\d+)(?:e(?P<exp>[+-]?\d+))?(?P<suffix>[^\W\d]+)?\b',
+        # 2.[e[+-]5][years]
+        r'(?P<int>\d+)\.(?P<float>)(?:(?:e(?P<exp>[+-]?\d+))?(?P<suffix>[^\W\d]+)?\b)?',
+        # 2[e[+-]5][years]
+        r'(?P<int>\d+)(?P<float>)(?:e(?P<exp>[+-]?\d+))?(?P<suffix>[^\W\d]+)?\b',
     ]
     for pattern in patterns:
         lexer.add(_regex(pattern, extra_flags=re.IGNORECASE), NumberToken)
