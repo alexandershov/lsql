@@ -645,7 +645,7 @@ class QueryExpr(Expr):
         self.offset_expr = offset_expr
         if self.from_expr is None:
             self.from_expr = NameExpr('cwd')
-        if isinstance(self.from_expr, (NameExpr, LiteralExpr)):
+        if isinstance(self.from_expr, (NameExpr, ValueExpr)):
             self.from_expr = FunctionExpr('files', [self.from_expr])
         from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
         if isinstance(self.select_expr, SelectStarExpr):
@@ -662,11 +662,11 @@ class QueryExpr(Expr):
         if self.select_expr is None:
             self.select_expr = ListExpr(list(map(NameExpr, from_type.default_columns)))
         if self.where_expr is None:
-            self.where_expr = LiteralExpr(True)
+            self.where_expr = ValueExpr(True)
         if self.order_expr is None:
             self.order_expr = ListExpr([])
         if self.offset_expr is None:
-            self.offset_expr = LiteralExpr(0)
+            self.offset_expr = ValueExpr(0)
 
     def walk(self, visitor):
         visitor.visit(self)
@@ -774,7 +774,7 @@ class GroupExpr(ListExpr):
     def __init__(self, exprs, having_expr=None):
         super(GroupExpr, self).__init__(exprs)
         if having_expr is None:
-            having_expr = LiteralExpr(True)
+            having_expr = ValueExpr(True)
         self.having_expr = having_expr
 
     def check_type(self, scope):
@@ -824,7 +824,7 @@ class SelectStarExpr(Expr):
         return True
 
 
-class LiteralExpr(Expr):
+class ValueExpr(Expr):
     def __init__(self, value):
         self.value = value
 
@@ -838,7 +838,7 @@ class LiteralExpr(Expr):
         return '{!s}(value={!r})'.format(self.__class__.__name__, self.value)
 
     def __eq__(self, other):
-        if not isinstance(other, LiteralExpr):
+        if not isinstance(other, ValueExpr):
             return False
         return self.value == other.value
 

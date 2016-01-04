@@ -171,6 +171,8 @@ def parse(tokens):
     return Parser(tokens).parse()
 
 
+# TODO(aershov182): add methods that'll help to figure out that these token has redefined
+# TODO(aershov182): ... .suffix(), .prefix(), and .clause().
 class Token(object):
     def __init__(self, match):
         """
@@ -413,7 +415,7 @@ class NotNullToken(KeywordToken):
 
 class NullToken(KeywordToken):
     def prefix(self, parser):
-        return expr.LiteralExpr(expr.NULL)
+        return expr.ValueExpr(expr.NULL)
 
 
 class OffsetToken(KeywordToken):
@@ -481,6 +483,9 @@ class WhitespaceToken(Token):
 
 
 class NumberToken(Token):
+    def prefix(self, parser):
+        return expr.ValueExpr(self.value)
+
     @property
     def value(self):
         result = 0
@@ -488,29 +493,26 @@ class NumberToken(Token):
         int_part = self.match.group('int')
         float_part = self.match.group('float')
         exp_part = self.match.group('exp')
-        suffix = self.match.group('suffix')
+        suffix_part = self.match.group('suffix')
         if int_part:
             result = int(int_part)
         if float_part:
             result += float('0.{}'.format(float_part))
         if exp_part:
             result *= 10 ** float(exp_part)
-        if suffix:
-            # all suffixes in LITERAL_SUFFIXES are lowercase, but we want to have
-            # case-insensitive suffixes: 10mb and 10MB should mean the same thing.
+        if suffix_part:
             try:
-                result *= LITERAL_SUFFIXES[suffix.lower()]
+                # all suffixes in LITERAL_SUFFIXES are lowercase, but we want to have
+                # case-insensitive suffixes: 10mb and 10MB should mean the same thing.
+                result *= LITERAL_SUFFIXES[suffix_part.lower()]
             except KeyError:
-                raise UnknownLiteralSuffixError(suffix, self)
+                raise UnknownLiteralSuffixError(suffix_part, self)
         return result
-
-    def prefix(self, parser):
-        return expr.LiteralExpr(self.value)
 
 
 class StringToken(Token):
     def prefix(self, parser):
-        return expr.LiteralExpr(self.match.group('string'))
+        return expr.ValueExpr(self.match.group('string'))
 
 
 class NameToken(Token):
