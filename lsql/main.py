@@ -87,8 +87,7 @@ def lscolor_to_termcolor(lscolor):
 
 def _show_table(table):
     for row in table:
-        # TODO(aershov182): handle unicode
-        print('\t'.join(map(str, colorize(row))))
+        print('\t'.join(map(unicode, colorize(row))))
 
 
 if __name__ == '__main__':
