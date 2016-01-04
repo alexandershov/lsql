@@ -1,13 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from collections import OrderedDict
 import argparse
 import os
-from collections import OrderedDict
+import sys
 
 from colorama import Fore
 
 from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
+from lsql.expr import DirectoryDoesNotExistError
 from lsql import get_version
 
 FORE_BROWN = '\x1b[33m'
@@ -15,10 +17,27 @@ FORE_BROWN = '\x1b[33m'
 GITHUB = 'https://github.com/alexandershov/lsql'
 
 
+# TODO(aershov182): this should just to print_message when --no-color is passed
+def print_warning(text):
+    print_message(colored(text, Fore.RED))
+
+
+# TODO(aershov182): this should just to print_message when --no-color is passed
+def print_error(text):
+    print_warning(text)
+
+
+def print_message(text):
+    print(text, file=sys.stderr)
+
+
 def main():
     args = _get_parser().parse_args()
-    table = run_query(args.query_string, args.directory)
-    _show_table(table, args.with_header, args.color)
+    try:
+        table = run_query(args.query_string, args.directory)
+        _show_table(table, args.with_header, args.color)
+    except DirectoryDoesNotExistError as exc:
+        print_error("directory '{}' doesn't exist".format(exc.path))
 
 
 def _get_parser():

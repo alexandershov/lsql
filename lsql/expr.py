@@ -508,8 +508,8 @@ class ExprError(LsqlError):
 
 
 class DirectoryDoesNotExistError(ExprError):
-    def __init__(self, dir_path):
-        self.dir_path = dir_path
+    def __init__(self, path):
+        self.path = path
 
 
 # TODO: Expr object should contain a reference to its location in the string
