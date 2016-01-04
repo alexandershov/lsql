@@ -17,6 +17,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='SQL over filesystem',
     )
+    # TODO(aershov182): maybe add_argument_group to group options by meaning (visual, behaviour etc)
+    parser.add_argument(
+        '-H', action='store_true',
+        help='show header with column names',
+        dest='with_header',
+    )
     parser.add_argument('query_string', metavar='query')
     parser.add_argument(
         'directory',
@@ -25,7 +31,7 @@ def main():
     )
     args = parser.parse_args()
     table = run_query(args.query_string, args.directory)
-    _show_table(table)
+    _show_table(table, args.with_header)
 
 
 def run_query(query_string, directory):
@@ -85,7 +91,9 @@ def lscolor_to_termcolor(lscolor):
     return color_mapping.get(lscolor, Fore.RESET)
 
 
-def _show_table(table):
+def _show_table(table, with_header):
+    if with_header:
+        print('\t'.join(table.row_type))
     for row in table:
         print('\t'.join(map(unicode, colorize(row))))
 
