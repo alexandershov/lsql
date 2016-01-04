@@ -158,7 +158,7 @@ def get_dir_size(path):
 
 class Timestamp(int):
     def __str__(self):
-        return datetime.datetime.fromtimestamp(self).isoformat()
+        return datetime.fromtimestamp(self).isoformat()
 
 
 class Mode(object):
