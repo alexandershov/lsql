@@ -20,6 +20,12 @@ from pyparsing import (
     Forward, Suppress,
 )
 
+
+__version__ = '0.1.0'
+
+def get_version():
+    return __version__
+
 CURRENT_TIME = datetime.datetime.utcnow()
 CURRENT_DATE = CURRENT_TIME.date()
 

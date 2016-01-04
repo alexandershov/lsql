@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-
 import argparse
 import os
 from collections import OrderedDict
@@ -9,6 +8,7 @@ from colorama import Fore
 
 from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
+from lsql import get_version
 
 FORE_BROWN = '\x1b[33m'
 
@@ -16,14 +16,29 @@ GITHUB = 'https://github.com/alexandershov/lsql'
 
 
 def main():
+    args = _get_parser().parse_args()
+    table = run_query(args.query_string, args.directory)
+    _show_table(table, args.with_header, args.color)
+
+
+def _get_parser():
     parser = argparse.ArgumentParser(
         description="It's like /usr/bin/find but with SQL",
     )
-    # TODO(aershov182): maybe add_argument_group to group options by meaning (visual, behaviour etc)
-    parser.add_argument(
+    output_options = parser.add_argument_group(title='output options')
+    output_options.add_argument(
         '-H', '--header', action='store_true',
         help='show header with column names',
         dest='with_header',
+    )
+    output_options.add_argument(
+        '-C', '--no-color', action='store_false',
+        help="don't colorize output",
+        dest='color',
+    )
+
+    parser.add_argument(
+        '--version', action='version', version='%(prog)s version {}'.format(get_version())
     )
     parser.add_argument(
         'query_string',
@@ -41,9 +56,7 @@ def main():
         ),
         nargs='?',
     )
-    args = parser.parse_args()
-    table = run_query(args.query_string, args.directory)
-    _show_table(table, args.with_header)
+    return parser
 
 
 def run_query(query_string, directory):
@@ -69,6 +82,7 @@ def colorize(row):
                     break
         colored_row.append(value)
     return colored_row
+
 
 # TODO: respect background, executable, bold.
 def parse_lscolors(lscolors):
@@ -103,11 +117,13 @@ def lscolor_to_termcolor(lscolor):
     return color_mapping.get(lscolor, Fore.RESET)
 
 
-def _show_table(table, with_header):
+def _show_table(table, with_header, with_color):
     if with_header:
         print('\t'.join(table.row_type))
     for row in table:
-        print('\t'.join(map(unicode, colorize(row))))
+        if with_color:
+            row = colorize(row)
+        print('\t'.join(map(unicode, row)))
 
 
 if __name__ == '__main__':
