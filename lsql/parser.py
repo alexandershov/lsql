@@ -824,6 +824,9 @@ def _get_binding_powers(token_groups, mul=100):
     return powers
 
 
+# we need to define binding powers at the end of the file, because we need tokens to be
+# defined
+
 LEFT_BINDING_POWERS = {
     # unary plus/minus should have max binding power, so '-3 + 2' is parsed as '(-3) + 2'
     # not '-(3 + 2)'

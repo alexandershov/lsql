@@ -1,10 +1,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import defaultdict, namedtuple, OrderedDict, Sized
+from collections import namedtuple, OrderedDict, Sized
 from datetime import datetime
 from functools import total_ordering, wraps
 from grp import getgrgid
-from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
 import numbers
@@ -15,24 +14,26 @@ import os
 # TODO(aershov182): maybe inherit from `dict`?
 class Context(object):
     """
-    Case-insensitive context.
+    Context is basically immutable case-insensitive dictionary with unicode keys.
     """
 
     def __init__(self, items):
         """
-        :param items: dictionary str -> value
+        :param items: dictionary unicode -> value
         """
-        self._items = items
+        self._items = {self._prepare_key(key): value
+                       for key, value in items.viewitems()}
+
+    @classmethod
+    def _prepare_key(cls, key):
+        assert isinstance(key, unicode)
+        return key.lower()
 
     def __getitem__(self, item):
-        item = item.lower()
-        return self._items[item]
+        return self._items[self._prepare_key(item)]
 
     def __contains__(self, item):
         return item in self._items
-
-    # def __iter__(self):
-    #     return iter(self._items)
 
     def __repr__(self):
         return 'Context(items={!r})'.format(self._items)
@@ -50,9 +51,6 @@ class EmptyContext(Context):
 
     def __repr__(self):
         return 'EmptyContext()'
-
-    def __iter__(self):
-        pass
 
 
 class MergedContext(object):
@@ -74,9 +72,6 @@ class MergedContext(object):
         return 'MergedContext({!s})'.format(
             ', '.join(map(repr, self.contexts))
         )
-
-    def __iter__(self):
-        return chain.from_iterable(self.contexts)
 
 
 class Visitor(object):
@@ -161,7 +156,7 @@ class Mode(object):
         return oct(self.mode)
 
 
-class Stat(object):
+class Stat(Context):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
         'path', 'fulldir', 'dir', 'name', 'extension', 'no_ext',
@@ -294,6 +289,7 @@ class Stat(object):
         return text.splitlines()
 
     def __getitem__(self, item):
+        item = self._prepare_key(item)
         name = Stat.ATTR_ALIASES.get(item, item)
         if name not in Stat.ATTRS:
             raise KeyError('unknown column: {!r}'.format(name))
@@ -696,7 +692,7 @@ class QueryExpr(Expr):
         keys = []
         for from_row in self.from_expr.get_value(context):
             row_context = MergedContext(
-                Context(from_row),
+                from_row,
                 context
             )
             keys.append(key(from_row))
@@ -704,7 +700,7 @@ class QueryExpr(Expr):
                 filtered_rows.append(from_row)
         for row in filtered_rows:
             row_context = MergedContext(
-                Context(row),
+                row,
                 context
             )
             cur_row = []
