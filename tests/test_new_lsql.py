@@ -1,5 +1,7 @@
 # coding: utf-8
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # TODO(aershov182): when done, replace test_lsql with this file
 
 import pytest
@@ -26,12 +28,12 @@ BASE_DIR = get_fixture_dir('base')
 
 def test_select_name():
     assert_same_items(
-        get_results('select name'), [
-            ('small',),
-            ('LICENSE',),
-            ('README.md',),
-            ('small.py',),
-        ]
+            get_results('select name'), [
+                ('small',),
+                ('LICENSE',),
+                ('README.md',),
+                ('small.py',),
+            ]
     )
 
 
@@ -50,8 +52,8 @@ def test_number_literal(select, result):
     query = 'select {} limit 1'.format(select)
     expected_results = [(result,)]
     assert_same_items(
-        get_results(query),
-        expected_results,
+            get_results(query),
+            expected_results,
     )
 
 
@@ -63,8 +65,8 @@ def test_number_literal(select, result):
 ])
 def test_math(query, expected_results):
     assert_same_items(
-        get_results(query),
-        expected_results,
+            get_results(query),
+            expected_results,
     )
 
 
@@ -107,15 +109,15 @@ def test_math(query, expected_results):
 ])
 def test_query(query, expected_results):
     assert_same_items(
-        get_results(query),
-        expected_results,
+            get_results(query),
+            expected_results,
     )
 
 
 def test_from():
     assert_same_items(
-        get_results("select 1 FROM '{}'".format(BASE_DIR), directory=None),
-        (((1,),) * 4)
+            get_results("select 1 FROM '{}'".format(BASE_DIR), directory=None),
+            (((1,),) * 4)
     )
 
 
@@ -129,12 +131,12 @@ def test_result_len(query, expected_len):
 
 def test_concat():
     assert_same_items(
-        get_results("select name || '_test'"), [
-            ('small_test',),
-            ('LICENSE_test',),
-            ('README.md_test',),
-            ('small.py_test',),
-        ]
+            get_results("select name || '_test'"), [
+                ('small_test',),
+                ('LICENSE_test',),
+                ('README.md_test',),
+                ('small.py_test',),
+            ]
     )
 
 
@@ -147,15 +149,14 @@ def test_concat():
 ])
 def test_non_ascii_paths(query, expected_results):
     assert_same_items(
-        get_results(query, directory=get_fixture_dir('non-ascii-paths')),
-        expected_results
+            get_results(query, directory=get_fixture_dir('non-ascii-paths')),
+            expected_results
     )
 
 
 def test_from_directory_does_not_exist():
     with pytest.raises(expr.DirectoryDoesNotExistError):
         get_results('select 1', directory='does not exist!')
-
 
 
 def test_unknown_literal_suffix():
@@ -168,4 +169,7 @@ def assert_same_items(seq_x, seq_y):
 
 
 def get_results(query, directory=BASE_DIR):
-    return list(main.run_query(query, directory))
+    # TODO: remove str(directory) and figure out how to live with unicode directories
+    # in this case `walk_with_depth` will return unicode, Stat._path will be unicode and
+    # Stat.path will try to decode unicode which is not supported.
+    return list(main.run_query(unicode(query), str(directory)))

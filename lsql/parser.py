@@ -73,6 +73,12 @@ class CantTokenizeError(LexerError):
         return "Can't tokenize at position {:d}: {!r}".format(self.pos, substring)
 
 
+class NotImplementedTokenError(LexerError):
+    def __init__(self, token_class, match):
+        self.token_class = token_class
+        self.match = match
+
+
 class ParserError(LsqlError):
     pass
 
@@ -178,7 +184,7 @@ def parse(tokens):
 
 
 # TODO(aershov182): add methods that'll help to figure out that these token has redefined
-# TODO(aershov182): ... .suffix(), .prefix(), and .clause().
+# TODO(aershov182): ... .suffix(), .prefix(), and .clause() methods.
 class Token(object):
     def __init__(self, match):
         """
@@ -272,12 +278,18 @@ class Token(object):
         )
 
 
+class NotImplementedToken(Token):
+    def __init__(self, match):
+        # TODO: maybe we can reuse Token class here?
+        raise NotImplementedTokenError(token_class=self.__class__, match=match)
+
+
 class KeywordToken(Token):
     """Base class for keyword tokens."""
 
 
-class AsToken(KeywordToken):
-    pass  # not implemented yet
+class AsToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class AscToken(KeywordToken):
@@ -296,40 +308,40 @@ class BetweenToken(KeywordToken):
         return expr.BetweenExpr(left, first, last)
 
 
-class CaseToken(KeywordToken):
-    pass  # not implemented yet
+class CaseToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class ByToken(KeywordToken):
     pass
 
 
-class ContainsToken(KeywordToken):
-    pass  # not implemented yet
+class ContainsToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class CountToken(KeywordToken):
-    pass  # not implemented yet
+class CountToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class DeleteToken(KeywordToken):
-    pass  # not implemented yet
+class DeleteToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class DropToken(KeywordToken):
-    pass  # not implemented yet
+class DropToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class ElseToken(KeywordToken):
-    pass  # not implemented yet
+class ElseToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class EndToken(KeywordToken):
-    pass  # not implemented yet
+class EndToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class ExistsToken(KeywordToken):
-    pass  # not implemented yet
+class ExistsToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class FromToken(KeywordToken):
@@ -337,28 +349,28 @@ class FromToken(KeywordToken):
         return parser.expr()
 
 
-class GroupToken(KeywordToken):
-    pass  # not implemented yet
+class GroupToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class HavingToken(KeywordToken):
-    pass  # not implemented yet
+class HavingToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class IsToken(KeywordToken):
-    pass  # not implemented yet
+class IsToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class IsNullToken(KeywordToken):
-    pass  # not implemented yet
+class IsNullToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class JoinToken(KeywordToken):
-    pass  # not implemented yet
+class JoinToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class LeftToken(KeywordToken):
-    pass  # not implemented yet
+class LeftToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class AndToken(KeywordToken):
@@ -389,21 +401,23 @@ class InToken(OperatorToken):
         return expr.FunctionExpr(self.operator_name, [left, expr.ArrayExpr(exprs)])
 
 
-class LikeToken(OperatorToken):
-    pass  # not implemented yet
+class LikeToken(NotImplementedToken, OperatorToken):
+    pass
 
 
 # alias for rlike
-class LikeRegexToken(OperatorToken):
-    pass  # not implemented yet
 
 
-class IcontainsToken(OperatorToken):
-    pass  # not implemented yet
+class LikeRegexToken(NotImplementedToken, OperatorToken):
+    pass
 
 
-class IlikeToken(OperatorToken):
-    pass  # not implemented yet
+class IcontainsToken(NotImplementedToken, OperatorToken):
+    pass
+
+
+class IlikeToken(NotImplementedToken, OperatorToken):
+    pass
 
 
 class LimitToken(KeywordToken):
@@ -411,12 +425,12 @@ class LimitToken(KeywordToken):
         return parser.expr()
 
 
-class NotToken(OperatorToken):
-    pass  # not implemented yet
+class NotToken(NotImplementedToken, OperatorToken):
+    pass
 
 
-class NotNullToken(KeywordToken):
-    pass  # not implemented yet
+class NotNullToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class NullToken(KeywordToken):
@@ -449,16 +463,16 @@ def _parse_one_order_by_clause(parser):
     return expr.OrderByPartExpr(part_expr, direction)
 
 
-class OuterToken(KeywordToken):
-    pass  # not implemented yet
+class OuterToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class RlikeToken(OperatorToken):
-    pass  # not implemented yet
+class RlikeToken(NotImplementedToken, OperatorToken):
+    pass
 
 
-class RilikeToken(OperatorToken):
-    pass  # not implemented yet
+class RilikeToken(NotImplementedToken, OperatorToken):
+    pass
 
 
 class SelectToken(KeywordToken):
@@ -471,12 +485,12 @@ class SelectToken(KeywordToken):
         return select_expr
 
 
-class ThenToken(KeywordToken):
-    pass  # not implemented yet
+class ThenToken(NotImplementedToken, KeywordToken):
+    pass
 
 
-class UpdateToken(KeywordToken):
-    pass  # not implemented yet
+class UpdateToken(NotImplementedToken, KeywordToken):
+    pass
 
 
 class WhereToken(KeywordToken):
@@ -618,8 +632,8 @@ class CommaToken(SpecialToken):
     pass
 
 
-class PeriodToken(SpecialToken):
-    pass  # not implemented yet
+class PeriodToken(NotImplementedToken, SpecialToken):
+    pass
 
 
 class EndQueryToken(Token):

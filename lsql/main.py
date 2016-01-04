@@ -16,6 +16,7 @@ from lsql import parser
 FORE_BROWN = '\x1b[33m'
 
 GITHUB = 'https://github.com/alexandershov/lsql'
+GITHUB_ISSUES = '{}/issues'.format(GITHUB)
 
 
 class Printer(object):
@@ -71,6 +72,7 @@ def _get_printer(with_color):
     return Printer()
 
 
+# TODO: line wrapping at 80
 def main():
     args = _get_arg_parser().parse_args()
     printer = _get_printer(args.color)
@@ -88,50 +90,59 @@ def main():
         # TODO: add link to documentation where all suffixes are described
         printer.show_error(args.query_string, exc.token.start, exc.token.end)
         printer.show_message('Known suffixes are: <{}>'.format(', '.join(exc.known_suffixes)))
+    except parser.NotImplementedTokenError as exc:
+        token_text = exc.match.group().upper()
+        printer.show_message('Sorry, but {} is not implemented (yet):'.format(token_text))
+        printer.show_error(args.query_string, start=exc.match.start(), end=exc.match.end())
+        printer.show_message(
+            'If you want lsql to support {}, '
+            'then please create an issue (or pull request!): {}'.format(token_text, GITHUB_ISSUES)
+        )
     except expr.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
 
 
 def _get_arg_parser():
     arg_parser = argparse.ArgumentParser(
-            description="It's like /usr/bin/find but with SQL",
+        description="It's like /usr/bin/find but with SQL",
     )
     output_options = arg_parser.add_argument_group(title='output options')
     output_options.add_argument(
-            '-H', '--header', action='store_true',
-            help='show header with column names',
-            dest='with_header',
+        '-H', '--header', action='store_true',
+        help='show header with column names',
+        dest='with_header',
     )
     output_options.add_argument(
-            '-C', '--no-color', action='store_false',
-            help="don't colorize output",
-            dest='color',
+        '-C', '--no-color', action='store_false',
+        help="don't colorize output",
+        dest='color',
     )
 
     arg_parser.add_argument(
-            '--version', action='version', version='%(prog)s version {}'.format(get_version())
+        '--version', action='version', version='%(prog)s version {}'.format(get_version())
     )
     arg_parser.add_argument(
-            'query_string',
-            type=unicode,  # TODO: check that it works & error handling when passed non-ascii symbols in command line
-            help=(
-                'For example: "where size > 10mb" '
-                'For more examples see {}/README.md'
-            ).format(GITHUB),
-            metavar='query',
+        'query_string',
+        type=unicode,  # TODO: check that it works & error handling when passed non-ascii symbols in command line
+        help=(
+            'For example: "where size > 10mb" '
+            'For more examples see {}/README.md'
+        ).format(GITHUB),
+        metavar='query',
     )
     arg_parser.add_argument(
-            'directory',
-            help=(
-                "Do query on this directory. "
-                "Note that you can't specify FROM clause and directory argument together"
-            ),
-            nargs='?',
+        'directory',
+        help=(
+            "Do query on this directory. "
+            "Note that you can't specify FROM clause and directory argument together"
+        ),
+        nargs='?',
     )
     return arg_parser
 
 
 def run_query(query_string, directory):
+    assert isinstance(query_string, unicode)
     tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
     cwd_context = Context({'cwd': (directory or '.')})
@@ -147,8 +158,8 @@ def parse_lscolors(lscolors):
     """
     if not lscolors:
         return OrderedDict.fromkeys(
-                ['dir', 'link', 'exec', 'file'],
-                Fore.RESET
+            ['dir', 'link', 'exec', 'file'],
+            Fore.RESET
         )
     return OrderedDict([
         ('dir', lscolor_to_termcolor(lscolors[0].lower())),
