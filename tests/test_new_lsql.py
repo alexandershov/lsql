@@ -35,16 +35,18 @@ def test_select_name():
     )
 
 
-@pytest.mark.parametrize('query, expected_results', [
-    ('select 1', ((1,),) * 4),
-    ('select 1.3', ((1.3,),) * 4),
-    ('select 1.3e2', ((130.0,),) * 4),
-    ('select 100e-2', ((1.0,),) * 4),
-    ('select 2hours', ((7200,),) * 4),
+@pytest.mark.parametrize('select, result', [
+    ('1', 1),
+    ('1.3', 1.3),
+    ('1.3e2', 130),
+    ('100e-2', 1),
+    ('2hours', 7200),
     # checking that suffix is case-insensitive
-    ('select 2HoUrS', ((7200,),) * 4),
+    ('2HoUrS', 7200),
 ])
-def test_number_literal(query, expected_results):
+def test_number_literal(select, result):
+    query = 'select {} limit 1'.format(select)
+    expected_results = [(result,)]
     assert_same_items(
         get_results(query),
         expected_results,
