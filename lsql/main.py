@@ -17,63 +17,107 @@ FORE_BROWN = '\x1b[33m'
 GITHUB = 'https://github.com/alexandershov/lsql'
 
 
-# TODO(aershov182): this should just to print_message when --no-color is passed
-def print_warning(text):
-    print_message(colored(text, Fore.RED))
-
-
-# TODO(aershov182): this should just to print_message when --no-color is passed
-def print_error(text):
-    print_warning(text)
-
-
-def print_message(text):
+def show_message(text):
     print(text, file=sys.stderr)
+
+
+class Colorizer(object):
+    def __init__(self, tag_colors):
+        self._tag_colors = tag_colors
+
+    def colored(self, color, text, start=0, end=None):
+        assert isinstance(text, unicode)
+        if end is None:
+            end = len(text)
+        return text[:start] + color + text[start:end] + Fore.RESET + text[end:]
+
+    def warning(self, text, start=0, end=None):
+        return self.colored(color=Fore.RED, text=text, start=start, end=end)
+
+    def error(self, text, start=0, end=None):
+        return self.colored(color=Fore.RED, text=text, start=start, end=end)
+
+    def auto_colored(self, value):
+        if isinstance(value, TaggedUnicode):
+            for tag, color in self._tag_colors.viewitems():
+                if tag in value.tags:
+                    return self.colored(color, value)
+        return value
+
+    def show_error(self, text, start=0, end=None):
+        show_message(self.error(text=text, start=start, end=end))
+
+    def show_warning(self, text, start=0, end=None):
+        show_message(self.warning(text=text, start=start, end=end))
+
+
+class FakeColorizer(Colorizer):
+    def __init__(self):
+        pass
+
+    def colored(self, color, text, start=0, end=None):
+        return text
+
+    def warning(self, text, start=0, end=None):
+        return text
+
+    def error(self, text, start=0, end=None):
+        return text
+
+    def auto_colored(self, value):
+        return value
+
+
+def get_colorizer(with_color):
+    if with_color:
+        return Colorizer(parse_lscolors(os.getenv('LSCOLORS') or ''))
+    return FakeColorizer()
 
 
 def main():
     args = _get_parser().parse_args()
+    colorizer = get_colorizer(args.color)
     try:
         table = run_query(args.query_string, args.directory)
-        _show_table(table, args.with_header, args.color)
+        _show_table(table, args.with_header, colorizer)
     except DirectoryDoesNotExistError as exc:
-        print_error("directory '{}' doesn't exist".format(exc.path))
+        colorizer.show_error("directory '{}' doesn't exist".format(exc.path))
 
 
 def _get_parser():
     parser = argparse.ArgumentParser(
-        description="It's like /usr/bin/find but with SQL",
+            description="It's like /usr/bin/find but with SQL",
     )
     output_options = parser.add_argument_group(title='output options')
     output_options.add_argument(
-        '-H', '--header', action='store_true',
-        help='show header with column names',
-        dest='with_header',
+            '-H', '--header', action='store_true',
+            help='show header with column names',
+            dest='with_header',
     )
     output_options.add_argument(
-        '-C', '--no-color', action='store_false',
-        help="don't colorize output",
-        dest='color',
+            '-C', '--no-color', action='store_false',
+            help="don't colorize output",
+            dest='color',
     )
 
     parser.add_argument(
-        '--version', action='version', version='%(prog)s version {}'.format(get_version())
+            '--version', action='version', version='%(prog)s version {}'.format(get_version())
     )
     parser.add_argument(
-        'query_string',
-        help=(
-            'For example: "where size > 10mb" '
-            'For more examples see {}/README.md'
-        ).format(GITHUB),
-        metavar='query',
+            'query_string',
+            help=(
+                'For example: "where size > 10mb" '
+                'For more examples see {}/README.md'
+            ).format(GITHUB),
+            metavar='query',
     )
     parser.add_argument(
-        'directory',
-        help=(
-            "Do query on this directory. "
-            "Note that you can't specify FROM clause and directory argument together"
-        ),
-        nargs='?',
+            'directory',
+            help=(
+                "Do query on this directory. "
+                "Note that you can't specify FROM clause and directory argument together"
+            ),
+            nargs='?',
     )
     return parser
 
@@ -86,23 +130,6 @@ def run_query(query_string, directory):
     return query.get_value(MergedContext(cwd_context, BUILTIN_CONTEXT))
 
 
-def colored(text, color):
-    return color + text + Fore.RESET
-
-
-def colorize(row):
-    colors = parse_lscolors(os.getenv('LSCOLORS') or '')
-    colored_row = []
-    for value in row:
-        if isinstance(value, TaggedUnicode):
-            for tag, color in colors.viewitems():
-                if tag in value.tags:
-                    value = colored(value, color)
-                    break
-        colored_row.append(value)
-    return colored_row
-
-
 # TODO: respect background, executable, bold.
 def parse_lscolors(lscolors):
     """
@@ -111,8 +138,8 @@ def parse_lscolors(lscolors):
     """
     if not lscolors:
         return OrderedDict.fromkeys(
-            ['dir', 'link', 'exec', 'file'],
-            Fore.RESET
+                ['dir', 'link', 'exec', 'file'],
+                Fore.RESET
         )
     return OrderedDict([
         ('dir', lscolor_to_termcolor(lscolors[0].lower())),
@@ -136,13 +163,12 @@ def lscolor_to_termcolor(lscolor):
     return color_mapping.get(lscolor, Fore.RESET)
 
 
-def _show_table(table, with_header, with_color):
+def _show_table(table, with_header, colorizer):
     if with_header:
         print('\t'.join(table.row_type))
     for row in table:
-        if with_color:
-            row = colorize(row)
-        print('\t'.join(map(unicode, row)))
+        colored_row = [unicode(colorizer.auto_colored(column)) for column in row]
+        print('\t'.join(colored_row))
 
 
 if __name__ == '__main__':
