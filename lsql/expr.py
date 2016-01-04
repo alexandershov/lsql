@@ -11,7 +11,6 @@ import operator
 import os
 
 
-# TODO(aershov182): maybe inherit from `dict`?
 class Context(object):
     """
     Context is basically immutable case-insensitive dictionary with unicode keys.
@@ -33,7 +32,7 @@ class Context(object):
         return self._items[self._prepare_key(item)]
 
     def __contains__(self, item):
-        return item in self._items
+        return self._prepare_key(item) in self._items
 
     def __repr__(self):
         return 'Context(items={!r})'.format(self._items)
@@ -53,12 +52,14 @@ class EmptyContext(Context):
         return 'EmptyContext()'
 
 
-class MergedContext(object):
+class MergedContext(Context):
     def __init__(self, *contexts):
-        self.contexts = contexts
+        for context in contexts:
+            assert isinstance(context, Context)
+        self._contexts = contexts
 
     def __getitem__(self, item):
-        for context in self.contexts:
+        for context in self._contexts:
             try:
                 return context[item]
             except KeyError:
@@ -66,11 +67,11 @@ class MergedContext(object):
         raise KeyError(item)
 
     def __contains__(self, item):
-        return any((item in context) for context in self.contexts)
+        return any((item in context) for context in self._contexts)
 
     def __repr__(self):
         return 'MergedContext({!s})'.format(
-            ', '.join(map(repr, self.contexts))
+            ', '.join(map(repr, self._contexts))
         )
 
 
@@ -156,6 +157,7 @@ class Mode(object):
         return oct(self.mode)
 
 
+# TODO(aershov182): don't make it a subclass of Context, add a method .get_context()
 class Stat(Context):
     ATTRS = OrderedDict.fromkeys([
         'fullpath', 'size', 'owner',
