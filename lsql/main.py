@@ -108,11 +108,11 @@ def main():
         table = run_query(args.query_string, args.directory)
         _show_table(table, args.with_header, printer)
     except parser.CantTokenizeError as exc:
-        if exc.string[exc.pos] == "'":
-            printer.show_message('Probably unterminated quoted string at position {:d}:'.format(exc.pos))
+        if args.query_string[exc.pos] == "'":
+            printer.show_message('Probably unterminated single quoted string at position {:d}:'.format(exc.pos))
         else:
             printer.show_message("Can't tokenize query at position {:d}:".format(exc.pos))
-        printer.show_error(exc.string, exc.pos)
+        printer.show_error(args.query_string, exc.pos)
     except parser.UnknownLiteralSuffixError as exc:
         printer.show_message("Unknown number literal suffix '{}':".format(exc.suffix))
         # TODO: add link to documentation where all suffixes are described
