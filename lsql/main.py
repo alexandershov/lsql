@@ -115,11 +115,11 @@ def main():
             printer.show_message("Probably unterminated single quoted string starting at {}:".format(
                 get_context(args.query_string, exc.pos)))
         else:
-            printer.show_message("Can't tokenize query starting at '{}': ".format(get_context(
+            printer.show_message("Can't tokenize query starting at `{}`: ".format(get_context(
                 args.query_string, exc.pos)))
         printer.show_error(args.query_string, exc.pos)
     except parser.UnknownLiteralSuffixError as exc:
-        printer.show_message("Unknown number literal suffix '{}':".format(exc.suffix))
+        printer.show_message("Unknown number literal suffix `{}`:".format(exc.suffix))
 
         printer.show_error(args.query_string, exc.token.start, exc.token.end)
         printer.show_message('Known suffixes are: <{}>'.format(', '.join(exc.known_suffixes)))
@@ -139,17 +139,17 @@ def main():
             printer.show_message("Expected '{}', but got end of query.".format(
                 exc.expected_token_class.get_human_name()))
         else:
-            printer.show_message("Expected '{}', but got '{}': ".format(
+            printer.show_message("Expected '{}', but got `{}`: ".format(
                 exc.expected_token_class.get_human_name(), exc.actual_token.text))
             printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.OperatorExpectedError as exc:
-        printer.show_message('Expected operator, got {}:'.format(exc.token.text))
+        printer.show_message('Expected operator, got `{}`:'.format(exc.token.text))
         # TODO: add helper that will do show_error_with_token
         printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.ValueExpectedError as exc:
-        printer.show_message('Expected value, got {}:'.format(exc.token.text))
+        printer.show_message('Expected value, got `{}`:'.format(exc.token.text))
         # TODO: add helper that will do show_error_with_token
         printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
         suggest_to_create_issue_or_pull_request(printer)
