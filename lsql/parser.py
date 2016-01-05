@@ -633,13 +633,15 @@ class PowerToken(OperatorToken):
 
 class SpecialToken(Token):
     """Base class for special tokens: parens, commas, periods etc."""
+    string = None  # redefine me in subclasses
+
+    @classmethod
+    def get_human_name(cls):
+        return cls.string
 
 
 class OpeningParenToken(SpecialToken):
-    # TODO: DRY it up with _add_special
-    @classmethod
-    def get_human_name(cls):
-        return '('
+    string = '('
 
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
@@ -661,18 +663,15 @@ class OpeningParenToken(SpecialToken):
 
 
 class ClosingParenToken(SpecialToken):
-    # TODO: DRY it up with _add_special
-    @classmethod
-    def get_human_name(cls):
-        return ')'
+    string = ')'
 
 
 class CommaToken(SpecialToken):
-    pass
+    string = ','
 
 
 class PeriodToken(NotImplementedToken, SpecialToken):
-    pass
+    string = '.'
 
 
 class EndQueryToken(Token):
@@ -735,13 +734,14 @@ def _make_default_lexer():
 
 
 def _add_special(lexer):
-    patterns_with_special_classes = [
-        (r'\)', ClosingParenToken),
-        (r'\,', CommaToken),
-        (r'\(', OpeningParenToken),
-        (r'\.', PeriodToken)
+    special_token_classes = [
+        ClosingParenToken,
+        CommaToken,
+        OpeningParenToken,
+        PeriodToken,
     ]
-    for pattern, special_class in patterns_with_special_classes:
+    for special_class in special_token_classes:
+        pattern = r'\{}'.format(special_class.string)
         lexer.add(_regex(pattern), special_class)
 
 
