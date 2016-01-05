@@ -713,6 +713,10 @@ class PeriodToken(NotImplementedToken, SpecialToken):
 
 class EndQueryToken(Token):
     """Sentinel token with right binding power equal to zero. Parsing will not go through it."""
+    @classmethod
+    def get_human_name(cls):
+        # TODO: check that string is ok in all cases
+        return '<END OF QUERY>'
 
 
 class Lexer(object):
