@@ -15,10 +15,17 @@ from lsql import parser
 
 FORE_BROWN = '\x1b[33m'
 
+COLOR_ARG_CHOICES = (
+    'never',
+    'always',
+    'auto',  # Color stdout only if it's a tty. Always color
+)
+
 GITHUB = 'https://github.com/alexandershov/lsql'
 GITHUB_ISSUES = '{}/issues'.format(GITHUB)
 
 
+# TODO: split this class into 2. One should be about errors/warnings/messages, another - about colored_column()
 class Printer(object):
     def colored(self, color, text, start=0, end=None):
         return text
@@ -29,7 +36,7 @@ class Printer(object):
     def error(self, text, start=0, end=None):
         return text
 
-    def auto_colored(self, value):
+    def colored_column(self, value):
         return value
 
     def show_message(self, text):
@@ -58,24 +65,38 @@ class ColoredPrinter(Printer):
     def error(self, text, start=0, end=None):
         return self.colored(color=Fore.RED, text=text, start=start, end=end)
 
-    def auto_colored(self, value):
-        if isinstance(value, TaggedUnicode):
+    def colored_column(self, column_value):
+        if isinstance(column_value, TaggedUnicode):
             for tag, color in self._tag_colors.viewitems():
-                if tag in value.tags:
-                    return self.colored(color, value)
-        return value
+                if tag in column_value.tags:
+                    return self.colored(color, column_value)
+        return column_value
 
 
-def _get_printer(with_color):
-    if with_color:
-        return ColoredPrinter(parse_lscolors(os.getenv('LSCOLORS') or ''))
-    return Printer()
+class NoColoredColumnPrinter(ColoredPrinter):
+    def colored_column(self, column_value):
+        return column_value
+
+
+def _get_printer(stdout, color):
+    tag_colors = parse_lscolors(os.getenv('LSCOLORS') or '')
+    if color == 'always':
+        return ColoredPrinter(tag_colors)
+    elif color == 'never':
+        return Printer()
+    elif color == 'auto':
+        if stdout.isatty():
+            return ColoredPrinter(tag_colors)
+        else:
+            return NoColoredColumnPrinter(tag_colors)
+    else:
+        raise ValueError("Oops, bad color value '{}', should be one of {!r}".format(color, COLOR_ARG_CHOICES))
 
 
 # TODO: line wrapping at 80
 def main():
     args = _get_arg_parser().parse_args()
-    printer = _get_printer(args.color)
+    printer = _get_printer(sys.stdout, args.color)
     try:
         table = run_query(args.query_string, args.directory)
         _show_table(table, args.with_header, printer)
@@ -108,14 +129,19 @@ def _get_arg_parser():
     )
     output_options = arg_parser.add_argument_group(title='output options')
     output_options.add_argument(
-        '-H', '--header', action='store_true',
+        '--header', action='store_true',
         help='show header with column names',
         dest='with_header',
     )
     output_options.add_argument(
-        '-C', '--no-color', action='store_false',
-        help="don't colorize output",
-        dest='color',
+        '--color',
+        # TODO: handle u'' prefixes when getting error in command line. Maybe create a separate class
+        # TODO: ... ColorChoice and handle it there?
+        choices=COLOR_ARG_CHOICES,
+        default='auto',
+        help=(
+            "colorize output. The possible values of this option are: 'never', 'always', and 'auto'"
+        )
     )
 
     arg_parser.add_argument(
@@ -145,7 +171,8 @@ def run_query(query_string, directory):
     assert isinstance(query_string, unicode)
     tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
-    cwd_context = Context({'cwd': (directory or '.')})
+    # TODO: b'.'? Handle TaggedUnicode issues inside of the expr.walk_with_depth
+    cwd_context = Context({'cwd': (directory or b'.')})
     query = parse(tokens)
     return query.get_value(MergedContext(cwd_context, BUILTIN_CONTEXT))
 
@@ -185,10 +212,21 @@ def lscolor_to_termcolor(lscolor):
 
 def _show_table(table, with_header, colorizer):
     if with_header:
-        print('\t'.join(table.row_type))
+        print_row(table.row_type)
     for row in table:
-        colored_row = [unicode(colorizer.auto_colored(column)) for column in row]
-        print('\t'.join(colored_row))
+        colored_row = [colorizer.colored_column(column) for column in row]
+        print_row(colored_row)
+
+
+def print_row(row):
+    # we need b'\t' so resulting string will not be unicode
+    print(b'\t'.join(_printable_unicode(column) for column in row))
+
+
+def _printable_unicode(x):
+    if not isinstance(x, unicode):
+        x = unicode(x)
+    return x.encode('utf-8')
 
 
 if __name__ == '__main__':
