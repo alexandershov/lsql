@@ -93,7 +93,9 @@ SELECT path WHERE size > 10mb
 ```
 
 Here are all available suffixes:
+
 | Suffix | Value | Example |
+| ------ | ----- | ------- |
 |k|1024 bytes|where size > 2k|
 |kb|1024 bytes, alias for `k`|where size > 2kb|
 |m|1024 * 1024 bytes|where size > 2mb|
