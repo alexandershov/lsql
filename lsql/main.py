@@ -58,6 +58,9 @@ class Printer(object):
     def show_warning(self, text, start=0, end=None):
         self.show_message(self.warning(text=text, start=start, end=end))
 
+    def show_token_error(self, text, token):
+        self.show_error(text, start=token.start, end=token.end)
+
 
 class ColoredPrinter(Printer):
     def __init__(self, tag_colors, width=WIDTH):
@@ -71,7 +74,7 @@ class ColoredPrinter(Printer):
         return text[:start] + color + text[start:end] + Fore.RESET + text[end:]
 
     def warning(self, text, start=0, end=None):
-        return self.colored(color=Fore.RED, text=text, start=start, end=end)
+        return self.colored(color=Fore.RESET, text=text, start=start, end=end)
 
     def error(self, text, start=0, end=None):
         return self.colored(color=Fore.RED, text=text, start=start, end=end)
@@ -121,13 +124,14 @@ def main():
     except parser.UnknownLiteralSuffixError as exc:
         printer.show_message("Unknown number literal suffix `{}`:".format(exc.suffix))
 
-        printer.show_error(args.query_string, exc.token.start, exc.token.end)
+        printer.show_token_error(args.query_string, exc.token)
         printer.show_message('Known suffixes are: <{}>'.format(', '.join(exc.known_suffixes)))
         printer.new_line()
         printer.show_message('For gory details take a look at the documentation: {}#suffixes'.format(GITHUB_README))
     except parser.NotImplementedTokenError as exc:
         token_text = exc.match.group().upper()
         printer.show_message('Sorry, but {} is not implemented (yet):'.format(token_text))
+        # TODO: do something better than match stuff (probably, exception should have some Token in it)
         printer.show_error(args.query_string, start=exc.match.start(), end=exc.match.end())
         printer.new_line()
         printer.show_message(
@@ -145,13 +149,11 @@ def main():
         suggest_to_create_issue_or_pull_request(printer)
     except parser.OperatorExpectedError as exc:
         printer.show_message('Expected operator, got `{}`:'.format(exc.token.text))
-        # TODO: add helper that will do show_error_with_token
-        printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
+        printer.show_token_error(args.query_string, exc.token)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.ValueExpectedError as exc:
         printer.show_message('Expected value, got `{}`:'.format(exc.token.text))
-        # TODO: add helper that will do show_error_with_token
-        printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
+        printer.show_token_error(args.query_string, token)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.UnexpectedEndError:
         # TODO: handle it better: tell what's expected.
@@ -161,6 +163,7 @@ def main():
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
 
 
+# TODO: rename, because pun with expr.Context
 def get_context(string, start, max_len=10):
     context = string[start:start + max_len]
     if start + max_len >= len(string):
@@ -174,7 +177,7 @@ def suggest_to_create_issue_or_pull_request(printer):
     """
     printer.new_line()
     printer.show_message("If you think that's a bug, then you're absolutely wrong!")
-    printer.show_message('Just kidding. It could be a bug.')
+    printer.show_message('Just kidding. It can be a bug.')
     printer.show_message('Please create an issue (or pull request!): {}'.format(GITHUB_ISSUES))
     printer.show_message('Thank you.')
 
