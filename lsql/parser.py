@@ -272,6 +272,10 @@ class Token(object):
     def _get_not_implemented_message(self, method):
         return 'not implemented method .{!s}() in {!r}'.format(method, self)
 
+    @classmethod
+    def get_human_name(cls):
+        return cls.__name__
+
     def __repr__(self):
         return '{:s}(text={!r}, start={!r}, end={!r})'.format(
             self.__class__.__name__, self.text, self.start, self.end
@@ -286,21 +290,30 @@ class NotImplementedToken(Token):
 
 class KeywordToken(Token):
     """Base class for keyword tokens."""
+    keyword = None  # redefine me in subclasses
+
+    @classmethod
+    def get_human_name(cls):
+        return cls.keyword
 
 
 class AsToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'as'
 
 
 class AscToken(KeywordToken):
     direction = expr.ASC
+    keyword = 'asc'
 
 
 class DescToken(KeywordToken):
     direction = expr.DESC
+    keyword = 'desc'
 
 
 class BetweenToken(KeywordToken):
+    keyword = 'between'
+
     def suffix(self, left, parser):
         first = parser.expr(left_bp=self.right_bp)
         parser.skip(AndToken)
@@ -309,76 +322,82 @@ class BetweenToken(KeywordToken):
 
 
 class CaseToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'case'
 
 
 class ByToken(KeywordToken):
-    pass
+    keyword = 'by'
 
 
 class ContainsToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'contains'
 
 
 class CountToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'count'
 
 
 class DeleteToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'delete'
 
 
 class DropToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'drop'
 
 
 class ElseToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'else'
 
 
 class EndToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'end'
 
 
 class ExistsToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'exists'
 
 
 class FromToken(KeywordToken):
+    keyword = 'from'
+
     def clause(self, parser):
         return parser.expr()
 
 
 class GroupToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'group'
 
 
 class HavingToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'having'
 
 
 class IsToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'is'
 
 
 class IsNullToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'isnull'
 
 
 class JoinToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'join'
 
 
 class LeftToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'left'
 
 
 class AndToken(KeywordToken):
+    keyword = 'and'
+
     def suffix(self, left, parser):
         return expr.AndExpr(left, parser.expr(self.right_bp))
 
 
 class OrToken(KeywordToken):
+    keyword = 'or'
+
     def suffix(self, left, parser):
         return expr.OrExpr(left, parser.expr(self.right_bp))
 
@@ -391,7 +410,8 @@ class OperatorToken(Token):
         return expr.FunctionExpr(self.operator_name, [left, right])
 
 
-class InToken(OperatorToken):
+class InToken(OperatorToken, KeywordToken):
+    keyword = 'in'
     operator_name = 'in'
 
     def suffix(self, left, parser):
@@ -401,49 +421,55 @@ class InToken(OperatorToken):
         return expr.FunctionExpr(self.operator_name, [left, expr.ArrayExpr(exprs)])
 
 
-class LikeToken(NotImplementedToken, OperatorToken):
-    pass
+class LikeToken(NotImplementedToken, OperatorToken, KeywordToken):
+    keyword = 'like'
 
 
 # alias for rlike
+class LikeRegexToken(NotImplementedToken, OperatorToken, KeywordToken):
+    keyword = 'like_regex'
 
 
-class LikeRegexToken(NotImplementedToken, OperatorToken):
-    pass
+class IcontainsToken(NotImplementedToken, OperatorToken, KeywordToken):
+    keyword = 'icontains'
 
 
-class IcontainsToken(NotImplementedToken, OperatorToken):
-    pass
-
-
-class IlikeToken(NotImplementedToken, OperatorToken):
-    pass
+class IlikeToken(NotImplementedToken, OperatorToken, KeywordToken):
+    keyword = 'ilike'
 
 
 class LimitToken(KeywordToken):
+    keyword = 'limit'
+
     def clause(self, parser):
         return parser.expr()
 
 
-class NotToken(NotImplementedToken, OperatorToken):
-    pass
+class NotToken(NotImplementedToken, OperatorToken, KeywordToken):
+    keyword = 'not'
 
 
 class NotNullToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'notnull'
 
 
 class NullToken(KeywordToken):
+    keyword = 'null'
+
     def prefix(self, parser):
         return expr.ValueExpr(expr.NULL)
 
 
 class OffsetToken(KeywordToken):
+    keyword = 'offset'
+
     def clause(self, parser):
         return parser.expr()
 
 
 class OrderToken(KeywordToken):
+    keyword = 'order'
+
     def clause(self, parser):
         parser.skip(ByToken)
         sub_exprs = parser.parse_delimited_exprs(
@@ -464,18 +490,21 @@ def _parse_one_order_by_clause(parser):
 
 
 class OuterToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'outer'
 
 
-class RlikeToken(NotImplementedToken, OperatorToken):
-    pass
+# TODO: maybe should be OperatorToken?
+class RlikeToken(NotImplementedToken, KeywordToken):
+    keyword = 'rlike'
 
 
-class RilikeToken(NotImplementedToken, OperatorToken):
-    pass
+class RilikeToken(NotImplementedToken, KeywordToken):
+    keyword = 'rilike'
 
 
 class SelectToken(KeywordToken):
+    keyword = 'select'
+
     def clause(self, parser):
         if isinstance(parser.token, MulToken):
             select_expr = expr.SelectStarExpr()
@@ -486,14 +515,16 @@ class SelectToken(KeywordToken):
 
 
 class ThenToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'then'
 
 
 class UpdateToken(NotImplementedToken, KeywordToken):
-    pass
+    keyword = 'update'
 
 
 class WhereToken(KeywordToken):
+    keyword = 'where'
+
     def clause(self, parser):
         return parser.expr()
 
@@ -707,50 +738,50 @@ def _add_special(lexer):
 
 
 def _add_keywords(lexer):
-    patterns_with_keyword_classes = [
-        ('and', AndToken),
-        ('as', AsToken),
-        ('asc', AscToken),
-        ('between', BetweenToken),
-        ('by', ByToken),
-        ('case', CaseToken),
-        ('contains', ContainsToken),
-        ('delete', DeleteToken),
-        ('desc', DescToken),
-        ('drop', DropToken),
-        ('count', CountToken),
-        ('else', ElseToken),
-        ('end', EndToken),
-        ('exists', ExistsToken),
-        ('from', FromToken),
-        ('group', GroupToken),
-        ('having', HavingToken),
-        ('icontains', IcontainsToken),
-        ('ilike', IlikeToken),
-        ('in', InToken),
-        ('is', IsToken),
-        ('isnull', IsNullToken),
-        ('join', JoinToken),
-        ('left', LeftToken),
-        ('like', LikeToken),
-        ('like_regex', LikeRegexToken),
-        ('limit', LimitToken),
-        ('not', NotToken),
-        ('notnull', NotNullToken),
-        ('null', NullToken),
-        ('offset', OffsetToken),
-        ('or', OrToken),
-        ('order', OrderToken),
-        ('outer', OuterToken),
-        ('rilike', RilikeToken),
-        ('rlike', RlikeToken),
-        ('select', SelectToken),
-        ('then', ThenToken),
-        ('update', UpdateToken),
-        ('where', WhereToken),
+    keyword_token_classes = [
+        AndToken,
+        AsToken,
+        AscToken,
+        BetweenToken,
+        ByToken,
+        CaseToken,
+        ContainsToken,
+        DeleteToken,
+        DescToken,
+        DropToken,
+        CountToken,
+        ElseToken,
+        EndToken,
+        ExistsToken,
+        FromToken,
+        GroupToken,
+        HavingToken,
+        IcontainsToken,
+        IlikeToken,
+        InToken,
+        IsToken,
+        IsNullToken,
+        JoinToken,
+        LeftToken,
+        LikeToken,
+        LikeRegexToken,
+        LimitToken,
+        NotToken,
+        NotNullToken,
+        NullToken,
+        OffsetToken,
+        OrToken,
+        OrderToken,
+        OuterToken,
+        RilikeToken,
+        RlikeToken,
+        SelectToken,
+        ThenToken,
+        UpdateToken,
+        WhereToken,
     ]
-    for pattern, keyword_class in patterns_with_keyword_classes:
-        lexer.add(_keyword(pattern), keyword_class)
+    for keyword_class in keyword_token_classes:
+        lexer.add(_keyword(keyword_class.keyword), keyword_class)
 
 
 def _add_names(lexer):

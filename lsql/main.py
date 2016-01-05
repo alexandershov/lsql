@@ -127,8 +127,24 @@ def main():
             'If you want lsql to support {}, '
             'then please create an issue (or pull request!): {}'.format(token_text, GITHUB_ISSUES)
         )
+    except parser.UnexpectedTokenError as exc:
+        printer.show_message("Expected '{}', but got '{}': ".format(
+            exc.expected_token_class.get_human_name(), exc.actual_token.text))
+        printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
+        suggest_to_create_issue_or_pull_request(printer)
     except expr.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
+
+
+def suggest_to_create_issue_or_pull_request(printer):
+    """
+    :type printer: Printer
+    """
+    printer.show_message('')
+    printer.show_message("If you think that's a bug, then you're absolutely wrong!")
+    printer.show_message('Just kidding. It could be a bug.')
+    printer.show_message('Please create an issue (or pull request!): {}'.format(GITHUB_ISSUES))
+    printer.show_message('Thank you.')
 
 
 def _get_arg_parser():
