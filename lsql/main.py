@@ -109,9 +109,11 @@ def main():
         _show_table(table, args.with_header, printer)
     except parser.CantTokenizeError as exc:
         if args.query_string[exc.pos] == "'":
-            printer.show_message('Probably unterminated single quoted string at position {:d}:'.format(exc.pos))
+            printer.show_message("Probably unterminated single quoted string starting at {}:".format(
+                get_context(args.query_string, exc.pos)))
         else:
-            printer.show_message("Can't tokenize query at position {:d}:".format(exc.pos))
+            printer.show_message("Can't tokenize query starting at '{}': ".format(get_context(
+                args.query_string, exc.pos)))
         printer.show_error(args.query_string, exc.pos)
     except parser.UnknownLiteralSuffixError as exc:
         printer.show_message("Unknown number literal suffix '{}':".format(exc.suffix))
@@ -137,11 +139,18 @@ def main():
             printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.UnexpectedEndError:
-        # TODO: handle it better
+        # TODO: handle it better: tell what's expected.
         printer.show_message('Unexpected end of query.')
         suggest_to_create_issue_or_pull_request(printer)
     except expr.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
+
+
+def get_context(string, start, max_len=10):
+    context = string[start:start+max_len]
+    if start + max_len >= len(string):
+        return context
+    return context + '...'
 
 
 def suggest_to_create_issue_or_pull_request(printer):
