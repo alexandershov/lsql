@@ -19,7 +19,7 @@ FORE_BROWN = '\x1b[33m'
 COLOR_ARG_CHOICES = (
     'never',
     'always',
-    'auto',  # Color stdout only if it's a tty. Always color
+    'auto',  # Color stdout only if it's a tty. Always color stderr
 )
 
 GITHUB = 'https://github.com/alexandershov/lsql'
@@ -107,8 +107,8 @@ def _get_printer(stdout, color):
         raise ValueError("Oops, bad color value '{}', should be one of {!r}".format(color, COLOR_ARG_CHOICES))
 
 
-def main():
-    args = _get_arg_parser().parse_args()
+def main(argv=None):
+    args = _get_arg_parser().parse_args(argv)
     printer = _get_printer(sys.stdout, args.color)
     try:
         table = run_query(args.query_string, args.directory)
