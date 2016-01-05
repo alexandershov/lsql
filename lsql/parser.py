@@ -108,6 +108,11 @@ class OperatorExpectedError(ParserError):
         self.token = token
 
 
+class ValueExpectedError(ParserError):
+    def __init__(self, token):
+        self.token = token
+
+
 class Parser(object):
     def __init__(self, tokens):
         self._tokens = list(tokens)
@@ -256,7 +261,7 @@ class Token(object):
           2 - 4
               ^
         """
-        raise NotImplementedError(self._get_not_implemented_message('prefix'))
+        raise ValueExpectedError(self)
 
     @not_implemented
     def suffix(self, left, parser):

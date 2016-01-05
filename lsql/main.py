@@ -142,6 +142,11 @@ def main():
         # TODO: add helper that will do show_error_with_token
         printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
         suggest_to_create_issue_or_pull_request(printer)
+    except parser.ValueExpectedError as exc:
+        printer.show_message('Expected value, got {}:'.format(exc.token.text))
+        # TODO: add helper that will do show_error_with_token
+        printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
+        suggest_to_create_issue_or_pull_request(printer)
     except parser.UnexpectedEndError:
         # TODO: handle it better: tell what's expected.
         printer.show_message('Unexpected end of query.')
