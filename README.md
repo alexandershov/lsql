@@ -87,7 +87,7 @@ Let's say you're in the directory /tmp with two files
 
 ## Suffixes
 Lsql supports number literal suffixes.
-For example, to select files with size greater than 10 megabytes use: 
+For example, to select files with size greater than 10 megabytes use this query: 
 ```sql
 SELECT path WHERE size > 10mb
 ```
