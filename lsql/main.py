@@ -24,6 +24,7 @@ COLOR_ARG_CHOICES = (
 
 GITHUB = 'https://github.com/alexandershov/lsql'
 GITHUB_ISSUES = '{}/issues'.format(GITHUB)
+GITHUB_README = '{}/blob/master/README.md'.format(GITHUB)
 
 WIDTH = 80
 
@@ -116,9 +117,11 @@ def main():
         printer.show_error(args.query_string, exc.pos)
     except parser.UnknownLiteralSuffixError as exc:
         printer.show_message("Unknown number literal suffix '{}':".format(exc.suffix))
-        # TODO: add link to documentation where all suffixes are described
+
         printer.show_error(args.query_string, exc.token.start, exc.token.end)
         printer.show_message('Known suffixes are: <{}>'.format(', '.join(exc.known_suffixes)))
+        printer.show_message('')
+        printer.show_message('For gory details take a look at the documentation: {}#suffixes'.format(GITHUB_README))
     except parser.NotImplementedTokenError as exc:
         token_text = exc.match.group().upper()
         printer.show_message('Sorry, but {} is not implemented (yet):'.format(token_text))
@@ -156,7 +159,7 @@ def main():
 
 
 def get_context(string, start, max_len=10):
-    context = string[start:start+max_len]
+    context = string[start:start + max_len]
     if start + max_len >= len(string):
         return context
     return context + '...'

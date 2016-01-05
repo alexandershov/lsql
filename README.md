@@ -1,5 +1,5 @@
 ## What is it?
-It's like `find` but with SQL (Work in progress)
+It's like `find` but with SQL (work in progress)
 
 ## Install
 ```shell
@@ -84,3 +84,31 @@ Let's say you're in the directory /tmp with two files
 | BTRIM | delete characters from the both ends of the string | `lsql "select BTRIM(name, '~')"` | 'a' |
 | LENGTH | length of the string/array | `lsql "select LENGTH(lines)"` | 5 |
 
+
+## Suffixes
+Lsql supports number literal suffixes.
+For example, to select files with size greater than 10 megabytes use: 
+```sql
+SELECT path WHERE size > 10mb
+```
+
+Here are all available suffixes:
+| Suffix | Value | Example |
+|k|1024 bytes|where size > 2k|
+|kb|1024 bytes, alias for `k`|where size > 2kb|
+|m|1024 * 1024 bytes|where size > 2mb|
+|mb|1024 * 1024 bytes, alias for `mb`|where size > 2mb|
+|g|1024 * 1024 * 1024 bytes|where size > 2g|
+|gb|1024 * 1024 * 1024, alias for `g`|where size > 2gb|
+|minute|60 seconds|where age(mtime) > 2minute|
+|minutes|60 seconds, alias for `minute`|where age(mtime) > 2minutes|
+|hour|60 minutes|where age(mtime) > 2hour|
+|hours|60 minutes, alias for `hour`|where age(mtime) > 2hours|
+|day|24 hours|where age(mtime) > 2day|
+|days|24 hours, alias for `day`|where age(mtime) > 2days|
+|week|7 days|where age(mtime) > 2week|
+|weeks|7 days, alias for `week`|where age(mtime) > 2weeks|
+|month|30 days|where age(mtime) > 2month|
+|months|30 days, alias for `month`|where age(mtime) > 2months|
+|year|365 days|where age(mtime) > 2year|
+|years|365 days, alias for `year`|where age(mtime) > 2years|
