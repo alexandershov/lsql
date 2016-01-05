@@ -89,7 +89,7 @@ class UnexpectedTokenError(ParserError):
         self.actual_token = actual_token
 
 
-class UnexpectedEnd(ParserError):
+class UnexpectedEndError(ParserError):
     pass
 
 
@@ -122,7 +122,7 @@ class Parser(object):
 
     def _check_bounds(self, index):
         if index >= len(self._tokens):
-            raise UnexpectedEnd('unexpected end of query')
+            raise UnexpectedEndError('unexpected end of query')
 
     def peek(self):
         self._check_bounds(self._index + 1)

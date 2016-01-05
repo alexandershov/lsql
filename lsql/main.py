@@ -136,7 +136,8 @@ def main():
                 exc.expected_token_class.get_human_name(), exc.actual_token.text))
             printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
         suggest_to_create_issue_or_pull_request(printer)
-    except parser.UnexpectedEnd:
+    except parser.UnexpectedEndError:
+        # TODO: handle it better
         printer.show_message('Unexpected end of query.')
         suggest_to_create_issue_or_pull_request(printer)
     except expr.DirectoryDoesNotExistError as exc:
