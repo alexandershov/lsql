@@ -28,6 +28,9 @@ GITHUB_README = '{}/blob/master/README.md'.format(GITHUB)
 
 WIDTH = 80
 
+SUCCESS_CODE = 0
+FAILURE_CODE = 1
+
 
 # TODO: split this class into 2. One should be about errors/warnings/messages, another - about colored_column()
 class Printer(object):
@@ -113,6 +116,7 @@ def main(argv=None):
     try:
         table = run_query(args.query_string, args.directory)
         _show_table(table, args.with_header, printer)
+        return SUCCESS_CODE
     except parser.CantTokenizeError as exc:
         if args.query_string[exc.pos] == "'":
             printer.show_message("Probably unterminated single quoted string starting at {}:".format(
@@ -161,6 +165,7 @@ def main(argv=None):
         suggest_to_create_issue_or_pull_request(printer)
     except expr.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
+    return FAILURE_CODE
 
 
 # TODO: rename, because pun with expr.Context
@@ -289,4 +294,4 @@ def _printable_unicode(x):
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

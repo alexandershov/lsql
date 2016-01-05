@@ -11,8 +11,6 @@ NON_ASCII_PATHS_DIR = pytest.get_fixture_dir('non-ascii-paths')
 # We don't check results (they're checked in test_new_lsql.py).
 # We just want to check that lsql.main:main never throws exception (even when query is bad).
 
-# TODO: actually run the process and check exit code: 0 if ok, not 0 if not ok.
-
 @pytest.mark.parametrize('query', [
     # empty query is legal
     '',
@@ -20,7 +18,7 @@ NON_ASCII_PATHS_DIR = pytest.get_fixture_dir('non-ascii-paths')
     "select fullpath || 'oops' where size > 0kb and ext != 'py'"
 ])
 def test_good_select(query):
-    run_query(query)
+    assert run_query(query) == 0
 
 
 @pytest.mark.parametrize('query', [
@@ -48,11 +46,11 @@ def test_good_select(query):
     'select 3 +',
 ])
 def test_bad_select(query):
-    run_query(query)
+    assert run_query(query) == 1
 
 
 def run_query(query, directory=None):
     if directory is None:
         directory = BASE_DIR
     # TODO: handle str/unicode insanity
-    main(argv=[query, str(directory)])
+    return main(argv=[query, str(directory)])
