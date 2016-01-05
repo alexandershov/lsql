@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from functools import partial
+from functools import partial, wraps
 import logging
 import re
 
@@ -103,6 +103,11 @@ class UnknownLiteralSuffixError(ParserError):
         return LITERAL_SUFFIXES.keys()
 
 
+class OperatorExpectedError(ParserError):
+    def __init__(self, token):
+        self.token = token
+
+
 class Parser(object):
     def __init__(self, tokens):
         self._tokens = list(tokens)
@@ -183,6 +188,14 @@ def parse(tokens):
     return Parser(tokens).parse()
 
 
+def not_implemented(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+    wrapper.not_implemented = True
+    return wrapper
+
+
 # TODO(aershov182): add methods that'll help to figure out that these token has redefined
 # TODO(aershov182): ... .suffix(), .prefix(), and .clause() methods.
 class Token(object):
@@ -222,8 +235,11 @@ class Token(object):
         try:
             return RIGHT_BINDING_POWERS[cls]
         except KeyError:
+            if not self.implemented_suffix():
+                raise OperatorExpectedError(self)
             raise NotImplementedError('please add {} to RIGHT_BINDING_POWERS'.format(cls.__name__))
 
+    @not_implemented
     def prefix(self, parser):
         """
         Called when token is encountered in prefix position.
@@ -242,6 +258,7 @@ class Token(object):
         """
         raise NotImplementedError(self._get_not_implemented_message('prefix'))
 
+    @not_implemented
     def suffix(self, left, parser):
         """
         Called when token is encountered in suffix position.
@@ -259,6 +276,7 @@ class Token(object):
         """
         raise NotImplementedError(self._get_not_implemented_message('suffix'))
 
+    @not_implemented
     def clause(self, parser):
         """
         Called in special cases. For example Parser.parse() will call .clause() on
@@ -271,6 +289,20 @@ class Token(object):
 
     def _get_not_implemented_message(self, method):
         return 'not implemented method .{!s}() in {!r}'.format(method, self)
+
+    # TODO: think of something better than implemented_* methods that use getattr
+
+    @classmethod
+    def implemented_prefix(cls):
+        return not getattr(cls.prefix, 'not_implemented', False)
+
+    @classmethod
+    def implemented_suffix(cls):
+        return not getattr(cls.suffix, 'not_implemented', False)
+
+    @classmethod
+    def implemented_clause(cls):
+        return not getattr(cls.clause, 'not_implemented', False)
 
     @classmethod
     def get_human_name(cls):
@@ -871,13 +903,13 @@ def _get_right_binding_powers():
     return _get_binding_powers(right_token_groups)
 
 
-# multiply by 100 so we can add some inbetweener precedence level
+# multiply by 100 so we can add some in-between precedence levels
 def _get_binding_powers(token_groups, mul=100):
     powers = {}
     for level, group in enumerate(token_groups):
-        for op in group:
-            assert op not in powers
-            powers[op] = mul * level
+        for operator_class in group:
+            assert operator_class not in powers
+            powers[operator_class] = mul * level
     return powers
 
 

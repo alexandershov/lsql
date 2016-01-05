@@ -100,7 +100,6 @@ def _get_printer(stdout, color):
         raise ValueError("Oops, bad color value '{}', should be one of {!r}".format(color, COLOR_ARG_CHOICES))
 
 
-# TODO: line wrapping at 80
 def main():
     args = _get_arg_parser().parse_args()
     printer = _get_printer(sys.stdout, args.color)
@@ -137,6 +136,11 @@ def main():
             printer.show_message("Expected '{}', but got '{}': ".format(
                 exc.expected_token_class.get_human_name(), exc.actual_token.text))
             printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
+        suggest_to_create_issue_or_pull_request(printer)
+    except parser.OperatorExpectedError as exc:
+        printer.show_message('Expected operator, got {}:'.format(exc.token.text))
+        # TODO: add helper that will do show_error_with_token
+        printer.show_error(args.query_string, start=exc.token.start, end=exc.token.end)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.UnexpectedEndError:
         # TODO: handle it better: tell what's expected.
