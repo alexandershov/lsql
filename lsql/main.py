@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import OrderedDict
 import argparse
 import os
+import textwrap
 import sys
 
 from colorama import Fore
@@ -24,9 +25,14 @@ COLOR_ARG_CHOICES = (
 GITHUB = 'https://github.com/alexandershov/lsql'
 GITHUB_ISSUES = '{}/issues'.format(GITHUB)
 
+WIDTH = 80
+
 
 # TODO: split this class into 2. One should be about errors/warnings/messages, another - about colored_column()
 class Printer(object):
+    def __init__(self, width=WIDTH):
+        self._width = 80
+
     def colored(self, color, text, start=0, end=None):
         return text
 
@@ -40,7 +46,7 @@ class Printer(object):
         return value
 
     def show_message(self, text):
-        print(text, file=sys.stderr)
+        print(textwrap.fill(text, self._width), file=sys.stderr)
 
     def show_error(self, text, start=0, end=None):
         self.show_message(self.error(text=text, start=start, end=end))
@@ -50,7 +56,8 @@ class Printer(object):
 
 
 class ColoredPrinter(Printer):
-    def __init__(self, tag_colors):
+    def __init__(self, tag_colors, width=WIDTH):
+        super(ColoredPrinter, self).__init__(width)
         self._tag_colors = tag_colors
 
     def colored(self, color, text, start=0, end=None):
@@ -115,6 +122,7 @@ def main():
         token_text = exc.match.group().upper()
         printer.show_message('Sorry, but {} is not implemented (yet):'.format(token_text))
         printer.show_error(args.query_string, start=exc.match.start(), end=exc.match.end())
+        printer.show_message('')
         printer.show_message(
             'If you want lsql to support {}, '
             'then please create an issue (or pull request!): {}'.format(token_text, GITHUB_ISSUES)
