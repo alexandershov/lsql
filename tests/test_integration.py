@@ -4,20 +4,55 @@ import pytest
 
 from lsql.main import main
 
-BASE_DIR = pytest.get_fixture_dir('base')
+BASE_DIR = pytest.get_fixture_dir(b'base')
 NON_ASCII_PATHS_DIR = pytest.get_fixture_dir('non-ascii-paths')
 
 
-# we don't check results (they're checked in test_new_lsql.py)
-# we just want to check that lsql.main:main doesn't throw exception
+# We don't check results (they're checked in test_new_lsql.py).
+# We just want to check that lsql.main:main never throws exception (even when query is bad).
+
+# TODO: actually run the process and check exit code: 0 if ok, not 0 if not ok.
+
 @pytest.mark.parametrize('query', [
+    # empty query is legal
+    '',
     'select 1',
+    "select fullpath || 'oops' where size > 0kb and ext != 'py'"
 ])
-def test_select(query):
+def test_good_select(query):
+    run_query(query)
+
+
+@pytest.mark.parametrize('query', [
+    # CantTokenizeError: unclosed string literal
+    "select 'text",
+    # CantTokenizeError: other
+    "select `",
+    # UnknownLiteralSuffixError
+    "select 1unknown",
+    # NotImplementedTokenError: as is not implemented
+    "select name as name_alias",
+    # NotImplementedTokenError: group is not implemented
+    'select name group by name',
+    # UnexpectedTokenError
+    "order 'unexpected'"
+    # OperatorExpectedError: value token instead of operator
+    'select 3 3',
+    # OperatorExpectedError: keyword token instead of operator
+    'select 3 from',
+    # ValueExpectedError: operator token instead of value
+    'select + *',
+    # ValueExpectedError: keyword token instead of value
+    'select 3 + from',
+    # UnexpectedEndError
+    'select 3 +',
+])
+def test_bad_select(query):
     run_query(query)
 
 
 def run_query(query, directory=None):
     if directory is None:
         directory = BASE_DIR
-    main(argv=[query, directory])
+    # TODO: handle str/unicode insanity
+    main(argv=[query, str(directory)])

@@ -153,7 +153,7 @@ def main(argv=None):
         suggest_to_create_issue_or_pull_request(printer)
     except parser.ValueExpectedError as exc:
         printer.show_message('Expected value, got `{}`:'.format(exc.token.text))
-        printer.show_token_error(args.query_string, token)
+        printer.show_token_error(args.query_string, exc.token)
         suggest_to_create_issue_or_pull_request(printer)
     except parser.UnexpectedEndError:
         # TODO: handle it better: tell what's expected.
