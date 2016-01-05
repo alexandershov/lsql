@@ -128,9 +128,13 @@ def main():
             'then please create an issue (or pull request!): {}'.format(token_text, GITHUB_ISSUES)
         )
     except parser.UnexpectedTokenError as exc:
-        printer.show_message("Expected '{}', but got '{}': ".format(
-            exc.expected_token_class.get_human_name(), exc.actual_token.text))
-        printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
+        if isinstance(exc.actual_token, parser.EndQueryToken):
+            printer.show_message("Expected '{}', but got end of query.".format(
+                exc.expected_token_class.get_human_name()))
+        else:
+            printer.show_message("Expected '{}', but got '{}': ".format(
+                exc.expected_token_class.get_human_name(), exc.actual_token.text))
+            printer.show_error(args.query_string, start=exc.actual_token.start, end=exc.actual_token.end)
         suggest_to_create_issue_or_pull_request(printer)
     except expr.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))

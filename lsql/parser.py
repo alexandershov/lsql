@@ -636,6 +636,11 @@ class SpecialToken(Token):
 
 
 class OpeningParenToken(SpecialToken):
+    # TODO: DRY it up with _add_special
+    @classmethod
+    def get_human_name(cls):
+        return '('
+
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
             raise UnexpectedTokenError(None, parser.token)
@@ -656,7 +661,10 @@ class OpeningParenToken(SpecialToken):
 
 
 class ClosingParenToken(SpecialToken):
-    pass
+    # TODO: DRY it up with _add_special
+    @classmethod
+    def get_human_name(cls):
+        return ')'
 
 
 class CommaToken(SpecialToken):
