@@ -15,7 +15,8 @@ NON_ASCII_PATHS_DIR = pytest.get_fixture_dir('non-ascii-paths')
     # empty query is legal
     '',
     'select 1',
-    "select fullpath || 'oops' where size > 0kb and ext != 'py'"
+    "select fullpath || 'oops' where size > 0kb and ext != 'py'",
+    'select name group by name',
 ])
 def test_good_select(query):
     assert run_query(query) == 0
@@ -30,8 +31,6 @@ def test_good_select(query):
     "select 1unknown",
     # NotImplementedTokenError: as is not implemented
     "select name as name_alias",
-    # NotImplementedTokenError: group is not implemented
-    'select name group by name',
     # UnexpectedTokenError
     "order 'unexpected'"
     # OperatorExpectedError: value token instead of operator

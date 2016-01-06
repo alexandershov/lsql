@@ -97,6 +97,12 @@ def test_math(query, expected_results):
     ('select count(*)', [
         (4,)
     ]),
+    ('select name, count(*) group by name', [
+        ('small.py', 1),
+        ('LICENSE', 1),
+        ('small', 1),
+        ('README.md', 1),
+    ])
 ])
 def test_query(query, expected_results):
     assert_same_items(

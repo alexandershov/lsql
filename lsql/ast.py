@@ -109,10 +109,16 @@ class AggFunctionsVisitor(NodeVisitor):
         return bool(self.agg_function_nodes)
 
 
-def has_agg_functions(node):
+def has_agg_functions_nodes(node):
     visitor = AggFunctionsVisitor()
     node.walk(visitor)
     return visitor.has_agg_functions
+
+
+def get_agg_function_nodes(node):
+    visitor = AggFunctionsVisitor()
+    node.walk(visitor)
+    return visitor.agg_function_nodes
 
 
 class NodeTransformer(NodeVisitor):
@@ -761,10 +767,10 @@ class QueryNode(Node):
         if self.offset_node is None:
             self.offset_node = ValueNode(0)
 
-        if has_agg_functions(self.where_node):
+        if has_agg_functions_nodes(self.where_node):
             raise LsqlEvalError('aggregate functions are not allowed in WHERE')
         if self.group_node is None:
-            if any(has_agg_functions(node) for node in chain(self.select_node, self.order_node)):
+            if any(has_agg_functions_nodes(node) for node in chain(self.select_node, self.order_node)):
                 self.group_node = GroupNode()
             elif self.having_node is None:
                 self.group_node = FakeGroupNode()
@@ -808,6 +814,7 @@ class QueryNode(Node):
                 filtered_rows.append(from_row)
 
         if not isinstance(self.group_node, FakeGroupNode):
+            agg_function_nodes = get_agg_function_nodes(self)
             grouped = defaultdict(list)  # group_key -> rows
             # TODO: check that stuff in select_expr and having_expr are legal
             for row in filtered_rows:
@@ -818,6 +825,8 @@ class QueryNode(Node):
                 key = tuple(node.get_value(row_context) for node in self.group_node)
                 grouped[key].append(row)
             for key, grouped_rows in grouped.viewitems():
+                for agg_node in agg_function_nodes:
+                    agg_node.clear_aggregate()
                 cur_row = [None] * len(self.select_node)
                 for row in grouped_rows:
                     row_context = MergedContext(

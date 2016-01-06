@@ -419,6 +419,7 @@ class GroupToken(KeywordToken):
     keyword = 'group'
 
     def clause(self, parser):
+        parser.skip(ByToken)
         return ast.GroupNode(parser.parse_delimited_exprs(CommaToken))
 
 
@@ -913,7 +914,7 @@ def _operator(s):
 def _get_right_binding_powers():
     # increasing precedence levels, first level is zero
     right_token_groups = [
-        [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, OrderToken,
+        [EndToken, CommaToken, ClosingParenToken, FromToken, WhereToken, GroupToken, HavingToken, OrderToken,
          AscToken, DescToken, LimitToken, OffsetToken, EndQueryToken],
 
         [OrToken],
