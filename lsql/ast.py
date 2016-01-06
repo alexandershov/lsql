@@ -279,7 +279,7 @@ class Stat(object):
     @property
     def birthtime(self):
         if not hasattr(self.__stat, 'st_birthtime'):
-            raise ExprError('birthtime is not supported on your platform')
+            raise LsqlEvalError('birthtime is not supported on your platform')
         return Timestamp(self.__stat.st_birthtime)
 
     @property
@@ -523,11 +523,11 @@ def walk_with_depth(path, depth=0):
                 yield x
 
 
-class ExprError(LsqlError):
+class LsqlEvalError(LsqlError):
     pass
 
 
-class DirectoryDoesNotExistError(ExprError):
+class DirectoryDoesNotExistError(LsqlEvalError):
     def __init__(self, path):
         self.path = path
 
