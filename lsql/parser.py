@@ -147,6 +147,8 @@ class Parser(object):
         select_node = self._get_clause(SelectToken)
         from_node = self._get_clause(FromToken)
         where_node = self._get_clause(WhereToken)
+        group_node = self._get_clause(GroupToken)
+        having_node = self._get_clause(HavingToken)
         order_node = self._get_clause(OrderToken)
         limit_node = self._get_clause(LimitToken)
         offset_node = self._get_clause(OffsetToken)
@@ -157,6 +159,8 @@ class Parser(object):
             select_node=select_node,
             from_node=from_node,
             where_node=where_node,
+            group_node=group_node,
+            having_node=having_node,
             order_node=order_node,
             limit_node=limit_node,
             offset_node=offset_node,
@@ -370,8 +374,18 @@ class ContainsToken(NotImplementedToken, KeywordToken):
     keyword = 'contains'
 
 
-class CountToken(NotImplementedToken, KeywordToken):
+class CountToken(KeywordToken):
     keyword = 'count'
+
+    def prefix(self, parser):
+        parser.skip(OpeningParenToken)
+        if isinstance(parser.token, MulToken):
+            parser.advance()
+            arg_node = ast.ValueNode(1)
+        else:
+            arg_node = parser.expr()
+        parser.skip(ClosingParenToken)
+        return ast.FunctionNode('count', arg_nodes=[arg_node])
 
 
 class DeleteToken(NotImplementedToken, KeywordToken):
@@ -401,12 +415,18 @@ class FromToken(KeywordToken):
         return parser.expr()
 
 
-class GroupToken(NotImplementedToken, KeywordToken):
+class GroupToken(KeywordToken):
     keyword = 'group'
 
+    def clause(self, parser):
+        return ast.GroupNode(parser.parse_delimited_exprs(CommaToken))
 
-class HavingToken(NotImplementedToken, KeywordToken):
+
+class HavingToken(KeywordToken):
     keyword = 'having'
+
+    def clause(self, parser):
+        return ast.HavingNode(parser.expr())
 
 
 class IsToken(NotImplementedToken, KeywordToken):

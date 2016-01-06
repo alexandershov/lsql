@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import namedtuple, OrderedDict, Sized
+from collections import defaultdict, namedtuple, OrderedDict, Sized
 from copy import copy
 from datetime import datetime
 from functools import total_ordering, wraps
 from grp import getgrgid
+from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
 import numbers
@@ -94,6 +95,26 @@ class NodeVisitor(object):
         raise NotImplementedError
 
 
+class AggFunctionsVisitor(NodeVisitor):
+    def __init__(self):
+        self.agg_function_nodes = []
+
+    def visit(self, node):
+        if isinstance(node, FunctionNode):
+            if node.function_name in AGG_FUNCTIONS:
+                self.agg_function_nodes.append(node)
+
+    @property
+    def has_agg_functions(self):
+        return bool(self.agg_function_nodes)
+
+
+def has_agg_functions(node):
+    visitor = AggFunctionsVisitor()
+    node.walk(visitor)
+    return visitor.has_agg_functions
+
+
 class NodeTransformer(NodeVisitor):
     def visit(self, node):
         """
@@ -106,6 +127,14 @@ class NodeTransformer(NodeVisitor):
         :rtype: Node
         """
         raise NotImplementedError
+
+
+class AggFunctionsTransformer(NodeTransformer):
+    def visit(self, node):
+        if isinstance(node, FunctionNode):
+            if node.function_name in AGGREGATES:
+                return AggFunctionNode(node.function_name, arg_nodes=node.arg_nodes)
+        return node
 
 
 class FileTableType(Namespace):
@@ -459,6 +488,45 @@ TYPES = {
     AnyIterable, NumberIterable,
 }
 
+
+class Aggregate(object):
+    type = None  # redefine me in subclasses
+    return_type = None  # redefine me in subclasses
+
+    def clear(self):
+        raise NotImplementedError
+
+    def add(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @property
+    def value(self):
+        raise NotImplementedError
+
+
+class CountAggregate(Aggregate):
+    type = (object, int)
+    return_type = int  # TODO: DRY return_type and type
+
+    def __init__(self):
+        self._count = 0
+
+    def clear(self):
+        self._count = 0
+
+    def add(self, value):
+        if value is not NULL:
+            self._count += 1
+
+    @property
+    def value(self):
+        return self._count
+
+
+AGGREGATES = {
+    'count': CountAggregate,
+}
+
 AGG_FUNCTIONS = Context({
     'count': agg_function(count_agg, [AnyIterable, int]),
     'sum': agg_function(sum_agg, [NumberIterable, int]),
@@ -572,6 +640,9 @@ class Node(object):
     def __iter__(self):
         return iter(self.children)
 
+    def __len__(self):
+        return len(self.children)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -653,11 +724,13 @@ class BetweenNode(Node):
 
 
 class QueryNode(Node):
-    def __init__(self, select_node, from_node, where_node, order_node,
+    def __init__(self, select_node, from_node, where_node, group_node, having_node, order_node,
                  limit_node, offset_node):
         self.select_node = select_node
         self.from_node = from_node
         self.where_node = where_node
+        self.group_node = group_node
+        self.having_node = having_node
         self.order_node = order_node
         self.limit_node = limit_node
         self.offset_node = offset_node
@@ -682,14 +755,29 @@ class QueryNode(Node):
         if self.where_node is None:
             self.where_node = ValueNode(True)
         if self.order_node is None:
-            self.order_node = OrderNode([])
+            self.order_node = OrderNode()
         if self.limit_node is None:
             self.limit_node = ValueNode(float('inf'))
         if self.offset_node is None:
             self.offset_node = ValueNode(0)
+
+        if has_agg_functions(self.where_node):
+            raise LsqlEvalError('aggregate functions are not allowed in WHERE')
+        if self.group_node is None:
+            if any(has_agg_functions(node) for node in chain(self.select_node, self.order_node)):
+                self.group_node = GroupNode()
+            elif self.having_node is None:
+                self.group_node = FakeGroupNode()
+            else:
+                self.group_node = GroupNode()
+        if self.having_node is None:
+            self.having_node = HavingNode(ValueNode(True))
+        transformer = AggFunctionsTransformer()
+        self.select_node = self.select_node.transform(transformer)
+        self.having_node = self.having_node.transform(transformer)
         super(QueryNode, self).__init__(children=[
-            self.select_node, self.from_node, self.where_node, self.order_node, self.limit_node,
-            self.offset_node,
+            self.select_node, self.from_node, self.where_node, self.group_node, self.having_node,
+            self.order_node, self.limit_node, self.offset_node,
         ])
 
     def get_value(self, context):
@@ -698,6 +786,7 @@ class QueryNode(Node):
         select_context = MergedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
         for i, node in enumerate(self.select_node):
+            # TODO: check it in regard to group by
             row_type[get_name(node, 'column_{:d}'.format(i))] = node.get_type(select_context)
 
         def key(row):
@@ -717,16 +806,39 @@ class QueryNode(Node):
             keys.append(key(from_row))
             if self.where_node.get_value(row_context):
                 filtered_rows.append(from_row)
-        for row in filtered_rows:
-            row_context = MergedContext(
-                row.get_context(),
-                context
-            )
-            cur_row = []
-            for node in self.select_node:
-                column = node.get_value(row_context)
-                cur_row.append(column)
-            rows.append(cur_row)
+
+        if not isinstance(self.group_node, FakeGroupNode):
+            grouped = defaultdict(list)  # group_key -> rows
+            # TODO: check that stuff in select_expr and having_expr are legal
+            for row in filtered_rows:
+                row_context = MergedContext(
+                    row.get_context(),
+                    context
+                )
+                key = tuple(node.get_value(row_context) for node in self.group_node)
+                grouped[key].append(row)
+            for key, grouped_rows in grouped.viewitems():
+                cur_row = [None] * len(self.select_node)
+                for row in grouped_rows:
+                    row_context = MergedContext(
+                        row.get_context(),
+                        context
+                    )
+                    for i, node in enumerate(self.select_node):
+                        column = node.get_value(row_context)
+                        cur_row[i] = column
+                rows.append(cur_row)
+        else:
+            for row in filtered_rows:
+                row_context = MergedContext(
+                    row.get_context(),
+                    context
+                )
+                cur_row = []
+                for node in self.select_node:
+                    column = node.get_value(row_context)
+                    cur_row.append(column)
+                rows.append(cur_row)
 
         rows = [row for _, row in sorted(zip(keys, rows))]
         rows = rows[self.offset_node.get_value(context):]
@@ -768,17 +880,19 @@ class FromNode(Node):
 
 
 class GroupNode(Node):
-    # TODO: don't allow having_node equal to None
-    def __init__(self, group_nodes, having_node=None):
-        if having_node is None:
-            having_node = ValueNode(True)
-        self.group = group_nodes
-        self.having_node = having_node
-        super(GroupNode, self).__init__(children=(group_nodes + [self.having_node]))
+    @property
+    def groups(self):
+        return self.children
 
-    def check_type(self, scope):
-        super(GroupNode, self).check_type(scope)
-        self.having_node.check_type(scope)
+
+class FakeGroupNode(Node):
+    pass
+
+
+class HavingNode(Node):
+    def __init__(self, condition):
+        self.condition = condition
+        super(HavingNode, self).__init__(children=[self.condition])
 
 
 class NameNode(Node):
@@ -857,13 +971,31 @@ class FunctionNode(Node):
     def __eq__(self, other):
         return super(FunctionNode, self).__eq__(other) and (self.function_name == other.function_name)
 
-    def __hash__(self, other):
+    def __hash__(self):
         return hash((self.children, self.function_name))
 
     def __repr__(self):
-        return 'FunctionNode(function_name={!r}, arg_nodes={!r})'.format(
-            self.function_name, self.arg_nodes
+        return '{}(function_name={!r}, arg_nodes={!r})'.format(
+            self.__class__.__name__.self.function_name, self.arg_nodes
         )
+
+
+class AggFunctionNode(FunctionNode):
+    def __init__(self, function_name, arg_nodes):
+        super(AggFunctionNode, self).__init__(function_name, arg_nodes)
+        self.aggregate = AGGREGATES[self.function_name]()
+
+    @property
+    def function(self):
+        return self.aggregate
+
+    def clear_aggregate(self):
+        self.aggregate.clear()
+
+    def get_value(self, context):
+        args = [arg_node.get_value(context) for arg_node in self.arg_nodes]
+        self.aggregate.add(*args)
+        return self.aggregate.value
 
 
 class AndNode(Node):

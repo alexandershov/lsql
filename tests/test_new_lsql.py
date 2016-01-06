@@ -94,6 +94,9 @@ def test_math(query, expected_results):
     ('select name where length(lines) between 2 and 4', [
         ('small.py',),
     ]),
+    ('select count(*)', [
+        (4,)
+    ]),
 ])
 def test_query(query, expected_results):
     assert_same_items(
