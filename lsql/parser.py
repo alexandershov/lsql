@@ -513,7 +513,7 @@ class OrderToken(KeywordToken):
             CommaToken,
             parse_fn=partial(_parse_one_order_by_clause, parser=parser)
         )
-        return expr.ListExpr(sub_exprs)
+        return expr.OrderExpr(sub_exprs)
 
 
 def _parse_one_order_by_clause(parser):
@@ -547,7 +547,7 @@ class SelectToken(KeywordToken):
             select_expr = expr.SelectStarExpr()
             parser.advance()
         else:
-            select_expr = expr.ListExpr(parser.parse_delimited_exprs(CommaToken))
+            select_expr = expr.SelectExpr(children=parser.parse_delimited_exprs(CommaToken))
         return select_expr
 
 

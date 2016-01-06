@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple, OrderedDict, Sized
+from copy import copy
 from datetime import datetime
 from functools import total_ordering, wraps
 from grp import getgrgid
@@ -13,6 +14,11 @@ import os
 import errno
 
 from lsql.errors import LsqlError
+
+_MISSING = object()
+
+ASC = 1
+DESC = -1
 
 
 class Namespace(object):
@@ -83,8 +89,22 @@ class MergedContext(Context):
         )
 
 
-class Visitor(object):
+class NodeVisitor(object):
     def visit(self, node):
+        raise NotImplementedError
+
+
+class NodeTransformer(NodeVisitor):
+    def visit(self, node):
+        """
+        If you don't want to transform the node, then just return `node`.
+        If you want to remove node, return None.
+        Otherwise return another node that will replace `node` in the ast.
+        Don't modify `node` in-place. Return a new node.
+
+        :type node: Expr
+        :rtype: Expr
+        """
         raise NotImplementedError
 
 
@@ -512,76 +532,75 @@ class DirectoryDoesNotExistError(ExprError):
         self.path = path
 
 
-# TODO: Expr object should contain a reference to its location in the string
-# TODO: ... (and the string itself)
+# TODO: Expr object should contain a reference to its location in the string (and the string itself)
 class Expr(object):
+    def __init__(self, children=None, parent=None):
+        # we make a tuple out of children, because we want it to be hashable
+        if children is None:
+            children = ()
+        self.children = tuple(child.replace(parent=self) for child in children)
+        self.parent = parent
+
     def get_type(self, scope):
         raise NotImplementedError
 
     def walk(self, visitor):
-        raise NotImplementedError
+        visitor.visit(self)
+        for child in self.children:
+            child.walk(visitor)
+
+    def transform(self, transformer):
+        result = transformer.visit(self)
+        transformed_children = [child.transform(transformer) for child in self.children]
+        return result.replace(children=transformed_children)
+
+    def replace(self, children=_MISSING, parent=_MISSING):
+        result = copy(self)  # TODO: maybe implement __copy__ method?
+        if children is not _MISSING:
+            result.children = children
+        if parent is not _MISSING:
+            result.parent = parent
+        return result
 
     def get_value(self, context):
         raise NotImplementedError
 
     def check_type(self, scope):
-        raise NotImplementedError
+        for child in self.children:
+            child.check_type(scope)
+
+    def __iter__(self):
+        return iter(self.children)
 
     def __eq__(self, other):
-        raise NotImplementedError
+        if not isinstance(other, self.__class__):
+            return False
+        return self.children == other.children
+
+    def __hash__(self):
+        return hash(self.children)
 
     def __ne__(self, other):
         return not (self == other)
 
+    def __repr__(self):
+        # we can't show parent because of infinite recursion
+        return '{}(children={!r})'.format(self.__class__.__name__, self.children)
+
 
 class NullExpr(Expr):
-    def walk(self, visitor):
-        pass
-
     def __eq__(self, other):
         return isinstance(other, NullExpr)
 
-
-# TODO(aershov182): rename too similar to ArrayExpr but means a different thing
-class ListExpr(Expr):
-    def __init__(self, exprs):
-        self.exprs = exprs
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        walk_iterable(visitor, self.exprs)
-
-    def check_type(self, scope):
-        for expr in self.exprs:
-            expr.check_type(scope)
-
-    def __iter__(self):
-        for expr in self.exprs:
-            yield expr
-
-    def __len__(self):
-        return len(self.exprs)
-
-    def __repr__(self):
-        return 'ListExpr(exprs={!r})'.format(self.exprs)
-
-    def __eq__(self, other):
-        if not isinstance(other, ListExpr):
-            return False
-        for x, y in zip(self, other):
-            if x != y:
-                return False
-        return True
-
-
-ASC = 1
-DESC = -1
+    def __copy__(self):
+        return NullExpr()
 
 
 class OrderByPartExpr(Expr):
     def __init__(self, expr, direction):
         self.expr = expr
         self.direction = direction
+        super(OrderByPartExpr, self).__init__(children=[expr])
 
     def get_value(self, context):
         return self.expr.get_value(context)
@@ -589,20 +608,17 @@ class OrderByPartExpr(Expr):
     def get_type(self, scope):
         return self.expr.get_type(scope)
 
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.expr.walk(visitor)
-
     def __eq__(self, other):
-        if not isinstance(other, OrderByPartExpr):
-            return False
-        return (self.expr == other.expr) and (self.direction == other.direction)
+        return super(OrderByPartExpr, self).__eq__(other) and (self.direction == other.direction)
+
+    def __hash__(self):
+        return hash((self.children, self.direction))
 
 
 @total_ordering
 class OrderByKey(object):
     def __init__(self, row, exprs):
-        assert len(row) == len(exprs)
+        assert len(row) == len(list(exprs))
         self.row = row
         self.exprs = exprs
 
@@ -621,16 +637,12 @@ class OrderByKey(object):
         return self.row == other.row
 
 
-def walk_iterable(visitor, exprs):
-    for expr in exprs:
-        expr.walk(visitor)
-
-
 class BetweenExpr(Expr):
     def __init__(self, value_expr, first_expr, last_expr):
         self.value_expr = value_expr
         self.first_expr = first_expr
         self.last_expr = last_expr
+        super(BetweenExpr, self).__init__(children=[self.value_expr, self.first_expr, self.last_expr])
 
     def get_type(self, scope):
         return bool
@@ -638,18 +650,6 @@ class BetweenExpr(Expr):
     def get_value(self, context):
         return self.first_expr.get_value(context) <= self.value_expr.get_value(context) <= self.last_expr.get_value(
             context)
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.value_expr.walk(visitor)
-        self.first_expr.walk(visitor)
-        self.last_expr.walk(visitor)
-
-    def __eq__(self, other):
-        if not isinstance(other, BetweenExpr):
-            return False
-        return (self.value_expr == other.value_expr) and (self.first_expr == other.first_expr) and (
-            self.last_expr == other.last_expr)
 
 
 class QueryExpr(Expr):
@@ -668,32 +668,29 @@ class QueryExpr(Expr):
         from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
         if isinstance(self.select_expr, SelectStarExpr):
             if hasattr(from_type, 'star_columns'):
-                self.select_expr = ListExpr(
+                self.select_expr = SelectExpr(
                     [
                         NameExpr(column) for column in from_type.star_columns
                         ])
             else:
-                self.select_expr = ListExpr(
+                self.select_expr = SelectExpr(
                     [
                         NameExpr(column) for column in from_type
                         ])
         if self.select_expr is None:
-            self.select_expr = ListExpr(list(map(NameExpr, from_type.default_columns)))
+            self.select_expr = SelectExpr(list(map(NameExpr, from_type.default_columns)))
         if self.where_expr is None:
             self.where_expr = ValueExpr(True)
         if self.order_expr is None:
-            self.order_expr = ListExpr([])
+            self.order_expr = OrderExpr([])
+        if self.limit_expr is None:
+            self.limit_expr = ValueExpr(float('inf'))
         if self.offset_expr is None:
             self.offset_expr = ValueExpr(0)
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.select_expr.walk(visitor)
-        self.from_expr.walk(visitor)
-        self.where_expr.walk(visitor)
-        self.order_expr.walk(visitor)
-        self.limit_expr.walk(visitor)
-        self.offset_expr.walk(visitor)
+        super(QueryExpr, self).__init__(children=[
+            self.select_expr, self.from_expr, self.where_expr, self.order_expr, self.limit_expr,
+            self.offset_expr,
+        ])
 
     def get_value(self, context):
         rows = []
@@ -733,9 +730,9 @@ class QueryExpr(Expr):
 
         rows = [row for _, row in sorted(zip(keys, rows))]
         rows = rows[self.offset_expr.get_value(context):]
-        if self.limit_expr is not None:
-            rows = rows[:self.limit_expr.get_value(context)]
-
+        value = self.limit_expr.get_value(context)
+        if value != float('inf'):
+            rows = rows[:value]
         return Table(row_type, rows)
 
 
@@ -757,43 +754,37 @@ class Table(object):
 
 
 class SelectExpr(Expr):
-    def __init__(self, column_exprs):
-        self.column_exprs = column_exprs
+    pass
+
+
+class OrderExpr(Expr):
+    pass
 
 
 class FromExpr(Expr):
     def __init__(self, from_expr):
         self.from_expr = from_expr
+        super(FromExpr, self).__init__(children=[self.from_expr])
 
 
-class GroupExpr(ListExpr):
-    def __init__(self, exprs, having_expr=None):
-        super(GroupExpr, self).__init__(exprs)
+class GroupExpr(Expr):
+    # TODO: don't allow having_expr equal to None
+    def __init__(self, group_exprs, having_expr=None):
         if having_expr is None:
             having_expr = ValueExpr(True)
+        self.group = group_exprs
         self.having_expr = having_expr
+        super(GroupExpr, self).__init__(children=(group_exprs + [self.having_expr]))
 
     def check_type(self, scope):
         super(GroupExpr, self).check_type(scope)
         self.having_expr.check_type(scope)
 
-    def walk(self, visitor):
-        super(GroupExpr, self).walk(visitor)
-        self.having_expr.walk(visitor)
-
-    def __eq__(self, other):
-        if not isinstance(other, GroupExpr):
-            return False
-        if self.exprs != other.exprs:
-            return False
-        if self.having_expr != other.having_expr:
-            return False
-        return True
-
 
 class NameExpr(Expr):
     def __init__(self, name):
         self.name = name
+        super(NameExpr, self).__init__()
 
     def get_type(self, scope):
         return scope[self.name]
@@ -801,28 +792,22 @@ class NameExpr(Expr):
     def get_value(self, context):
         return context[self.name]
 
-    def walk(self, visitor):
-        visitor.visit(self)
-
     def __eq__(self, other):
-        if not isinstance(other, NameExpr):
-            return False
-        return self.name == other.name
+        return super(NameExpr, self).__eq__(other) and self.name == other.name
 
     def __repr__(self):
         return 'NameExpr(name={!r})'.format(self.name)
 
 
-class SelectStarExpr(Expr):
-    def __eq__(self, other):
-        if not isinstance(other, SelectStarExpr):
-            return False
-        return True
+class SelectStarExpr(SelectExpr):
+    def __init__(self):
+        super(SelectStarExpr, self).__init__()
 
 
 class ValueExpr(Expr):
     def __init__(self, value):
         self.value = value
+        super(ValueExpr, self).__init__()
 
     def get_type(self, scope):
         return type(self.value)
@@ -834,24 +819,16 @@ class ValueExpr(Expr):
         return '{!s}(value={!r})'.format(self.__class__.__name__, self.value)
 
     def __eq__(self, other):
-        if not isinstance(other, ValueExpr):
-            return False
-        return self.value == other.value
-
-    def walk(self, visitor):
-        visitor.visit(self)
+        return super(ValueExpr, self).__eq__(other) and self.value == other.value
 
 
 class ArrayExpr(Expr):
     def __init__(self, exprs):
         self.exprs = exprs
+        super(ArrayExpr, self).__init__(children=self.exprs)
 
     def get_type(self, scope):
         return AnyIterable
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        walk_iterable(visitor, self.exprs)
 
     def get_value(self, context):
         return [e.get_value(context) for e in self.exprs]
@@ -859,16 +836,12 @@ class ArrayExpr(Expr):
     def __repr__(self):
         return '{!s}(exprs={!r})'.format(self.__class__.__name__, self.exprs)
 
-    def __eq__(self, other):
-        if not isinstance(other, ArrayExpr):
-            return False
-        return self.exprs == other.exprs
-
 
 class FunctionExpr(Expr):
     def __init__(self, function_name, arg_exprs):
         self.function_name = function_name
         self.arg_exprs = arg_exprs
+        super(FunctionExpr, self).__init__(children=arg_exprs)
 
     @property
     def function(self):
@@ -881,14 +854,11 @@ class FunctionExpr(Expr):
         args = [arg_expr.get_value(context) for arg_expr in self.arg_exprs]
         return self.function(*args)
 
-    def walk(self, visitor):
-        visitor.visit(self)
-        walk_iterable(visitor, self.arg_exprs)
-
     def __eq__(self, other):
-        if not isinstance(other, FunctionExpr):
-            return False
-        return (self.function_name == other.function_name) and (self.arg_exprs == other.arg_exprs)
+        return super(FunctionExpr, self).__eq__(other) and (self.function_name == other.function_name)
+
+    def __hash__(self, other):
+        return hash((self.children, self.function_name))
 
     def __repr__(self):
         return 'FunctionExpr(function_name={!r}, arg_exprs={!r})'.format(
@@ -900,20 +870,11 @@ class AndExpr(Expr):
     def __init__(self, left_expr, right_expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
+        super(AndExpr, self).__init__(children=[self.left_expr, self.right_expr])
 
     def get_value(self, context):
         return all(arg_expr.get_value(context)
                    for arg_expr in [self.left_expr, self.right_expr])
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.left_expr.walk(visitor)
-        self.right_expr.walk(visitor)
-
-    def __eq__(self, other):
-        if not isinstance(other, AndExpr):
-            return False
-        return (self.left_expr == other.left_expr) and (self.right_expr == other.right_expr)
 
 
 # TODO(aershov182): DRY it up with AndExpr
@@ -921,17 +882,8 @@ class OrExpr(Expr):
     def __init__(self, left_expr, right_expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
+        super(OrExpr, self).__init__(children=[left_expr, right_expr])
 
     def get_value(self, context):
         return any(arg_expr.get_value(context)
                    for arg_expr in [self.left_expr, self.right_expr])
-
-    def walk(self, visitor):
-        visitor.visit(self)
-        self.left_expr.walk(visitor)
-        self.right_expr.walk(visitor)
-
-    def __eq__(self, other):
-        if not isinstance(other, OrExpr):
-            return False
-        return (self.left_expr == other.left_expr) and (self.right_expr == other.right_expr)
