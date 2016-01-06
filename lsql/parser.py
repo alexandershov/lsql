@@ -427,7 +427,7 @@ class HavingToken(KeywordToken):
     keyword = 'having'
 
     def clause(self, parser):
-        return ast.HavingNode(parser.expr())
+        return parser.expr()
 
 
 class IsToken(NotImplementedToken, KeywordToken):

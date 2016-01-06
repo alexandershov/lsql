@@ -777,7 +777,7 @@ class QueryNode(Node):
             else:
                 self.group_node = GroupNode()
         if self.having_node is None:
-            self.having_node = HavingNode(ValueNode(True))
+            self.having_node = ValueNode(True)
         transformer = AggFunctionsTransformer()
         self.select_node = self.select_node.transform(transformer)
         self.having_node = self.having_node.transform(transformer)
@@ -828,6 +828,7 @@ class QueryNode(Node):
                 for agg_node in agg_function_nodes:
                     agg_node.clear_aggregate()
                 cur_row = [None] * len(self.select_node)
+                cond = False
                 for row in grouped_rows:
                     row_context = MergedContext(
                         row.get_context(),
@@ -836,7 +837,9 @@ class QueryNode(Node):
                     for i, node in enumerate(self.select_node):
                         column = node.get_value(row_context)
                         cur_row[i] = column
-                rows.append(cur_row)
+                    cond = self.having_node.get_value(row_context)
+                if cond:
+                    rows.append(cur_row)
         else:
             for row in filtered_rows:
                 row_context = MergedContext(
@@ -898,6 +901,7 @@ class FakeGroupNode(Node):
     pass
 
 
+# TODO: do we need this class
 class HavingNode(Node):
     def __init__(self, condition):
         self.condition = condition

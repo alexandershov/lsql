@@ -102,6 +102,9 @@ def test_math(query, expected_results):
         ('LICENSE', 1),
         ('small', 1),
         ('README.md', 1),
+    ]),
+    ("select name, count(*) group by name having name = 'small.py'", [
+        ('small.py', 1),
     ])
 ])
 def test_query(query, expected_results):
