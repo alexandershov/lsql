@@ -144,22 +144,22 @@ class Parser(object):
 
     def parse(self):
         # order of _get_clause calls is important, because order of clauses is important in SQL
-        select_expr = self._get_clause(SelectToken)
-        from_expr = self._get_clause(FromToken)
-        where_expr = self._get_clause(WhereToken)
-        order_expr = self._get_clause(OrderToken)
-        limit_expr = self._get_clause(LimitToken)
-        offset_expr = self._get_clause(OffsetToken)
+        select_node = self._get_clause(SelectToken)
+        from_node = self._get_clause(FromToken)
+        where_node = self._get_clause(WhereToken)
+        order_node = self._get_clause(OrderToken)
+        limit_node = self._get_clause(LimitToken)
+        offset_node = self._get_clause(OffsetToken)
 
         self.expect(EndQueryToken)
 
         return ast.QueryNode(
-            select_expr=select_expr,
-            from_expr=from_expr,
-            where_expr=where_expr,
-            order_expr=order_expr,
-            limit_expr=limit_expr,
-            offset_expr=offset_expr,
+            select_node=select_node,
+            from_node=from_node,
+            where_node=where_node,
+            order_node=order_node,
+            limit_node=limit_node,
+            offset_node=offset_node,
         )
 
     def _get_clause(self, token_class, default=None):
@@ -182,11 +182,11 @@ class Parser(object):
     def parse_delimited_exprs(self, delimiter_token_cls, parse_fn=None):
         if parse_fn is None:
             parse_fn = self.expr
-        exprs = [parse_fn()]
+        nodes = [parse_fn()]
         while isinstance(self.token, delimiter_token_cls):
             self.advance()
-            exprs.append(parse_fn())
-        return exprs
+            nodes.append(parse_fn())
+        return nodes
 
 
 def parse(tokens):
@@ -268,14 +268,14 @@ class Token(object):
         """
         Called when token is encountered in suffix position.
 
-        :param left: Expression to the left of the token.
+        :param left: Node to the left of the token.
         :type left: lsql.ast.Node
         :type parser: lsql.parser.Parser
         :rtype: lsql.ast.Node
 
         Example (^ means current token position):
 
-        * In this case we call MinusToken().suffix(LiteralExpr(2), parser):
+        * In this case we call MinusToken().suffix(Literalnode(2), parser):
           2 - 4
             ^
         """
@@ -453,9 +453,9 @@ class InToken(OperatorToken, KeywordToken):
 
     def suffix(self, left, parser):
         parser.skip(OpeningParenToken)
-        exprs = parser.parse_delimited_exprs(CommaToken)
+        nodes = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return ast.FunctionNode(self.operator_name, [left, ast.ArrayNode(exprs)])
+        return ast.FunctionNode(self.operator_name, [left, ast.ArrayNode(nodes)])
 
 
 class LikeToken(NotImplementedToken, OperatorToken, KeywordToken):
@@ -509,21 +509,21 @@ class OrderToken(KeywordToken):
 
     def clause(self, parser):
         parser.skip(ByToken)
-        sub_exprs = parser.parse_delimited_exprs(
+        sub_nodes = parser.parse_delimited_exprs(
             CommaToken,
             parse_fn=partial(_parse_one_order_by_clause, parser=parser)
         )
-        return ast.OrderNode(sub_exprs)
+        return ast.OrderNode(sub_nodes)
 
 
 def _parse_one_order_by_clause(parser):
-    part_expr = parser.expr()
+    part_node = parser.expr()
     if isinstance(parser.token, (AscToken, DescToken)):
         direction = parser.token.direction
         parser.advance()
     else:
         direction = ast.ASC
-    return ast.OrderByPartNode(part_expr, direction)
+    return ast.OrderByPartNode(part_node, direction)
 
 
 class OuterToken(NotImplementedToken, KeywordToken):
@@ -544,11 +544,11 @@ class SelectToken(KeywordToken):
 
     def clause(self, parser):
         if isinstance(parser.token, MulToken):
-            select_expr = ast.SelectStarExpr()
+            select_node = ast.SelectStarNode()
             parser.advance()
         else:
-            select_expr = ast.SelectNode(children=parser.parse_delimited_exprs(CommaToken))
-        return select_expr
+            select_node = ast.SelectNode(children=parser.parse_delimited_exprs(CommaToken))
+        return select_node
 
 
 class ThenToken(NotImplementedToken, KeywordToken):
@@ -683,9 +683,9 @@ class OpeningParenToken(SpecialToken):
     def prefix(self, parser):
         if isinstance(parser.token, ClosingParenToken):
             raise UnexpectedTokenError(None, parser.token)
-        result_expr = parser.expr()
+        result_node = parser.expr()
         parser.skip(ClosingParenToken)
-        return result_expr
+        return result_node
 
     def suffix(self, left, parser):
         # TODO(aershov182): raise some appropriate exception when Node class will have it's full

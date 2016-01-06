@@ -597,16 +597,16 @@ class NullNode(Node):
 
 
 class OrderByPartNode(Node):
-    def __init__(self, expr, direction):
-        self.expr = expr
+    def __init__(self, node, direction):
+        self.node = node
         self.direction = direction
-        super(OrderByPartNode, self).__init__(children=[expr])
+        super(OrderByPartNode, self).__init__(children=[node])
 
     def get_value(self, context):
-        return self.expr.get_value(context)
+        return self.node.get_value(context)
 
     def get_type(self, scope):
-        return self.expr.get_type(scope)
+        return self.node.get_type(scope)
 
     def __eq__(self, other):
         return super(OrderByPartNode, self).__eq__(other) and (self.direction == other.direction)
@@ -617,15 +617,15 @@ class OrderByPartNode(Node):
 
 @total_ordering
 class OrderByKey(object):
-    def __init__(self, row, exprs):
-        assert len(row) == len(list(exprs))
+    def __init__(self, row, nodes):
+        assert len(row) == len(list(nodes))
         self.row = row
-        self.exprs = exprs
+        self.nodes = nodes
 
     def __lt__(self, other):
         assert len(self.row) == len(other.row)
-        for expr, x, y in zip(self.exprs, self.row, other.row):
-            if expr.direction == ASC:
+        for node, x, y in zip(self.nodes, self.row, other.row):
+            if node.direction == ASC:
                 op = operator.lt
             else:
                 op = operator.gt
@@ -638,84 +638,84 @@ class OrderByKey(object):
 
 
 class BetweenNode(Node):
-    def __init__(self, value_expr, first_expr, last_expr):
-        self.value_expr = value_expr
-        self.first_expr = first_expr
-        self.last_expr = last_expr
-        super(BetweenNode, self).__init__(children=[self.value_expr, self.first_expr, self.last_expr])
+    def __init__(self, value_node, first_node, last_node):
+        self.value_node = value_node
+        self.first_node = first_node
+        self.last_node = last_node
+        super(BetweenNode, self).__init__(children=[self.value_node, self.first_node, self.last_node])
 
     def get_type(self, scope):
         return bool
 
     def get_value(self, context):
-        return self.first_expr.get_value(context) <= self.value_expr.get_value(context) <= self.last_expr.get_value(
+        return self.first_node.get_value(context) <= self.value_node.get_value(context) <= self.last_node.get_value(
             context)
 
 
 class QueryNode(Node):
-    def __init__(self, select_expr, from_expr, where_expr, order_expr,
-                 limit_expr, offset_expr):
-        self.select_expr = select_expr
-        self.from_expr = from_expr
-        self.where_expr = where_expr
-        self.order_expr = order_expr
-        self.limit_expr = limit_expr
-        self.offset_expr = offset_expr
-        if self.from_expr is None:
-            self.from_expr = NameNode('cwd')
-        if isinstance(self.from_expr, (NameNode, ValueNode)):
-            self.from_expr = FunctionNode('files', [self.from_expr])
-        from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
-        if isinstance(self.select_expr, SelectStarExpr):
+    def __init__(self, select_node, from_node, where_node, order_node,
+                 limit_node, offset_node):
+        self.select_node = select_node
+        self.from_node = from_node
+        self.where_node = where_node
+        self.order_node = order_node
+        self.limit_node = limit_node
+        self.offset_node = offset_node
+        if self.from_node is None:
+            self.from_node = NameNode('cwd')
+        if isinstance(self.from_node, (NameNode, ValueNode)):
+            self.from_node = FunctionNode('files', [self.from_node])
+        from_type = self.from_node.get_type(BUILTIN_CONTEXT)
+        if isinstance(self.select_node, SelectStarNode):
             if hasattr(from_type, 'star_columns'):
-                self.select_expr = SelectNode(
+                self.select_node = SelectNode(
                     [
                         NameNode(column) for column in from_type.star_columns
                         ])
             else:
-                self.select_expr = SelectNode(
+                self.select_node = SelectNode(
                     [
                         NameNode(column) for column in from_type
                         ])
-        if self.select_expr is None:
-            self.select_expr = SelectNode(list(map(NameNode, from_type.default_columns)))
-        if self.where_expr is None:
-            self.where_expr = ValueNode(True)
-        if self.order_expr is None:
-            self.order_expr = OrderNode([])
-        if self.limit_expr is None:
-            self.limit_expr = ValueNode(float('inf'))
-        if self.offset_expr is None:
-            self.offset_expr = ValueNode(0)
+        if self.select_node is None:
+            self.select_node = SelectNode(list(map(NameNode, from_type.default_columns)))
+        if self.where_node is None:
+            self.where_node = ValueNode(True)
+        if self.order_node is None:
+            self.order_node = OrderNode([])
+        if self.limit_node is None:
+            self.limit_node = ValueNode(float('inf'))
+        if self.offset_node is None:
+            self.offset_node = ValueNode(0)
         super(QueryNode, self).__init__(children=[
-            self.select_expr, self.from_expr, self.where_expr, self.order_expr, self.limit_expr,
-            self.offset_expr,
+            self.select_node, self.from_node, self.where_node, self.order_node, self.limit_node,
+            self.offset_node,
         ])
 
     def get_value(self, context):
         rows = []
-        from_type = self.from_expr.get_type(context)
+        from_type = self.from_node.get_type(context)
         select_context = MergedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
-        for i, expr in enumerate(self.select_expr):
-            row_type[get_name(expr, 'column_{:d}'.format(i))] = expr.get_type(select_context)
+        for i, node in enumerate(self.select_node):
+            row_type[get_name(node, 'column_{:d}'.format(i))] = node.get_type(select_context)
 
         def key(row):
-            # TODO(aershov182): `ORDER BY` context should depend on select_expr
+            # TODO(aershov182): `ORDER BY` context should depend on select_node
             result = [e.get_value(MergedContext(row.get_context(), context))
-                      for e in self.order_expr]
-            return OrderByKey(result, self.order_expr)
+                      for e in self.order_node]
+            return OrderByKey(result, self.order_node)
 
         filtered_rows = []
 
         keys = []
-        for from_row in self.from_expr.get_value(context):
+        for from_row in self.from_node.get_value(context):
             row_context = MergedContext(
                 from_row.get_context(),
                 context
             )
             keys.append(key(from_row))
-            if self.where_expr.get_value(row_context):
+            if self.where_node.get_value(row_context):
                 filtered_rows.append(from_row)
         for row in filtered_rows:
             row_context = MergedContext(
@@ -723,22 +723,22 @@ class QueryNode(Node):
                 context
             )
             cur_row = []
-            for expr in self.select_expr:
-                column = expr.get_value(row_context)
+            for node in self.select_node:
+                column = node.get_value(row_context)
                 cur_row.append(column)
             rows.append(cur_row)
 
         rows = [row for _, row in sorted(zip(keys, rows))]
-        rows = rows[self.offset_expr.get_value(context):]
-        value = self.limit_expr.get_value(context)
+        rows = rows[self.offset_node.get_value(context):]
+        value = self.limit_node.get_value(context)
         if value != float('inf'):
             rows = rows[:value]
         return Table(row_type, rows)
 
 
-def get_name(expr, default):
-    if isinstance(expr, NameNode):
-        return expr.name
+def get_name(node, default):
+    if isinstance(node, NameNode):
+        return node.name
     return default
 
 
@@ -762,23 +762,23 @@ class OrderNode(Node):
 
 
 class FromNode(Node):
-    def __init__(self, from_expr):
-        self.from_expr = from_expr
-        super(FromNode, self).__init__(children=[self.from_expr])
+    def __init__(self, from_node):
+        self.from_node = from_node
+        super(FromNode, self).__init__(children=[self.from_node])
 
 
 class GroupNode(Node):
-    # TODO: don't allow having_expr equal to None
-    def __init__(self, group_exprs, having_expr=None):
-        if having_expr is None:
-            having_expr = ValueNode(True)
-        self.group = group_exprs
-        self.having_expr = having_expr
-        super(GroupNode, self).__init__(children=(group_exprs + [self.having_expr]))
+    # TODO: don't allow having_node equal to None
+    def __init__(self, group_nodes, having_node=None):
+        if having_node is None:
+            having_node = ValueNode(True)
+        self.group = group_nodes
+        self.having_node = having_node
+        super(GroupNode, self).__init__(children=(group_nodes + [self.having_node]))
 
     def check_type(self, scope):
         super(GroupNode, self).check_type(scope)
-        self.having_expr.check_type(scope)
+        self.having_node.check_type(scope)
 
 
 class NameNode(Node):
@@ -799,9 +799,9 @@ class NameNode(Node):
         return 'NameNode(name={!r})'.format(self.name)
 
 
-class SelectStarExpr(SelectNode):
+class SelectStarNode(SelectNode):
     def __init__(self):
-        super(SelectStarExpr, self).__init__()
+        super(SelectStarNode, self).__init__()
 
 
 class ValueNode(Node):
@@ -823,25 +823,25 @@ class ValueNode(Node):
 
 
 class ArrayNode(Node):
-    def __init__(self, exprs):
-        self.exprs = exprs
-        super(ArrayNode, self).__init__(children=self.exprs)
+    def __init__(self, nodes):
+        self.nodes = nodes
+        super(ArrayNode, self).__init__(children=self.nodes)
 
     def get_type(self, scope):
         return AnyIterable
 
     def get_value(self, context):
-        return [e.get_value(context) for e in self.exprs]
+        return [e.get_value(context) for e in self.nodes]
 
     def __repr__(self):
-        return '{!s}(exprs={!r})'.format(self.__class__.__name__, self.exprs)
+        return '{!s}(nodes={!r})'.format(self.__class__.__name__, self.nodes)
 
 
 class FunctionNode(Node):
-    def __init__(self, function_name, arg_exprs):
+    def __init__(self, function_name, arg_nodes):
         self.function_name = function_name
-        self.arg_exprs = arg_exprs
-        super(FunctionNode, self).__init__(children=arg_exprs)
+        self.arg_nodes = arg_nodes
+        super(FunctionNode, self).__init__(children=arg_nodes)
 
     @property
     def function(self):
@@ -851,7 +851,7 @@ class FunctionNode(Node):
         return self.function.return_type
 
     def get_value(self, context):
-        args = [arg_expr.get_value(context) for arg_expr in self.arg_exprs]
+        args = [arg_node.get_value(context) for arg_node in self.arg_nodes]
         return self.function(*args)
 
     def __eq__(self, other):
@@ -861,29 +861,29 @@ class FunctionNode(Node):
         return hash((self.children, self.function_name))
 
     def __repr__(self):
-        return 'FunctionNode(function_name={!r}, arg_exprs={!r})'.format(
-            self.function_name, self.arg_exprs
+        return 'FunctionNode(function_name={!r}, arg_nodes={!r})'.format(
+            self.function_name, self.arg_nodes
         )
 
 
 class AndNode(Node):
-    def __init__(self, left_expr, right_expr):
-        self.left_expr = left_expr
-        self.right_expr = right_expr
-        super(AndNode, self).__init__(children=[self.left_expr, self.right_expr])
+    def __init__(self, left_node, right_node):
+        self.left_node = left_node
+        self.right_node = right_node
+        super(AndNode, self).__init__(children=[self.left_node, self.right_node])
 
     def get_value(self, context):
-        return all(arg_expr.get_value(context)
-                   for arg_expr in [self.left_expr, self.right_expr])
+        return all(arg_node.get_value(context)
+                   for arg_node in [self.left_node, self.right_node])
 
 
 # TODO(aershov182): DRY it up with AndNode
 class OrNode(Node):
-    def __init__(self, left_expr, right_expr):
-        self.left_expr = left_expr
-        self.right_expr = right_expr
-        super(OrNode, self).__init__(children=[left_expr, right_expr])
+    def __init__(self, left_node, right_node):
+        self.left_node = left_node
+        self.right_node = right_node
+        super(OrNode, self).__init__(children=[left_node, right_node])
 
     def get_value(self, context):
-        return any(arg_expr.get_value(context)
-                   for arg_expr in [self.left_expr, self.right_expr])
+        return any(arg_node.get_value(context)
+                   for arg_node in [self.left_node, self.right_node])
