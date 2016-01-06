@@ -124,7 +124,7 @@ class FileTableType(Namespace):
 class FileTableContext(Context):
     def __init__(self, stat):
         """
-        :type stat: lsql.expr.Stat
+        :type stat: lsql.ast.Stat
         """
         self._stat = stat
 

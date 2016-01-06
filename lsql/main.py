@@ -8,9 +8,9 @@ import sys
 
 from colorama import Fore
 
-from lsql.expr import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
+from lsql.ast import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
-from lsql import expr
+from lsql import ast
 from lsql import get_version
 from lsql import parser
 
@@ -163,12 +163,12 @@ def main(argv=None):
         # TODO: handle it better: tell what's expected.
         printer.show_message('Unexpected end of query.')
         suggest_to_create_issue_or_pull_request(printer)
-    except expr.DirectoryDoesNotExistError as exc:
+    except ast.DirectoryDoesNotExistError as exc:
         printer.show_error("directory '{}' doesn't exist".format(exc.path))
     return FAILURE_CODE
 
 
-# TODO: rename, because pun with expr.Context
+# TODO: rename, because pun with ast.Context
 def get_context(string, start, max_len=10):
     context = string[start:start + max_len]
     if start + max_len >= len(string):
@@ -235,7 +235,7 @@ def run_query(query_string, directory):
     assert isinstance(query_string, unicode)
     tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
-    # TODO: b'.'? Handle TaggedUnicode issues inside of the expr.walk_with_depth
+    # TODO: b'.'? Handle TaggedUnicode issues inside of the ast.walk_with_depth
     cwd_context = Context({'cwd': (directory or b'.')})
     query = parse(tokens)
     return query.get_value(MergedContext(cwd_context, BUILTIN_CONTEXT))

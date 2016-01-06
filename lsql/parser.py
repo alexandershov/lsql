@@ -4,7 +4,7 @@ from functools import partial, wraps
 import logging
 import re
 
-from lsql import expr
+from lsql import ast
 from lsql.errors import LsqlError
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ class Parser(object):
 
         self.expect(EndQueryToken)
 
-        return expr.QueryExpr(
+        return ast.QueryExpr(
             select_expr=select_expr,
             from_expr=from_expr,
             where_expr=where_expr,
@@ -249,7 +249,7 @@ class Token(object):
         """
         Called when token is encountered in prefix position.
         :type parser: lsql.parser.Parser
-        :rtype: lsql.expr.Expr
+        :rtype: lsql.ast.Expr
 
         Examples (^ means current token position):
 
@@ -269,9 +269,9 @@ class Token(object):
         Called when token is encountered in suffix position.
 
         :param left: Expression to the left of the token.
-        :type left: lsql.expr.Expr
+        :type left: lsql.ast.Expr
         :type parser: lsql.parser.Parser
-        :rtype: lsql.expr.Expr
+        :rtype: lsql.ast.Expr
 
         Example (^ means current token position):
 
@@ -288,7 +288,7 @@ class Token(object):
         SelectToken, FromToken, WhereToken etc.
 
         :type parser: lsql.parser.Parser
-        :rtype: lsql.expr.Expr
+        :rtype: lsql.ast.Expr
         """
         raise NotImplementedError(self._get_not_implemented_message('clause'))
 
@@ -339,12 +339,12 @@ class AsToken(NotImplementedToken, KeywordToken):
 
 
 class AscToken(KeywordToken):
-    direction = expr.ASC
+    direction = ast.ASC
     keyword = 'asc'
 
 
 class DescToken(KeywordToken):
-    direction = expr.DESC
+    direction = ast.DESC
     keyword = 'desc'
 
 
@@ -355,7 +355,7 @@ class BetweenToken(KeywordToken):
         first = parser.expr(left_bp=self.right_bp)
         parser.skip(AndToken)
         last = parser.expr()
-        return expr.BetweenExpr(left, first, last)
+        return ast.BetweenExpr(left, first, last)
 
 
 class CaseToken(NotImplementedToken, KeywordToken):
@@ -429,14 +429,14 @@ class AndToken(KeywordToken):
     keyword = 'and'
 
     def suffix(self, left, parser):
-        return expr.AndExpr(left, parser.expr(self.right_bp))
+        return ast.AndExpr(left, parser.expr(self.right_bp))
 
 
 class OrToken(KeywordToken):
     keyword = 'or'
 
     def suffix(self, left, parser):
-        return expr.OrExpr(left, parser.expr(self.right_bp))
+        return ast.OrExpr(left, parser.expr(self.right_bp))
 
 
 class OperatorToken(Token):
@@ -444,7 +444,7 @@ class OperatorToken(Token):
 
     def suffix(self, left, parser):
         right = parser.expr(self.right_bp)
-        return expr.FunctionExpr(self.operator_name, [left, right])
+        return ast.FunctionExpr(self.operator_name, [left, right])
 
 
 class InToken(OperatorToken, KeywordToken):
@@ -455,7 +455,7 @@ class InToken(OperatorToken, KeywordToken):
         parser.skip(OpeningParenToken)
         exprs = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return expr.FunctionExpr(self.operator_name, [left, expr.ArrayExpr(exprs)])
+        return ast.FunctionExpr(self.operator_name, [left, ast.ArrayExpr(exprs)])
 
 
 class LikeToken(NotImplementedToken, OperatorToken, KeywordToken):
@@ -494,7 +494,7 @@ class NullToken(KeywordToken):
     keyword = 'null'
 
     def prefix(self, parser):
-        return expr.ValueExpr(expr.NULL)
+        return ast.ValueExpr(ast.NULL)
 
 
 class OffsetToken(KeywordToken):
@@ -513,7 +513,7 @@ class OrderToken(KeywordToken):
             CommaToken,
             parse_fn=partial(_parse_one_order_by_clause, parser=parser)
         )
-        return expr.OrderExpr(sub_exprs)
+        return ast.OrderExpr(sub_exprs)
 
 
 def _parse_one_order_by_clause(parser):
@@ -522,8 +522,8 @@ def _parse_one_order_by_clause(parser):
         direction = parser.token.direction
         parser.advance()
     else:
-        direction = expr.ASC
-    return expr.OrderByPartExpr(part_expr, direction)
+        direction = ast.ASC
+    return ast.OrderByPartExpr(part_expr, direction)
 
 
 class OuterToken(NotImplementedToken, KeywordToken):
@@ -544,10 +544,10 @@ class SelectToken(KeywordToken):
 
     def clause(self, parser):
         if isinstance(parser.token, MulToken):
-            select_expr = expr.SelectStarExpr()
+            select_expr = ast.SelectStarExpr()
             parser.advance()
         else:
-            select_expr = expr.SelectExpr(children=parser.parse_delimited_exprs(CommaToken))
+            select_expr = ast.SelectExpr(children=parser.parse_delimited_exprs(CommaToken))
         return select_expr
 
 
@@ -572,7 +572,7 @@ class WhitespaceToken(Token):
 
 class NumberToken(Token):
     def prefix(self, parser):
-        return expr.ValueExpr(self.value)
+        return ast.ValueExpr(self.value)
 
     @property
     def value(self):
@@ -600,12 +600,12 @@ class NumberToken(Token):
 
 class StringToken(Token):
     def prefix(self, parser):
-        return expr.ValueExpr(self.match.group('string'))
+        return ast.ValueExpr(self.match.group('string'))
 
 
 class NameToken(Token):
     def prefix(self, parser):
-        return expr.NameExpr(self.text)
+        return ast.NameExpr(self.text)
 
 
 class EqToken(OperatorToken):
@@ -641,7 +641,7 @@ class MinusToken(OperatorToken):
 
     # handles unary minus
     def prefix(self, parser):
-        return expr.FunctionExpr('negate', [parser.expr(left_bp=self.left_bp)])
+        return ast.FunctionExpr('negate', [parser.expr(left_bp=self.left_bp)])
 
 
 class PlusToken(OperatorToken):
@@ -690,13 +690,13 @@ class OpeningParenToken(SpecialToken):
     def suffix(self, left, parser):
         # TODO(aershov182): raise some appropriate exception when Expr class will have it's full
         # TODO(aershov182): ... position in string
-        assert isinstance(left, expr.NameExpr)
+        assert isinstance(left, ast.NameExpr)
         if isinstance(parser.token, ClosingParenToken):
             args = []
         else:
             args = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return expr.FunctionExpr(left.name, args)
+        return ast.FunctionExpr(left.name, args)
 
 
 class ClosingParenToken(SpecialToken):

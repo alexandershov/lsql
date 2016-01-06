@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # TODO(aershov182): when done, replace test_lsql with this file
 import pytest
 
-from lsql import expr
+from lsql import ast
 from lsql import main
 from lsql import parser
 
@@ -60,7 +60,7 @@ def test_math(query, expected_results):
 
 @pytest.mark.parametrize('query, expected_results', [
     ("where ext = 'py'", [('small.py',)]),
-    ("select NULL", ((expr.NULL,),) * 4),
+    ("select NULL", ((ast.NULL,),) * 4),
     ("select name WHERE ext = 'py'", [('small.py',)]),
     ("select name WHERE ext = 'py' OR no_ext = 'README'",
      [('small.py',), ('README.md',)]),
@@ -84,7 +84,7 @@ def test_math(query, expected_results):
     ('select name, length(lines)', [
         ('small.py', 4),
         ('LICENSE', 1),
-        ('small', expr.NULL),
+        ('small', ast.NULL),
         ('README.md', 1),
     ]),
     ("select name where ext IN ('py', 'md')", [
@@ -143,7 +143,7 @@ def test_non_ascii_paths(query, expected_results):
 
 
 def test_from_directory_does_not_exist():
-    with pytest.raises(expr.DirectoryDoesNotExistError):
+    with pytest.raises(ast.DirectoryDoesNotExistError):
         get_results('select 1', directory='does not exist!')
 
 
