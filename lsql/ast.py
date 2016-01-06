@@ -109,16 +109,40 @@ class AggFunctionsVisitor(NodeVisitor):
         return bool(self.agg_function_nodes)
 
 
+class TypeNodeVisitor(NodeVisitor):
+    def __init__(self, node_class):
+        self.node_class = node_class
+        self.nodes = []
+
+    def visit(self, node):
+        if isinstance(node, self.node_class):
+            self.nodes.append(node)
+
+
 def has_agg_functions_nodes(node):
-    visitor = AggFunctionsVisitor()
-    node.walk(visitor)
-    return visitor.has_agg_functions
+    return bool(get_agg_function_nodes(node))
 
 
+# TODO: use get_nodes_of_type, but accurately, because in has_agg_function_nodes we don't search
+# TODO: ... class, we check AGGREGATES
 def get_agg_function_nodes(node):
     visitor = AggFunctionsVisitor()
     node.walk(visitor)
     return visitor.agg_function_nodes
+
+
+def get_nodes_of_type(node, node_class):
+    visitor = TypeNodeVisitor(node_class)
+    node.walk(visitor)
+    return visitor.nodes
+
+
+def has_agg_ancestor(node):
+    while node.parent is not None:
+        if isinstance(node.parent, AggFunctionNode):
+            return True
+        node = node.parent
+    return False
 
 
 class NodeTransformer(NodeVisitor):
@@ -601,6 +625,11 @@ class LsqlEvalError(LsqlError):
     pass
 
 
+class IllegalGroupBy(LsqlEvalError):
+    def __init__(self, node):
+        self.node = node
+
+
 class DirectoryDoesNotExistError(LsqlEvalError):
     def __init__(self, path):
         self.path = path
@@ -625,7 +654,7 @@ class Node(object):
 
     def transform(self, transformer):
         result = transformer.visit(self)
-        transformed_children = [child.transform(transformer) for child in self.children]
+        transformed_children = tuple(child.transform(transformer) for child in self.children)
         return result.replace(children=transformed_children)
 
     def replace(self, children=_MISSING, parent=_MISSING):
@@ -781,6 +810,11 @@ class QueryNode(Node):
         transformer = AggFunctionsTransformer()
         self.select_node = self.select_node.transform(transformer)
         self.having_node = self.having_node.transform(transformer)
+        # TODO: uncomment next line
+        # self.order_node = self.order_node.transform(transformer)
+
+
+
         super(QueryNode, self).__init__(children=[
             self.select_node, self.from_node, self.where_node, self.group_node, self.having_node,
             self.order_node, self.limit_node, self.offset_node,
@@ -789,6 +823,13 @@ class QueryNode(Node):
     def get_value(self, context):
         rows = []
         from_type = self.from_node.get_type(context)
+        if not isinstance(self.group_node, FakeGroupNode):
+            name_nodes = []
+            for node in [self.select_node, self.having_node, self.order_node]:
+                name_nodes.extend(get_nodes_of_type(node, NameNode))
+            for name_node in name_nodes:
+                if name_node not in self.group_node and name_node.name in from_type and not has_agg_ancestor(name_node):
+                    raise IllegalGroupBy(name_node)
         select_context = MergedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
         for i, node in enumerate(self.select_node):

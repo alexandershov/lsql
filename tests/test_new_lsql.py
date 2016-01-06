@@ -175,6 +175,14 @@ def _test_group_by_order_by():
     ]
 
 
+@pytest.mark.parametrize('query', [
+    'select size group by name',
+])
+def test_illegal_group_by(query):
+    with pytest.raises(ast.IllegalGroupBy):
+        get_results(query)
+
+
 def assert_same_items(seq_x, seq_y):
     assert sorted(seq_x) == sorted(seq_y)
 
