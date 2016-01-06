@@ -102,8 +102,8 @@ class NodeTransformer(NodeVisitor):
         Otherwise return another node that will replace `node` in the ast.
         Don't modify `node` in-place. Return a new node.
 
-        :type node: Expr
-        :rtype: Expr
+        :type node: Node
+        :rtype: Node
         """
         raise NotImplementedError
 
@@ -532,8 +532,8 @@ class DirectoryDoesNotExistError(ExprError):
         self.path = path
 
 
-# TODO: Expr object should contain a reference to its location in the string (and the string itself)
-class Expr(object):
+# TODO: Node object should contain a reference to its location in the string (and the string itself)
+class Node(object):
     def __init__(self, children=None, parent=None):
         # we make a tuple out of children, because we want it to be hashable
         if children is None:
@@ -588,19 +588,19 @@ class Expr(object):
         return '{}(children={!r})'.format(self.__class__.__name__, self.children)
 
 
-class NullExpr(Expr):
+class NullNode(Node):
     def __eq__(self, other):
-        return isinstance(other, NullExpr)
+        return isinstance(other, NullNode)
 
     def __copy__(self):
-        return NullExpr()
+        return NullNode()
 
 
-class OrderByPartExpr(Expr):
+class OrderByPartNode(Node):
     def __init__(self, expr, direction):
         self.expr = expr
         self.direction = direction
-        super(OrderByPartExpr, self).__init__(children=[expr])
+        super(OrderByPartNode, self).__init__(children=[expr])
 
     def get_value(self, context):
         return self.expr.get_value(context)
@@ -609,7 +609,7 @@ class OrderByPartExpr(Expr):
         return self.expr.get_type(scope)
 
     def __eq__(self, other):
-        return super(OrderByPartExpr, self).__eq__(other) and (self.direction == other.direction)
+        return super(OrderByPartNode, self).__eq__(other) and (self.direction == other.direction)
 
     def __hash__(self):
         return hash((self.children, self.direction))
@@ -637,12 +637,12 @@ class OrderByKey(object):
         return self.row == other.row
 
 
-class BetweenExpr(Expr):
+class BetweenNode(Node):
     def __init__(self, value_expr, first_expr, last_expr):
         self.value_expr = value_expr
         self.first_expr = first_expr
         self.last_expr = last_expr
-        super(BetweenExpr, self).__init__(children=[self.value_expr, self.first_expr, self.last_expr])
+        super(BetweenNode, self).__init__(children=[self.value_expr, self.first_expr, self.last_expr])
 
     def get_type(self, scope):
         return bool
@@ -652,7 +652,7 @@ class BetweenExpr(Expr):
             context)
 
 
-class QueryExpr(Expr):
+class QueryNode(Node):
     def __init__(self, select_expr, from_expr, where_expr, order_expr,
                  limit_expr, offset_expr):
         self.select_expr = select_expr
@@ -662,32 +662,32 @@ class QueryExpr(Expr):
         self.limit_expr = limit_expr
         self.offset_expr = offset_expr
         if self.from_expr is None:
-            self.from_expr = NameExpr('cwd')
-        if isinstance(self.from_expr, (NameExpr, ValueExpr)):
-            self.from_expr = FunctionExpr('files', [self.from_expr])
+            self.from_expr = NameNode('cwd')
+        if isinstance(self.from_expr, (NameNode, ValueNode)):
+            self.from_expr = FunctionNode('files', [self.from_expr])
         from_type = self.from_expr.get_type(BUILTIN_CONTEXT)
         if isinstance(self.select_expr, SelectStarExpr):
             if hasattr(from_type, 'star_columns'):
-                self.select_expr = SelectExpr(
+                self.select_expr = SelectNode(
                     [
-                        NameExpr(column) for column in from_type.star_columns
+                        NameNode(column) for column in from_type.star_columns
                         ])
             else:
-                self.select_expr = SelectExpr(
+                self.select_expr = SelectNode(
                     [
-                        NameExpr(column) for column in from_type
+                        NameNode(column) for column in from_type
                         ])
         if self.select_expr is None:
-            self.select_expr = SelectExpr(list(map(NameExpr, from_type.default_columns)))
+            self.select_expr = SelectNode(list(map(NameNode, from_type.default_columns)))
         if self.where_expr is None:
-            self.where_expr = ValueExpr(True)
+            self.where_expr = ValueNode(True)
         if self.order_expr is None:
-            self.order_expr = OrderExpr([])
+            self.order_expr = OrderNode([])
         if self.limit_expr is None:
-            self.limit_expr = ValueExpr(float('inf'))
+            self.limit_expr = ValueNode(float('inf'))
         if self.offset_expr is None:
-            self.offset_expr = ValueExpr(0)
-        super(QueryExpr, self).__init__(children=[
+            self.offset_expr = ValueNode(0)
+        super(QueryNode, self).__init__(children=[
             self.select_expr, self.from_expr, self.where_expr, self.order_expr, self.limit_expr,
             self.offset_expr,
         ])
@@ -737,7 +737,7 @@ class QueryExpr(Expr):
 
 
 def get_name(expr, default):
-    if isinstance(expr, NameExpr):
+    if isinstance(expr, NameNode):
         return expr.name
     return default
 
@@ -753,38 +753,38 @@ class Table(object):
             yield py_type._make(row)
 
 
-class SelectExpr(Expr):
+class SelectNode(Node):
     pass
 
 
-class OrderExpr(Expr):
+class OrderNode(Node):
     pass
 
 
-class FromExpr(Expr):
+class FromNode(Node):
     def __init__(self, from_expr):
         self.from_expr = from_expr
-        super(FromExpr, self).__init__(children=[self.from_expr])
+        super(FromNode, self).__init__(children=[self.from_expr])
 
 
-class GroupExpr(Expr):
+class GroupNode(Node):
     # TODO: don't allow having_expr equal to None
     def __init__(self, group_exprs, having_expr=None):
         if having_expr is None:
-            having_expr = ValueExpr(True)
+            having_expr = ValueNode(True)
         self.group = group_exprs
         self.having_expr = having_expr
-        super(GroupExpr, self).__init__(children=(group_exprs + [self.having_expr]))
+        super(GroupNode, self).__init__(children=(group_exprs + [self.having_expr]))
 
     def check_type(self, scope):
-        super(GroupExpr, self).check_type(scope)
+        super(GroupNode, self).check_type(scope)
         self.having_expr.check_type(scope)
 
 
-class NameExpr(Expr):
+class NameNode(Node):
     def __init__(self, name):
         self.name = name
-        super(NameExpr, self).__init__()
+        super(NameNode, self).__init__()
 
     def get_type(self, scope):
         return scope[self.name]
@@ -793,21 +793,21 @@ class NameExpr(Expr):
         return context[self.name]
 
     def __eq__(self, other):
-        return super(NameExpr, self).__eq__(other) and self.name == other.name
+        return super(NameNode, self).__eq__(other) and self.name == other.name
 
     def __repr__(self):
-        return 'NameExpr(name={!r})'.format(self.name)
+        return 'NameNode(name={!r})'.format(self.name)
 
 
-class SelectStarExpr(SelectExpr):
+class SelectStarExpr(SelectNode):
     def __init__(self):
         super(SelectStarExpr, self).__init__()
 
 
-class ValueExpr(Expr):
+class ValueNode(Node):
     def __init__(self, value):
         self.value = value
-        super(ValueExpr, self).__init__()
+        super(ValueNode, self).__init__()
 
     def get_type(self, scope):
         return type(self.value)
@@ -819,13 +819,13 @@ class ValueExpr(Expr):
         return '{!s}(value={!r})'.format(self.__class__.__name__, self.value)
 
     def __eq__(self, other):
-        return super(ValueExpr, self).__eq__(other) and self.value == other.value
+        return super(ValueNode, self).__eq__(other) and self.value == other.value
 
 
-class ArrayExpr(Expr):
+class ArrayNode(Node):
     def __init__(self, exprs):
         self.exprs = exprs
-        super(ArrayExpr, self).__init__(children=self.exprs)
+        super(ArrayNode, self).__init__(children=self.exprs)
 
     def get_type(self, scope):
         return AnyIterable
@@ -837,11 +837,11 @@ class ArrayExpr(Expr):
         return '{!s}(exprs={!r})'.format(self.__class__.__name__, self.exprs)
 
 
-class FunctionExpr(Expr):
+class FunctionNode(Node):
     def __init__(self, function_name, arg_exprs):
         self.function_name = function_name
         self.arg_exprs = arg_exprs
-        super(FunctionExpr, self).__init__(children=arg_exprs)
+        super(FunctionNode, self).__init__(children=arg_exprs)
 
     @property
     def function(self):
@@ -855,34 +855,34 @@ class FunctionExpr(Expr):
         return self.function(*args)
 
     def __eq__(self, other):
-        return super(FunctionExpr, self).__eq__(other) and (self.function_name == other.function_name)
+        return super(FunctionNode, self).__eq__(other) and (self.function_name == other.function_name)
 
     def __hash__(self, other):
         return hash((self.children, self.function_name))
 
     def __repr__(self):
-        return 'FunctionExpr(function_name={!r}, arg_exprs={!r})'.format(
+        return 'FunctionNode(function_name={!r}, arg_exprs={!r})'.format(
             self.function_name, self.arg_exprs
         )
 
 
-class AndExpr(Expr):
+class AndNode(Node):
     def __init__(self, left_expr, right_expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
-        super(AndExpr, self).__init__(children=[self.left_expr, self.right_expr])
+        super(AndNode, self).__init__(children=[self.left_expr, self.right_expr])
 
     def get_value(self, context):
         return all(arg_expr.get_value(context)
                    for arg_expr in [self.left_expr, self.right_expr])
 
 
-# TODO(aershov182): DRY it up with AndExpr
-class OrExpr(Expr):
+# TODO(aershov182): DRY it up with AndNode
+class OrNode(Node):
     def __init__(self, left_expr, right_expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
-        super(OrExpr, self).__init__(children=[left_expr, right_expr])
+        super(OrNode, self).__init__(children=[left_expr, right_expr])
 
     def get_value(self, context):
         return any(arg_expr.get_value(context)
