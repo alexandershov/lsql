@@ -105,7 +105,8 @@ def test_math(query, expected_results):
     ]),
     ("select name, count(*) group by name having name = 'small.py'", [
         ('small.py', 1),
-    ])
+    ]),
+
 ])
 def test_query(query, expected_results):
     assert_same_items(
@@ -162,6 +163,16 @@ def test_from_directory_does_not_exist():
 def test_unknown_literal_suffix():
     with pytest.raises(parser.UnknownLiteralSuffixError):
         get_results('select 5badsuffix')
+
+
+# TODO: turn this test on when group by order by works
+def _test_group_by_order_by():
+    assert get_results('select name, count(*) group by name order by name') == [
+        ('LICENSE', 1),
+        ('README.md', 1),
+        ('small', 1),
+        ('small.py', 1),
+    ]
 
 
 def assert_same_items(seq_x, seq_y):
