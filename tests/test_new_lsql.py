@@ -201,6 +201,8 @@ def _test_group_by_order_by():
     'select size group by name',
     # aggregate functions can't be nested
     'select max(avg(size))',
+    # size + 9 is not in group by list
+    'select size + 9 group by size + 8',
 ])
 def test_illegal_group_by(query):
     with pytest.raises(ast.IllegalGroupBy):

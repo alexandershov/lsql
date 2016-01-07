@@ -925,8 +925,9 @@ class QueryNode(Node):
                 name_nodes.extend(get_nodes_of_type(node, NameNode))
                 agg_nodes.extend(get_nodes_of_type(node, AggFunctionNode))
             for name_node in name_nodes:
-                if all((node not in self.group_node) for node in up_to_root(name_node)) and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
-                    raise IllegalGroupBy(name_node)
+                if (name_node not in self.group_node) and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
+                    if all((node not in self.group_node) for node in up_to_root(name_node)):
+                        raise IllegalGroupBy(name_node)
             for agg_node in agg_nodes:
                 if has_ancestor_of_type(agg_node, AggFunctionNode):
                     # TODO: add message
