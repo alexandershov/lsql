@@ -226,6 +226,8 @@ def test_order_by(query, expected_results):
     'select size + 9 group by size + 8',
     # size is not in group by list
     'select name group by name order by size',
+    # aggregate function in group by
+    'select name group by name, count(*)',
 ])
 def test_illegal_group_by(query):
     with pytest.raises(ast.IllegalGroupBy):

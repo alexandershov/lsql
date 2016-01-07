@@ -911,6 +911,8 @@ class QueryNode(Node):
                 self.group_node = GroupNode()
         if self.having_node is None:
             self.having_node = ValueNode(True)
+        if has_agg_functions_nodes(self.group_node):
+            raise IllegalGroupBy('aggregate functions are not allowed in GROUP BY')
         transformer = AggFunctionsTransformer()
         self.select_node = self.select_node.transform(transformer)
         self.having_node = self.having_node.transform(transformer)
