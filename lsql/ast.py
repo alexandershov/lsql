@@ -730,6 +730,7 @@ class DirectoryDoesNotExistError(LsqlEvalError):
 
 
 # TODO: Node object should contain a reference to its location in the string (and the string itself)
+# TODO: think about a good solution to e.g dualism of children and some other properties (e.g FunctionNode.arg_exprs)
 class Node(object):
     def __init__(self, children=None, parent=None):
         # we make a tuple out of children, because we want it to be hashable
@@ -985,10 +986,18 @@ class QueryNode(Node):
                         context
                     )
                     for i, node in enumerate(self.select_node):
-                        column = node.get_value(row_context)
+                        if node in self.group_node:
+                            idx = self.group_node.children.index(node)
+                            column = key[idx]
+                        else:
+                            column = node.get_value(row_context)
                         cur_row[i] = column
                     for i, node in enumerate(self.order_node):
-                        column = node.get_value(row_context)
+                        if node.node in self.group_node:
+                            idx = self.group_node.children.index(node.node)
+                            column = key[idx]
+                        else:
+                            column = node.get_value(row_context)
                         order_row[i] = column
                     cond = self.having_node.get_value(row_context)
                 if cond:
