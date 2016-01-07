@@ -511,7 +511,7 @@ class CountAggregate(Aggregate):
         self._count = 0
 
     def clear(self):
-        self._count = 0
+        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -530,7 +530,7 @@ class SumAggregate(Aggregate):
         self._sum = 0
 
     def clear(self):
-        self._sum = 0
+        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -549,7 +549,7 @@ class MaxAggregate(Aggregate):
         self._max = NULL
 
     def clear(self):
-        self._max = NULL
+        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -572,7 +572,7 @@ class MinAggregate(Aggregate):
         self._min = NULL
 
     def clear(self):
-        self._min = NULL
+        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -595,8 +595,7 @@ class AvgAggregate(Aggregate):
         self._count = 0
 
     def clear(self):
-        self._sum = 0
-        self._count = 0
+        self.__init__()
 
     def add(self, value):
         if value is not NULL:
