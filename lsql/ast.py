@@ -474,59 +474,6 @@ def sql_function(function, signature):
     return wrapper
 
 
-def agg_function(function, signature):
-    @wraps(function)
-    def wrapper(*args):
-        return function(*args)
-
-    wrapper.return_type = signature[-1]
-    return wrapper
-
-
-def count_agg(items):
-    result = 0
-    for item in items:
-        if item is not NULL:
-            result += 1
-    return result
-
-
-def sum_agg(items):
-    result = 0
-    for item in items:
-        if item is not NULL:
-            result += item
-    return result
-
-
-def min_agg(items):
-    result = NULL
-    for item in items:
-        if result is NULL:
-            result = item
-        elif item is not NULL and item < result:
-            result = item
-    return result
-
-
-def max_agg(items):
-    result = NULL
-    for item in items:
-        if item is not NULL and item > result:
-            result = item
-    return result
-
-
-def avg_agg(items):
-    total = 0
-    count = 0
-    for item in items:
-        if item is not NULL:
-            total += item
-            count += 1
-    return total / count
-
-
 class AnyIterable(object):
     pass
 
@@ -671,14 +618,6 @@ AGGREGATES = {
     'min': MinAggregate,
     'avg': AvgAggregate,
 }
-
-AGG_FUNCTIONS = Context({
-    'count': agg_function(count_agg, [AnyIterable, int]),
-    'sum': agg_function(sum_agg, [NumberIterable, int]),
-    'max': agg_function(max_agg, [NumberIterable, object]),
-    'min': agg_function(min_agg, [NumberIterable, numbers.Number]),
-    'avg': agg_function(avg_agg, [NumberIterable, numbers.Number]),
-})
 
 BASE_CONTEXT = get_base_context()
 
