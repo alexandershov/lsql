@@ -101,7 +101,7 @@ class AggFunctionsVisitor(NodeVisitor):
 
     def visit(self, node):
         if isinstance(node, FunctionNode):
-            if node.function_name in AGG_FUNCTIONS:
+            if node.function_name in AGGREGATES:
                 self.agg_function_nodes.append(node)
 
     @property
@@ -572,9 +572,82 @@ class SumAggregate(Aggregate):
         return self._sum
 
 
+class MaxAggregate(Aggregate):
+    type = (object, object)
+    return_type = object  # TODO: DRY return_type and type
+
+    def __init__(self):
+        self._max = NULL
+
+    def clear(self):
+        self._max = NULL
+
+    def add(self, value):
+        if value is not NULL:
+            if self._max is NULL:
+                self._max = value
+            else:
+                self._max = max(self._max, value)
+
+    @property
+    def value(self):
+        return self._max
+
+
+# TODO: DRY all aggregates
+class MinAggregate(Aggregate):
+    type = (object, object)
+    return_type = object  # TODO: DRY return_type and type
+
+    def __init__(self):
+        self._min = NULL
+
+    def clear(self):
+        self._min = NULL
+
+    def add(self, value):
+        if value is not NULL:
+            if self._min is NULL:
+                self._min = value
+            else:
+                self._min = min(self._min, value)
+
+    @property
+    def value(self):
+        return self._min
+
+
+class AvgAggregate(Aggregate):
+    type = (numbers.Number, float)
+    return_type = float  # TODO: DRY return_type and type
+
+    def __init__(self):
+        self._sum = 0
+        self._count = 0
+
+    def clear(self):
+        self._sum = 0
+        self._count = 0
+
+    def add(self, value):
+        if value is not NULL:
+            self._sum += value
+            self._count += 1
+
+    @property
+    def value(self):
+        # TODO: fix this check
+        if self._count == 0:
+            return NULL
+        return self._sum / self._count
+
+
 AGGREGATES = {
     'count': CountAggregate,
     'sum': SumAggregate,
+    'max': MaxAggregate,
+    'min': MinAggregate,
+    'avg': AvgAggregate,
 }
 
 AGG_FUNCTIONS = Context({
@@ -597,6 +670,7 @@ def in_(x, y):
     return x in y
 
 
+# TODO: builtin-function don't belong into context, there should be separate namespace for functions
 FUNCTIONS = Context({
     'files': _files_table_function,
     '||': sql_function(operator.add, [unicode, unicode, unicode]),
@@ -617,7 +691,7 @@ FUNCTIONS = Context({
     'in': sql_function(in_, [object, AnyIterable])
 })
 
-BUILTIN_CONTEXT = MergedContext(AGG_FUNCTIONS, BASE_CONTEXT)
+BUILTIN_CONTEXT = BASE_CONTEXT
 
 
 # TODO(aershov182): add forbidden argument and handle case with permissions gracefully

@@ -113,6 +113,15 @@ def test_math(query, expected_results):
     ("select sum(length(lines))", [
         (6,),
     ]),
+    ("select max(length(lines))", [
+        (4,),
+    ]),
+    ("select min(length(lines))", [
+        (1,),
+    ]),
+    ("select avg(length(lines))", [
+        (6 / 3,),
+    ]),
 ], ids=idfn)
 def test_query(query, expected_results):
     assert_same_items(
