@@ -151,10 +151,10 @@ def test_concat():
 
 @pytest.mark.parametrize('query, expected_results', [
     ('select fullpath',
-     [(pytest.make_full_path(u'tests/data/non-ascii-paths/тест.txt'),)]),
-    ('select path', [(u'tests/data/non-ascii-paths/тест.txt',)]),
-    ('select name', [(u'тест.txt',)]),
-    ('select no_ext', [(u'тест',)]),
+     [(pytest.make_full_path(b'tests/data/non-ascii-paths/тест.txt'),)]),
+    ('select path', [(b'tests/data/non-ascii-paths/тест.txt',)]),
+    ('select name', [(b'тест.txt',)]),
+    ('select no_ext', [(b'тест',)]),
 ])
 def test_non_ascii_paths(query, expected_results):
     assert_same_items(

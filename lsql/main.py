@@ -8,7 +8,7 @@ import sys
 
 from colorama import Fore
 
-from lsql.ast import BUILTIN_CONTEXT, Context, CombinedContext, TaggedUnicode
+from lsql.ast import BUILTIN_CONTEXT, Context, CombinedContext, TaggedStr
 from lsql.parser import parse, tokenize
 from lsql import ast
 from lsql import get_version
@@ -83,7 +83,7 @@ class ColoredPrinter(Printer):
         return self.colored(color=Fore.RED, text=text, start=start, end=end)
 
     def colored_column(self, column_value):
-        if isinstance(column_value, TaggedUnicode):
+        if isinstance(column_value, TaggedStr):
             for tag, color in self._tag_colors.viewitems():
                 if tag in column_value.tags:
                     return self.colored(color, column_value)
@@ -235,7 +235,7 @@ def run_query(query_string, directory):
     assert isinstance(query_string, unicode)
     tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
-    # TODO: b'.'? Handle TaggedUnicode issues inside of the ast.walk_with_depth
+    # TODO: b'.'? Handle TaggedStr issues inside of the ast.walk_with_depth
     cwd_context = Context({'cwd': (directory or b'.')})
     query = parse(tokens)
     return query.get_value(CombinedContext(cwd_context, BUILTIN_CONTEXT))

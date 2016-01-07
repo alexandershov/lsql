@@ -92,6 +92,7 @@ class CombinedContext(Context):
         return 'CombinedContext(contexts={!r})'.format(self._contexts)
 
 
+# TODO: think about better Expr & Visitor representation
 class NodeVisitor(object):
     def visit(self, node):
         raise NotImplementedError
@@ -169,7 +170,7 @@ class AggFunctionsTransformer(NodeTransformer):
         return node
 
 
-class FileTableType(Namespace):
+class FilesTableType(Namespace):
     @property
     def star_columns(self):
         return Stat.MAIN_ATTRS
@@ -182,7 +183,7 @@ class FileTableType(Namespace):
         return self._items
 
 
-class FileTableContext(Context):
+class FilesTableContext(Context):
     def __init__(self, stat):
         """
         :type stat: lsql.ast.Stat
@@ -196,15 +197,15 @@ class FileTableContext(Context):
         return self.prepare_key(key) in self._stat.ATTRS
 
     def __repr__(self):
-        return 'FileTableContext(stat={!r})'.format(self._stat)
+        return 'FilesTableContext(stat={!r})'.format(self._stat)
 
 
-class TaggedUnicode(unicode):
-    def __new__(cls, string, tags, encoding='utf-8', errors='strict'):
-        return super(TaggedUnicode, cls).__new__(cls, string, encoding, errors)
+class TaggedStr(str):
+    def __new__(cls, string, tags, *args, **kwargs):
+        return super(TaggedStr, cls).__new__(cls, string, *args, **kwargs)
 
-    def __init__(self, string, tags, encoding='utf-8', errors='strict'):
-        super(TaggedUnicode, self).__init__(string, encoding, errors)
+    def __init__(self, string, tags, *args, **kwargs):
+        super(TaggedStr, self).__init__(string, *args, **kwargs)
         self.tags = tags
 
 
@@ -273,11 +274,11 @@ class Stat(object):
 
     @property
     def path(self):
-        return TaggedUnicode(self._path, self.get_tags())
+        return TaggedStr(self._path, self.get_tags())
 
     @property
     def fullpath(self):
-        return TaggedUnicode(
+        return TaggedStr(
             os.path.normpath(os.path.join(os.getcwd(), self._path)),
             self.get_tags(),
         )
@@ -306,7 +307,7 @@ class Stat(object):
 
     @property
     def name(self):
-        return TaggedUnicode(self._name, self.get_tags())
+        return TaggedStr(self._name, self.get_tags())
 
     @property
     def extension(self):
@@ -315,7 +316,7 @@ class Stat(object):
 
     @property
     def no_ext(self):
-        return TaggedUnicode(os.path.splitext(self._name)[0], self.get_tags())
+        return TaggedStr(os.path.splitext(self._name)[0], self.get_tags())
 
     @property
     def mode(self):
@@ -401,7 +402,7 @@ class Stat(object):
 
     @classmethod
     def get_type(cls):
-        return FileTableType({
+        return FilesTableType({
             'fullpath': unicode,
             'size': int,
             'owner': unicode,
@@ -430,7 +431,7 @@ class Stat(object):
         })
 
     def get_context(self):
-        return FileTableContext(self)
+        return FilesTableContext(self)
 
 
 def _files_table_function(directory):
