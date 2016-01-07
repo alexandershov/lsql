@@ -12,6 +12,10 @@ from lsql import parser
 BASE_DIR = pytest.get_fixture_dir('base')
 
 
+def idfn(val):
+    if isinstance(val, unicode):
+        return val.encode('utf-8')
+
 # TODO(aershov182): remove assert_same_items/get_results duplication in tests
 
 def test_select_name():
@@ -106,8 +110,10 @@ def test_math(query, expected_results):
     ("select name, count(*) group by name having name = 'small.py'", [
         ('small.py', 1),
     ]),
-
-])
+    ("select sum(length(lines))", [
+        (6,),
+    ]),
+], ids=idfn)
 def test_query(query, expected_results):
     assert_same_items(
         get_results(query),

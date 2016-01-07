@@ -553,8 +553,28 @@ class CountAggregate(Aggregate):
         return self._count
 
 
+class SumAggregate(Aggregate):
+    type = (object, numbers.Number)
+    return_type = numbers.Number  # TODO: DRY return_type and type
+
+    def __init__(self):
+        self._sum = 0
+
+    def clear(self):
+        self._sum = 0
+
+    def add(self, value):
+        if value is not NULL:
+            self._sum += value
+
+    @property
+    def value(self):
+        return self._sum
+
+
 AGGREGATES = {
     'count': CountAggregate,
+    'sum': SumAggregate,
 }
 
 AGG_FUNCTIONS = Context({
@@ -661,6 +681,8 @@ class Node(object):
         result = copy(self)  # TODO: maybe implement __copy__ method?
         if children is not _MISSING:
             result.children = children
+            for child in result.children:
+                child.parent = result
         if parent is not _MISSING:
             result.parent = parent
         return result
@@ -1030,7 +1052,7 @@ class FunctionNode(Node):
 
     def __repr__(self):
         return '{}(function_name={!r}, arg_nodes={!r})'.format(
-            self.__class__.__name__.self.function_name, self.arg_nodes
+            self.__class__.__name__, self.function_name, self.arg_nodes
         )
 
 
