@@ -137,13 +137,12 @@ def get_nodes_of_type(node, node_class):
     return visitor.nodes
 
 
-def has_agg_ancestor(node):
+def has_ancestor_of_type(node, ancestor_node_class):
     while node.parent is not None:
-        if isinstance(node.parent, AggFunctionNode):
+        if isinstance(node.parent, ancestor_node_class):
             return True
         node = node.parent
     return False
-
 
 class NodeTransformer(NodeVisitor):
     def visit(self, node):
@@ -742,13 +741,13 @@ class Node(object):
         raise NotImplementedError
 
     def walk(self, visitor):
-        visitor.visit(self)
         for child in self.children:
             child.walk(visitor)
+        visitor.visit(self)
 
     def transform(self, transformer):
-        result = transformer.visit(self)
         transformed_children = tuple(child.transform(transformer) for child in self.children)
+        result = transformer.visit(self)
         return result.replace(children=transformed_children)
 
     def replace(self, children=_MISSING, parent=_MISSING):
@@ -921,11 +920,17 @@ class QueryNode(Node):
         from_type = self.from_node.get_type(context)
         if not isinstance(self.group_node, FakeGroupNode):
             name_nodes = []
+            agg_nodes = []
             for node in [self.select_node, self.having_node, self.order_node]:
                 name_nodes.extend(get_nodes_of_type(node, NameNode))
+                agg_nodes.extend(get_nodes_of_type(node, AggFunctionNode))
             for name_node in name_nodes:
-                if name_node not in self.group_node and name_node.name in from_type and not has_agg_ancestor(name_node):
+                if name_node not in self.group_node and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
                     raise IllegalGroupBy(name_node)
+            for agg_node in agg_nodes:
+                if has_ancestor_of_type(agg_node, AggFunctionNode):
+                    # TODO: add message
+                    raise IllegalGroupBy(agg_node)
         select_context = MergedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
         for i, node in enumerate(self.select_node):
@@ -1104,8 +1109,11 @@ class ArrayNode(Node):
 class FunctionNode(Node):
     def __init__(self, function_name, arg_nodes):
         self.function_name = function_name
-        self.arg_nodes = arg_nodes
         super(FunctionNode, self).__init__(children=arg_nodes)
+
+    @property
+    def arg_nodes(self):
+        return self.children
 
     @property
     def function(self):

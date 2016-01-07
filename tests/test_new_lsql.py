@@ -191,7 +191,10 @@ def _test_group_by_order_by():
 
 
 @pytest.mark.parametrize('query', [
+    # "size" is not in group by
     'select size group by name',
+    # aggregate functions can't be nested
+    'select max(avg(size))',
 ])
 def test_illegal_group_by(query):
     with pytest.raises(ast.IllegalGroupBy):
