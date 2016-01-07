@@ -249,7 +249,8 @@ _CURRENT_DATE = _CURRENT_TIME.date()
 
 def get_dir_size(path):
     size = 0
-    for path, _ in walk_with_depth(path):
+    walker = DirectoryWalker(path)
+    for path, _ in walker.walk():
         if os.path.isfile(path):
             size += os.lstat(path).st_size
     return size
@@ -452,7 +453,8 @@ class Stat(object):
 
 
 def _files_table_function(directory):
-    for path, depth in walk_with_depth(directory):
+    walker = DirectoryWalker(directory)
+    for path, depth in walker.walk():
         path = os.path.relpath(path, os.getcwd())
         yield Stat(path, depth)
 
@@ -710,25 +712,33 @@ FUNCTIONS = Context({
 BUILTIN_CONTEXT = BASE_CONTEXT
 
 
-# TODO(aershov182): add forbidden argument and handle case with permissions gracefully
-def walk_with_depth(path, depth=0):
-    try:
-        names = os.listdir(path)
-    except OSError as exc:
-        # TODO(aershov182): ENOENT or EEXISTS?
-        if exc.errno == errno.ENOENT:
-            raise DirectoryDoesNotExistError(path)
-        return
-    dirs = []
-    for name in names:
-        full_path = os.path.join(path, name)
-        if os.path.isdir(full_path):
-            dirs.append(full_path)
-        yield full_path, depth
-    for d in dirs:
-        if not os.path.islink(d):
-            for x in walk_with_depth(d, depth + 1):
-                yield x
+class DirectoryWalker(object):
+    def __init__(self, path):
+        self.path = path
+        self.forbidden_paths = []
+
+    def walk(self, path=None, depth=0):
+        if path is None:
+            path = self.path
+        try:
+            names = os.listdir(path)
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                raise DirectoryDoesNotExistError(path)
+            elif exc.errno == errno.EPERM:
+                self.forbidden_paths.append(path)
+            else:
+                raise
+        dirs = []
+        for name in names:
+            full_path = os.path.join(path, name)
+            if os.path.isdir(full_path):
+                dirs.append(full_path)
+            yield full_path, depth
+        for d in dirs:
+            if not os.path.islink(d):
+                for x in self.walk(d, depth + 1):
+                    yield x
 
 
 class LsqlEvalError(LsqlError):

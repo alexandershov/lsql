@@ -240,6 +240,6 @@ def assert_same_items(seq_x, seq_y):
 
 def get_results(query, directory=BASE_DIR):
     # TODO: remove str(directory) and figure out how to live with unicode directories
-    # in this case `walk_with_depth` will return unicode, Stat._path will be unicode and
+    # in this case `DirectoryWalker.walk` will return unicode, Stat._path will be unicode and
     # Stat.path will try to decode unicode which is not supported.
     return list(main.run_query(unicode(query), str(directory)))

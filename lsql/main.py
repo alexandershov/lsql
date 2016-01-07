@@ -235,7 +235,7 @@ def run_query(query_string, directory):
     assert isinstance(query_string, unicode)
     tokens = tokenize(query_string)
     # TODO(aershov182): check that user hasn't passed both FROM and directory
-    # TODO: b'.'? Handle TaggedStr issues inside of the ast.walk_with_depth
+    # TODO: b'.'? Handle TaggedStr issues inside of the ast.DirectoryWalker
     cwd_context = Context({'cwd': (directory or b'.')})
     query = parse(tokens)
     return query.get_value(CombinedContext(cwd_context, BUILTIN_CONTEXT))
