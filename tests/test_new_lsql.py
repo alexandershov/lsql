@@ -180,8 +180,14 @@ def test_unknown_literal_suffix():
         ('small', 1),
         ('small.py', 1),
     ]),
+    ('select name, count(*) group by name order by name, count(*) DESC', [
+        ('LICENSE', 1),
+        ('README.md', 1),
+        ('small', 1),
+        ('small.py', 1),
+    ]),
 ])
-def _test_group_by_order_by(query, expected_results):
+def test_group_by_order_by(query, expected_results):
     assert get_results(query) == expected_results
 
 
@@ -218,6 +224,8 @@ def test_order_by(query, expected_results):
     'select max(avg(size))',
     # size + 9 is not in group by list
     'select size + 9 group by size + 8',
+    # size is not in group by list
+    'select name group by name order by size',
 ])
 def test_illegal_group_by(query):
     with pytest.raises(ast.IllegalGroupBy):

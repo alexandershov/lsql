@@ -800,9 +800,12 @@ class NullNode(Node):
 
 class OrderByPartNode(Node):
     def __init__(self, node, direction):
-        self.node = node
         self.direction = direction
         super(OrderByPartNode, self).__init__(children=[node])
+
+    @property
+    def node(self):
+        return self.children[0]
 
     def get_value(self, context):
         return self.node.get_value(context)
@@ -910,11 +913,7 @@ class QueryNode(Node):
         transformer = AggFunctionsTransformer()
         self.select_node = self.select_node.transform(transformer)
         self.having_node = self.having_node.transform(transformer)
-        # TODO: uncomment next line
-        # self.order_node = self.order_node.transform(transformer)
-
-
-
+        self.order_node = self.order_node.transform(transformer)
         super(QueryNode, self).__init__(children=[
             self.select_node, self.from_node, self.where_node, self.group_node, self.having_node,
             self.order_node, self.limit_node, self.offset_node,
@@ -962,6 +961,7 @@ class QueryNode(Node):
                 filtered_rows.append(from_row)
 
         if not isinstance(self.group_node, FakeGroupNode):
+            keys = []
             agg_function_nodes = get_agg_function_nodes(self)
             grouped = defaultdict(list)  # group_key -> rows
             # TODO: check that stuff in select_expr and having_expr are legal
@@ -972,10 +972,12 @@ class QueryNode(Node):
                 )
                 key = tuple(node.get_value(row_context) for node in self.group_node)
                 grouped[key].append(row)
+
             for key, grouped_rows in grouped.viewitems():
                 for agg_node in agg_function_nodes:
                     agg_node.clear_aggregate()
                 cur_row = [None] * len(self.select_node)
+                order_row = [None] * len(self.order_node)
                 cond = False
                 for row in grouped_rows:
                     row_context = MergedContext(
@@ -985,9 +987,13 @@ class QueryNode(Node):
                     for i, node in enumerate(self.select_node):
                         column = node.get_value(row_context)
                         cur_row[i] = column
+                    for i, node in enumerate(self.order_node):
+                        column = node.get_value(row_context)
+                        order_row[i] = column
                     cond = self.having_node.get_value(row_context)
                 if cond:
                     rows.append(cur_row)
+                    keys.append(OrderByKey(order_row, self.order_node))
         else:
             for row in filtered_rows:
                 row_context = MergedContext(
