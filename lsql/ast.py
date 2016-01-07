@@ -201,11 +201,11 @@ class FilesTableContext(Context):
 
 
 class TaggedStr(str):
-    def __new__(cls, string, tags, *args, **kwargs):
-        return super(TaggedStr, cls).__new__(cls, string, *args, **kwargs)
+    def __new__(cls, string, tags):
+        return super(TaggedStr, cls).__new__(cls, string)
 
-    def __init__(self, string, tags, *args, **kwargs):
-        super(TaggedStr, self).__init__(string, *args, **kwargs)
+    def __init__(self, string, tags):
+        super(TaggedStr, self).__init__(string)
         self.tags = tags
 
 
