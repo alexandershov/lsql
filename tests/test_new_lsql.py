@@ -186,26 +186,26 @@ def _test_group_by_order_by(query, expected_results):
 
 
 @pytest.mark.parametrize('query, expected_results', [
-    # ("select name where type = 'file' order by length(name)", [
-    #     ('LICENSE',),
-    #     ('small.py',),
-    #     ('README.md',),
-    # ]),
-    # ('select name order by size limit 1', [
-    #     ('LICENSE',)
-    # ]),
+    ("select name where type = 'file' order by length(name)", [
+        ('LICENSE',),
+        ('small.py',),
+        ('README.md',),
+    ]),
+    ('select name order by size limit 1', [
+        ('LICENSE',)
+    ]),
     ('select name order by length(lines) DESC, name ASC', [
         ('small.py',),
         ('LICENSE',),
         ('README.md',),
         ('small',),
     ]),
-    # ("select name, no_ext ORDER BY name LIMIT 1", [
-    #     ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
-    # ]),
-    # ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
-    #     ('README.md', 'README')
-    # ]),
+    ("select name, no_ext ORDER BY name LIMIT 1", [
+        ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
+    ]),
+    ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
+        ('README.md', 'README')
+    ]),
 ])
 def test_order_by(query, expected_results):
     assert get_results(query) == expected_results
