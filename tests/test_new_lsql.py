@@ -110,17 +110,23 @@ def test_math(query, expected_results):
     ("select name, count(*) group by name having name = 'small.py'", [
         ('small.py', 1),
     ]),
-    ("select sum(length(lines))", [
+    ('select sum(length(lines))', [
         (6,),
     ]),
-    ("select max(length(lines))", [
+    ('select max(length(lines))', [
         (4,),
     ]),
-    ("select min(length(lines))", [
+    ('select min(length(lines))', [
         (1,),
     ]),
-    ("select avg(length(lines))", [
+    ('select avg(length(lines))', [
         (6 / 3,),
+    ]),
+    ("select name || '_test' group by name || '_test'", [
+        ('small.py_test',),
+        ('LICENSE_test',),
+        ('small_test',),
+        ('README.md_test',),
     ]),
 ], ids=idfn)
 def test_query(query, expected_results):

@@ -925,7 +925,7 @@ class QueryNode(Node):
                 name_nodes.extend(get_nodes_of_type(node, NameNode))
                 agg_nodes.extend(get_nodes_of_type(node, AggFunctionNode))
             for name_node in name_nodes:
-                if name_node not in self.group_node and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
+                if all((node not in self.group_node) for node in up_to_root(name_node)) and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
                     raise IllegalGroupBy(name_node)
             for agg_node in agg_nodes:
                 if has_ancestor_of_type(agg_node, AggFunctionNode):
@@ -1007,6 +1007,11 @@ def get_name(node, default):
         return node.name
     return default
 
+
+def up_to_root(node):
+    while node is not None:
+        yield node
+        node = node.parent
 
 class Table(object):
     def __init__(self, row_type, rows):
