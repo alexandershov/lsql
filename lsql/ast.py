@@ -719,6 +719,7 @@ class LsqlEvalError(LsqlError):
 
 
 class IllegalGroupBy(LsqlEvalError):
+    # TODO: add message to constructor
     def __init__(self, node):
         self.node = node
 
@@ -830,8 +831,12 @@ class OrderByKey(object):
                 op = operator.lt
             else:
                 op = operator.gt
-            if op(x, y):
+            if x == y:
+                continue
+            elif op(x, y):
                 return True
+            else:
+                return False
         return False
 
     def __eq__(self, other):
@@ -952,8 +957,8 @@ class QueryNode(Node):
                 from_row.get_context(),
                 context
             )
-            keys.append(key(from_row))
             if self.where_node.get_value(row_context):
+                keys.append(key(from_row))
                 filtered_rows.append(from_row)
 
         if not isinstance(self.group_node, FakeGroupNode):

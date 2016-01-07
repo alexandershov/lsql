@@ -16,6 +16,7 @@ def idfn(val):
     if isinstance(val, unicode):
         return val.encode('utf-8')
 
+
 # TODO(aershov182): remove assert_same_items/get_results duplication in tests
 
 def test_select_name():
@@ -70,21 +71,7 @@ def test_math(query, expected_results):
      [('small.py',), ('README.md',)]),
     ("select name WHERE 3 >= 2 AND type = 'dir'",
      [('small',)]),
-    ('select name order by size limit 1', [
-        ('LICENSE',)
-    ]),
-    ('select name order by length(lines) DESC, name ASC', [
-        ('small.py',),
-        ('LICENSE',),
-        ('README.md',),
-        ('small',),
-    ]),
-    ("select name, no_ext ORDER BY name LIMIT 1", [
-        ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
-    ]),
-    ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
-        ('README.md', 'README')
-    ]),
+
     ('select name, length(lines)', [
         ('small.py', 4),
         ('LICENSE', 1),
@@ -186,14 +173,42 @@ def test_unknown_literal_suffix():
         get_results('select 5badsuffix')
 
 
-# TODO: turn this test on when group by order by works
-def _test_group_by_order_by():
-    assert get_results('select name, count(*) group by name order by name') == [
+@pytest.mark.parametrize('query, expected_results', [
+    ('select name, count(*) group by name order by name', [
         ('LICENSE', 1),
         ('README.md', 1),
         ('small', 1),
         ('small.py', 1),
-    ]
+    ]),
+])
+def _test_group_by_order_by(query, expected_results):
+    assert get_results(query) == expected_results
+
+
+@pytest.mark.parametrize('query, expected_results', [
+    # ("select name where type = 'file' order by length(name)", [
+    #     ('LICENSE',),
+    #     ('small.py',),
+    #     ('README.md',),
+    # ]),
+    # ('select name order by size limit 1', [
+    #     ('LICENSE',)
+    # ]),
+    ('select name order by length(lines) DESC, name ASC', [
+        ('small.py',),
+        ('LICENSE',),
+        ('README.md',),
+        ('small',),
+    ]),
+    # ("select name, no_ext ORDER BY name LIMIT 1", [
+    #     ('LICENSE', 'LICENSE')  # TODO(aershov182): better test
+    # ]),
+    # ("select name, no_ext ORDER BY name LIMIT 1 OFFSET 1", [
+    #     ('README.md', 'README')
+    # ]),
+])
+def test_order_by(query, expected_results):
+    assert get_results(query) == expected_results
 
 
 @pytest.mark.parametrize('query', [
