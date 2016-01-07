@@ -493,7 +493,7 @@ class Aggregate(object):
     return_type = None  # redefine me in subclasses
 
     def clear(self):
-        raise NotImplementedError
+        self.__init__()
 
     def add(self, *args, **kwargs):
         raise NotImplementedError
@@ -509,9 +509,6 @@ class CountAggregate(Aggregate):
 
     def __init__(self):
         self._count = 0
-
-    def clear(self):
-        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -529,9 +526,6 @@ class SumAggregate(Aggregate):
     def __init__(self):
         self._sum = 0
 
-    def clear(self):
-        self.__init__()
-
     def add(self, value):
         if value is not NULL:
             self._sum += value
@@ -547,9 +541,6 @@ class MaxAggregate(Aggregate):
 
     def __init__(self):
         self._max = NULL
-
-    def clear(self):
-        self.__init__()
 
     def add(self, value):
         if value is not NULL:
@@ -571,9 +562,6 @@ class MinAggregate(Aggregate):
     def __init__(self):
         self._min = NULL
 
-    def clear(self):
-        self.__init__()
-
     def add(self, value):
         if value is not NULL:
             if self._min is NULL:
@@ -593,9 +581,6 @@ class AvgAggregate(Aggregate):
     def __init__(self):
         self._sum = 0
         self._count = 0
-
-    def clear(self):
-        self.__init__()
 
     def add(self, value):
         if value is not NULL:
