@@ -221,10 +221,27 @@ class Null(object):
         return False
 
     def __lt__(self, other):
+        """
+        Null is always less than anything
+        """
         return True
+
+    def __eq__(self, other):
+        return self is other  # Null is a singleton, and NULL its single instance
 
 
 NULL = Null()
+
+
+def get_base_context():
+    current_time = datetime.utcnow()
+    current_date = current_time.date()
+    return Context({
+        'null': NULL,
+        'current_time': current_time,
+        'current_date': current_date,
+    })
+
 
 _CURRENT_TIME = datetime.utcnow()
 _CURRENT_DATE = _CURRENT_TIME.date()
@@ -661,18 +678,14 @@ AGG_FUNCTIONS = Context({
     'avg': agg_function(avg_agg, [NumberIterable, numbers.Number]),
 })
 
-# TODO(aershov182): probably we don't need to prefix private names with underscore
-BASE_CONTEXT = Context({
-    'null': NULL,
-    'current_time': _CURRENT_TIME,
-    'current_date': _CURRENT_DATE,
-})
+BASE_CONTEXT = get_base_context()
 
 
 def in_(x, y):
     return x in y
 
 
+# TODO(aershov182): probably we don't need to prefix private names with underscore
 # TODO: builtin-function don't belong into context, there should be separate namespace for functions
 FUNCTIONS = Context({
     'files': _files_table_function,
