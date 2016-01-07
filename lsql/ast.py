@@ -8,11 +8,10 @@ from grp import getgrgid
 from itertools import chain
 from pwd import getpwuid
 from stat import S_IXUSR
+import errno
 import numbers
 import operator
 import os
-
-import errno
 
 from lsql.errors import LsqlError
 
@@ -34,19 +33,19 @@ class Namespace(object):
         self._items = {self.prepare_key(key): value
                        for key, value in items.viewitems()}
 
+    def __getitem__(self, key):
+        return self._items[self.prepare_key(key)]
+
+    def __contains__(self, key):
+        return self.prepare_key(key) in self._items
+
+    def __repr__(self):
+        return '{}(items={!r})'.format(self.__class__.__name__, self._items)
+
     @classmethod
     def prepare_key(cls, key):
         assert isinstance(key, unicode)
         return key.lower()
-
-    def __getitem__(self, item):
-        return self._items[self.prepare_key(item)]
-
-    def __contains__(self, item):
-        return self.prepare_key(item) in self._items
-
-    def __repr__(self):
-        return '{}(items={!r})'.format(self.__class__.__name__, self._items)
 
 
 class Context(Namespace):
@@ -57,37 +56,40 @@ class EmptyContext(Context):
     def __init__(self):
         pass
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         raise KeyError
 
-    def __contains__(self, item):
+    def __contains__(self, key):
         return False
 
     def __repr__(self):
         return 'EmptyContext()'
 
 
-class MergedContext(Context):
+class CombinedContext(Context):
     def __init__(self, *contexts):
         for context in contexts:
             assert isinstance(context, Context)
         self._contexts = contexts
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         for context in self._contexts:
             try:
-                return context[item]
+                return context[key]
             except KeyError:
                 pass
-        raise KeyError(item)
+        raise KeyError(key)
 
-    def __contains__(self, item):
-        return any((item in context) for context in self._contexts)
+    def __contains__(self, key):
+        try:
+            self[key]
+        except KeyError:
+            return False
+        else:
+            return True
 
     def __repr__(self):
-        return 'MergedContext({!s})'.format(
-            ', '.join(map(repr, self._contexts))
-        )
+        return 'CombinedContext(contexts={!r})'.format(self._contexts)
 
 
 class NodeVisitor(object):
@@ -144,6 +146,7 @@ def has_ancestor_of_type(node, ancestor_node_class):
         node = node.parent
     return False
 
+
 class NodeTransformer(NodeVisitor):
     def visit(self, node):
         """
@@ -186,11 +189,11 @@ class FileTableContext(Context):
         """
         self._stat = stat
 
-    def __getitem__(self, item):
-        return self._stat[self.prepare_key(item)]
+    def __getitem__(self, key):
+        return self._stat[self.prepare_key(key)]
 
-    def __contains__(self, item):
-        return self.prepare_key(item) in self._stat.ATTRS
+    def __contains__(self, key):
+        return self.prepare_key(key) in self._stat.ATTRS
 
     def __repr__(self):
         return 'FileTableContext(stat={!r})'.format(self._stat)
@@ -932,14 +935,15 @@ class QueryNode(Node):
                 name_nodes.extend(get_nodes_of_type(node, NameNode))
                 agg_nodes.extend(get_nodes_of_type(node, AggFunctionNode))
             for name_node in name_nodes:
-                if (name_node not in self.group_node) and name_node.name in from_type and not has_ancestor_of_type(name_node, AggFunctionNode):
+                if (name_node not in self.group_node) and name_node.name in from_type and not has_ancestor_of_type(
+                    name_node, AggFunctionNode):
                     if all((node not in self.group_node) for node in up_to_root(name_node)):
                         raise IllegalGroupBy(name_node)
             for agg_node in agg_nodes:
                 if has_ancestor_of_type(agg_node, AggFunctionNode):
                     # TODO: add message
                     raise IllegalGroupBy(agg_node)
-        select_context = MergedContext(Context(from_type.as_dict()), context)
+        select_context = CombinedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
         for i, node in enumerate(self.select_node):
             # TODO: check it in regard to group by
@@ -947,7 +951,7 @@ class QueryNode(Node):
 
         def key(row):
             # TODO(aershov182): `ORDER BY` context should depend on select_node
-            result = [e.get_value(MergedContext(row.get_context(), context))
+            result = [e.get_value(CombinedContext(row.get_context(), context))
                       for e in self.order_node]
             return OrderByKey(result, self.order_node)
 
@@ -955,7 +959,7 @@ class QueryNode(Node):
 
         keys = []
         for from_row in self.from_node.get_value(context):
-            row_context = MergedContext(
+            row_context = CombinedContext(
                 from_row.get_context(),
                 context
             )
@@ -969,7 +973,7 @@ class QueryNode(Node):
             grouped = defaultdict(list)  # group_key -> rows
             # TODO: check that stuff in select_expr and having_expr are legal
             for row in filtered_rows:
-                row_context = MergedContext(
+                row_context = CombinedContext(
                     row.get_context(),
                     context
                 )
@@ -983,7 +987,7 @@ class QueryNode(Node):
                 order_row = [None] * len(self.order_node)
                 cond = False
                 for row in grouped_rows:
-                    row_context = MergedContext(
+                    row_context = CombinedContext(
                         row.get_context(),
                         context
                     )
@@ -1007,7 +1011,7 @@ class QueryNode(Node):
                     keys.append(OrderByKey(order_row, self.order_node))
         else:
             for row in filtered_rows:
-                row_context = MergedContext(
+                row_context = CombinedContext(
                     row.get_context(),
                     context
                 )
@@ -1035,6 +1039,7 @@ def up_to_root(node):
     while node is not None:
         yield node
         node = node.parent
+
 
 class Table(object):
     def __init__(self, row_type, rows):

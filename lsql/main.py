@@ -8,7 +8,7 @@ import sys
 
 from colorama import Fore
 
-from lsql.ast import BUILTIN_CONTEXT, Context, MergedContext, TaggedUnicode
+from lsql.ast import BUILTIN_CONTEXT, Context, CombinedContext, TaggedUnicode
 from lsql.parser import parse, tokenize
 from lsql import ast
 from lsql import get_version
@@ -238,7 +238,7 @@ def run_query(query_string, directory):
     # TODO: b'.'? Handle TaggedUnicode issues inside of the ast.walk_with_depth
     cwd_context = Context({'cwd': (directory or b'.')})
     query = parse(tokens)
-    return query.get_value(MergedContext(cwd_context, BUILTIN_CONTEXT))
+    return query.get_value(CombinedContext(cwd_context, BUILTIN_CONTEXT))
 
 
 # TODO: respect background, executable, bold.
