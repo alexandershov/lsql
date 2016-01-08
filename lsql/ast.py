@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict, namedtuple, OrderedDict, Sized
-from copy import copy
 from datetime import datetime
 from functools import total_ordering, wraps
 from grp import getgrgid
@@ -163,10 +162,16 @@ class NodeTransformer(NodeVisitor):
 
 
 class AggFunctionsTransformer(NodeTransformer):
+    # TODO: refactor it. Maybe move logic to Node.transform?
     def visit(self, node):
+        node = self.simple_visit(node)
+        children = tuple(self.visit(child)._replace(parent=node) for child in node.children)
+        return node._replace(children=children)
+
+    def simple_visit(self, node):
         if isinstance(node, FunctionNode):
             if node.function_name in AGGREGATES:
-                return AggFunctionNode(node.function_name, arg_nodes=node.arg_nodes)
+                return AggFunctionNode.create(node.function_name, arg_nodes=node.children)
         return node
 
 
@@ -492,6 +497,7 @@ class Aggregate(object):
     type = None  # redefine me in subclasses
     return_type = None  # redefine me in subclasses
 
+    # TODO: call clear() from __init__ not the other way around
     def clear(self):
         self.__init__()
 
@@ -679,15 +685,28 @@ class DirectoryDoesNotExistError(LsqlEvalError):
         self.path = path
 
 
+class Location(namedtuple('Location', ['text', 'start', 'end'])):
+    __slots__ = ()
+
+    @classmethod
+    def from_match(cls, match):
+        return cls(text=match.group(), start=match.start(), end=match.end())
+
+
 # TODO: Node object should contain a reference to its location in the string (and the string itself)
 # TODO: think about a good solution to e.g dualism of children and some other properties (e.g FunctionNode.arg_exprs)
-class Node(object):
-    def __init__(self, children=None, parent=None):
-        # we make a tuple out of children, because we want it to be hashable
+class Node(namedtuple('Node', ['data', 'children', 'location', 'parent'])):
+    def __new__(cls, data=None, children=None, location=None, parent=None):
         if children is None:
-            children = ()
-        self.children = tuple(child.replace(parent=self) for child in children)
-        self.parent = parent
+            children = []
+        result = super(Node, cls).__new__(cls, data=data, children=children, location=location, parent=parent)
+        result_children = tuple(child._replace(parent=result) for child in children)
+        return result._replace(children=result_children)
+
+    @classmethod
+    def create(cls, children=None, location=None, parent=None):
+        # no data by default
+        return cls(children=children, location=location, parent=parent)
 
     def get_type(self, scope):
         raise NotImplementedError
@@ -698,19 +717,7 @@ class Node(object):
         visitor.visit(self)
 
     def transform(self, transformer):
-        transformed_children = tuple(child.transform(transformer) for child in self.children)
-        result = transformer.visit(self)
-        return result.replace(children=transformed_children)
-
-    def replace(self, children=_MISSING, parent=_MISSING):
-        result = copy(self)  # TODO: maybe implement __copy__ method?
-        if children is not _MISSING:
-            result.children = children
-            for child in result.children:
-                child.parent = result
-        if parent is not _MISSING:
-            result.parent = parent
-        return result
+        return transformer.visit(self)
 
     def get_value(self, context):
         raise NotImplementedError
@@ -719,40 +726,38 @@ class Node(object):
         for child in self.children:
             child.check_type(scope)
 
-    def __iter__(self):
-        return iter(self.children)
-
-    def __len__(self):
-        return len(self.children)
-
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return self.children == other.children
-
-    def __hash__(self):
-        return hash(self.children)
+        # we ignore location and parent, because they don't matter in equality
+        return self.data == other.data and self.children == other.children
 
     def __ne__(self, other):
         return not (self == other)
 
     def __repr__(self):
         # we can't show parent because of infinite recursion
-        return '{}(children={!r})'.format(self.__class__.__name__, self.children)
+        return '{}(data={!r}, children={!r}, location={!r})'.format(
+            self.__class__.__name__, self.data, self.children, self.location)
 
 
 class NullNode(Node):
+    @classmethod
+    def create(cls, parent=None, children=None, location=None):
+        return cls(data=None, children=children, location=location, parent=parent)
+
     def __eq__(self, other):
         return isinstance(other, NullNode)
 
-    def __copy__(self):
-        return NullNode()
-
 
 class OrderByPartNode(Node):
-    def __init__(self, node, direction):
-        self.direction = direction
-        super(OrderByPartNode, self).__init__(children=[node])
+    @classmethod
+    def create(cls, node, direction, location=None, parent=None):
+        return cls(data=direction, children=[node], location=location, parent=parent)
+
+    @property
+    def direction(self):
+        return self.data
 
     @property
     def node(self):
@@ -763,9 +768,6 @@ class OrderByPartNode(Node):
 
     def get_type(self, scope):
         return self.node.get_type(scope)
-
-    def __eq__(self, other):
-        return super(OrderByPartNode, self).__eq__(other) and (self.direction == other.direction)
 
     def __hash__(self):
         return hash((self.children, self.direction))
@@ -797,12 +799,24 @@ class OrderByKey(object):
         return self.row == other.row
 
 
+# TODO: use namedtuple for children (and in other *Node classes too)
 class BetweenNode(Node):
-    def __init__(self, value_node, first_node, last_node):
-        self.value_node = value_node
-        self.first_node = first_node
-        self.last_node = last_node
-        super(BetweenNode, self).__init__(children=[self.value_node, self.first_node, self.last_node])
+    @classmethod
+    def create(cls, value_node, first_node, last_node, location=None, parent=None):
+        return cls(children=[value_node, first_node, last_node], location=location,
+                   parent=parent)
+
+    @property
+    def value_node(self):
+        return self.children[0]
+
+    @property
+    def first_node(self):
+        return self.children[1]
+
+    @property
+    def last_node(self):
+        return self.children[2]
 
     def get_type(self, scope):
         return bool
@@ -813,64 +827,94 @@ class BetweenNode(Node):
 
 
 class QueryNode(Node):
-    def __init__(self, select_node, from_node, where_node, group_node, having_node, order_node,
-                 limit_node, offset_node):
-        self.select_node = select_node
-        self.from_node = from_node
-        self.where_node = where_node
-        self.group_node = group_node
-        self.having_node = having_node
-        self.order_node = order_node
-        self.limit_node = limit_node
-        self.offset_node = offset_node
-        if self.from_node is None:
-            self.from_node = NameNode('cwd')
-        if isinstance(self.from_node, (NameNode, ValueNode)):
-            self.from_node = FunctionNode('files', [self.from_node])
-        from_type = self.from_node.get_type(BUILTIN_CONTEXT)
-        if isinstance(self.select_node, SelectStarNode):
-            if hasattr(from_type, 'star_columns'):
-                self.select_node = SelectNode(
-                    [
-                        NameNode(column) for column in from_type.star_columns
-                        ])
-            else:
-                self.select_node = SelectNode(
-                    [
-                        NameNode(column) for column in from_type
-                        ])
-        if self.select_node is None:
-            self.select_node = SelectNode(list(map(NameNode, from_type.default_columns)))
-        if self.where_node is None:
-            self.where_node = ValueNode(True)
-        if self.order_node is None:
-            self.order_node = OrderNode()
-        if self.limit_node is None:
-            self.limit_node = ValueNode(float('inf'))
-        if self.offset_node is None:
-            self.offset_node = ValueNode(0)
+    # TODO: add slots to every Node subclass
+    __slots__ = ()
 
-        if has_agg_functions_nodes(self.where_node):
-            raise LsqlEvalError('aggregate functions are not allowed in WHERE')
-        if self.group_node is None:
-            if any(has_agg_functions_nodes(node) for node in chain(self.select_node, self.order_node)):
-                self.group_node = GroupNode()
-            elif self.having_node is None:
-                self.group_node = FakeGroupNode()
+    @classmethod
+    def create(cls, select_node, from_node, where_node, group_node, having_node, order_node,
+               limit_node, offset_node, location=None, parent=None):
+        if from_node is None:
+            from_node = NameNode.create('cwd')
+        if isinstance(from_node, (NameNode, ValueNode)):
+            from_node = FunctionNode.create('files', [from_node])
+        from_type = from_node.get_type(BUILTIN_CONTEXT)
+        if isinstance(select_node, SelectStarNode):
+            if hasattr(from_type, 'star_columns'):
+                select_node = SelectNode.create(
+                    [
+                        NameNode.create(column) for column in from_type.star_columns
+                        ])
             else:
-                self.group_node = GroupNode()
-        if self.having_node is None:
-            self.having_node = ValueNode(True)
-        if has_agg_functions_nodes(self.group_node):
+                select_node = SelectNode.create(
+                    [
+                        NameNode.create(column) for column in from_type
+                        ])
+        if select_node is None:
+            select_node = SelectNode.create(list(map(NameNode.create, from_type.default_columns)))
+        if where_node is None:
+            where_node = ValueNode.create(True)
+        if order_node is None:
+            order_node = OrderNode.create()
+        if limit_node is None:
+            limit_node = ValueNode.create(float('inf'))
+        if offset_node is None:
+            offset_node = ValueNode.create(0)
+
+        if has_agg_functions_nodes(where_node):
+            raise LsqlEvalError('aggregate functions are not allowed in WHERE')
+        if group_node is None:
+            if any(has_agg_functions_nodes(node) for node in chain(select_node.children, order_node.children)):
+                group_node = GroupNode.create()
+            elif having_node is None:
+                group_node = FakeGroupNode.create()
+            else:
+                group_node = GroupNode.create()
+        if having_node is None:
+            having_node = ValueNode.create(True)
+        if has_agg_functions_nodes(group_node):
             raise IllegalGroupBy('aggregate functions are not allowed in GROUP BY')
         transformer = AggFunctionsTransformer()
-        self.select_node = self.select_node.transform(transformer)
-        self.having_node = self.having_node.transform(transformer)
-        self.order_node = self.order_node.transform(transformer)
-        super(QueryNode, self).__init__(children=[
-            self.select_node, self.from_node, self.where_node, self.group_node, self.having_node,
-            self.order_node, self.limit_node, self.offset_node,
-        ])
+        select_node = select_node.transform(transformer)
+        having_node = having_node.transform(transformer)
+        order_node = order_node.transform(transformer)
+        return cls(
+            children=[select_node, from_node, where_node, group_node, having_node, order_node,
+                      limit_node, offset_node],
+            location=location,
+            parent=parent,
+        )
+
+    @property
+    def select_node(self):
+        return self.children[0]
+
+    @property
+    def from_node(self):
+        return self.children[1]
+
+    @property
+    def where_node(self):
+        return self.children[2]
+
+    @property
+    def group_node(self):
+        return self.children[3]
+
+    @property
+    def having_node(self):
+        return self.children[4]
+
+    @property
+    def order_node(self):
+        return self.children[5]
+
+    @property
+    def limit_node(self):
+        return self.children[6]
+
+    @property
+    def offset_node(self):
+        return self.children[7]
 
     def get_value(self, context):
         rows = []
@@ -882,9 +926,10 @@ class QueryNode(Node):
                 name_nodes.extend(get_nodes_of_type(node, NameNode))
                 agg_nodes.extend(get_nodes_of_type(node, AggFunctionNode))
             for name_node in name_nodes:
-                if (name_node not in self.group_node) and name_node.name in from_type and not has_ancestor_of_type(
+                if (
+                    name_node not in self.group_node.children) and name_node.name in from_type and not has_ancestor_of_type(
                     name_node, AggFunctionNode):
-                    if all((node not in self.group_node) for node in up_to_root(name_node)):
+                    if all((node not in self.group_node.children) for node in up_to_root(name_node)):
                         raise IllegalGroupBy(name_node)
             for agg_node in agg_nodes:
                 if has_ancestor_of_type(agg_node, AggFunctionNode):
@@ -892,15 +937,15 @@ class QueryNode(Node):
                     raise IllegalGroupBy(agg_node)
         select_context = CombinedContext(Context(from_type.as_dict()), context)
         row_type = OrderedDict()
-        for i, node in enumerate(self.select_node):
+        for i, node in enumerate(self.select_node.children):
             # TODO: check it in regard to group by
             row_type[get_name(node, 'column_{:d}'.format(i))] = node.get_type(select_context)
 
         def key(row):
             # TODO(aershov182): `ORDER BY` context should depend on select_node
             result = [e.get_value(CombinedContext(row.get_context(), context))
-                      for e in self.order_node]
-            return OrderByKey(result, self.order_node)
+                      for e in self.order_node.children]
+            return OrderByKey(result, self.order_node.children)
 
         filtered_rows = []
 
@@ -924,29 +969,29 @@ class QueryNode(Node):
                     row.get_context(),
                     context
                 )
-                key = tuple(node.get_value(row_context) for node in self.group_node)
+                key = tuple(node.get_value(row_context) for node in self.group_node.children)
                 grouped[key].append(row)
 
             for key, grouped_rows in grouped.viewitems():
                 for agg_node in agg_function_nodes:
                     agg_node.clear_aggregate()
-                cur_row = [None] * len(self.select_node)
-                order_row = [None] * len(self.order_node)
+                cur_row = [None] * len(self.select_node.children)
+                order_row = [None] * len(self.order_node.children)
                 cond = False
                 for row in grouped_rows:
                     row_context = CombinedContext(
                         row.get_context(),
                         context
                     )
-                    for i, node in enumerate(self.select_node):
+                    for i, node in enumerate(self.select_node.children):
                         if node in self.group_node:
                             idx = self.group_node.children.index(node)
                             column = key[idx]
                         else:
                             column = node.get_value(row_context)
                         cur_row[i] = column
-                    for i, node in enumerate(self.order_node):
-                        if node.node in self.group_node:
+                    for i, node in enumerate(self.order_node.children):
+                        if node.node in self.group_node.children:
                             idx = self.group_node.children.index(node.node)
                             column = key[idx]
                         else:
@@ -955,7 +1000,7 @@ class QueryNode(Node):
                     cond = self.having_node.get_value(row_context)
                 if cond:
                     rows.append(cur_row)
-                    keys.append(OrderByKey(order_row, self.order_node))
+                    keys.append(OrderByKey(order_row, self.order_node.children))
         else:
             for row in filtered_rows:
                 row_context = CombinedContext(
@@ -963,7 +1008,7 @@ class QueryNode(Node):
                     context
                 )
                 cur_row = []
-                for node in self.select_node:
+                for node in self.select_node.children:
                     column = node.get_value(row_context)
                     cur_row.append(column)
                 rows.append(cur_row)
@@ -1008,9 +1053,13 @@ class OrderNode(Node):
 
 
 class FromNode(Node):
-    def __init__(self, from_node):
-        self.from_node = from_node
-        super(FromNode, self).__init__(children=[self.from_node])
+    @classmethod
+    def create(cls, from_node, location=None, parent=None):
+        return cls(children=[from_node], location=location, parent=parent)
+
+    @property
+    def from_node(self):
+        return self.children[0]
 
 
 class GroupNode(Node):
@@ -1025,15 +1074,23 @@ class FakeGroupNode(Node):
 
 # TODO: do we need this class
 class HavingNode(Node):
-    def __init__(self, condition):
-        self.condition = condition
-        super(HavingNode, self).__init__(children=[self.condition])
+    @classmethod
+    def create(cls, condition, location=None, parent=None):
+        return cls(children=[condition], location=location, parent=None)
+
+    @property
+    def condition(self):
+        return self.children[0]
 
 
 class NameNode(Node):
-    def __init__(self, name):
-        self.name = name
-        super(NameNode, self).__init__()
+    @classmethod
+    def create(cls, name, location=None, parent=None):
+        return cls(data=name, location=location, parent=parent)
+
+    @property
+    def name(self):
+        return self.data
 
     def get_type(self, scope):
         return scope[self.name]
@@ -1041,22 +1098,24 @@ class NameNode(Node):
     def get_value(self, context):
         return context[self.name]
 
-    def __eq__(self, other):
-        return super(NameNode, self).__eq__(other) and self.name == other.name
-
     def __repr__(self):
         return 'NameNode(name={!r})'.format(self.name)
 
 
 class SelectStarNode(SelectNode):
-    def __init__(self):
-        super(SelectStarNode, self).__init__()
+    @classmethod
+    def create(cls, location=None, parent=None):
+        return cls(location=location, parent=parent)
 
 
 class ValueNode(Node):
-    def __init__(self, value):
-        self.value = value
-        super(ValueNode, self).__init__()
+    @classmethod
+    def create(cls, value, location=None, parent=None):
+        return cls(data=value, location=None, parent=None)
+
+    @property
+    def value(self):
+        return self.data
 
     def get_type(self, scope):
         return type(self.value)
@@ -1067,14 +1126,15 @@ class ValueNode(Node):
     def __repr__(self):
         return '{!s}(value={!r})'.format(self.__class__.__name__, self.value)
 
-    def __eq__(self, other):
-        return super(ValueNode, self).__eq__(other) and self.value == other.value
-
 
 class ArrayNode(Node):
-    def __init__(self, nodes):
-        self.nodes = nodes
-        super(ArrayNode, self).__init__(children=self.nodes)
+    @classmethod
+    def create(cls, nodes, location=None, parent=None):
+        return cls(children=nodes, location=location, parent=parent)
+
+    @property
+    def nodes(self):
+        return self.children
 
     def get_type(self, scope):
         return AnyIterable
@@ -1082,14 +1142,16 @@ class ArrayNode(Node):
     def get_value(self, context):
         return [e.get_value(context) for e in self.nodes]
 
-    def __repr__(self):
-        return '{!s}(nodes={!r})'.format(self.__class__.__name__, self.nodes)
-
 
 class FunctionNode(Node):
-    def __init__(self, function_name, arg_nodes):
-        self.function_name = function_name
-        super(FunctionNode, self).__init__(children=arg_nodes)
+    @classmethod
+    def create(cls, function_name, arg_nodes, location=None, parent=None):
+        return cls(data=function_name, children=arg_nodes, location=location,
+                   parent=parent)
+
+    @property
+    def function_name(self):
+        return self.data
 
     @property
     def arg_nodes(self):
@@ -1106,22 +1168,29 @@ class FunctionNode(Node):
         args = [arg_node.get_value(context) for arg_node in self.arg_nodes]
         return self.function(*args)
 
-    def __eq__(self, other):
-        return super(FunctionNode, self).__eq__(other) and (self.function_name == other.function_name)
-
-    def __hash__(self):
-        return hash((self.children, self.function_name))
-
     def __repr__(self):
         return '{}(function_name={!r}, arg_nodes={!r})'.format(
             self.__class__.__name__, self.function_name, self.arg_nodes
         )
 
 
+AggFunctionData = namedtuple('AggFunctionData', ['function_name', 'aggregate'])
+
+
 class AggFunctionNode(FunctionNode):
-    def __init__(self, function_name, arg_nodes):
-        super(AggFunctionNode, self).__init__(function_name, arg_nodes)
-        self.aggregate = AGGREGATES[self.function_name]()
+    @classmethod
+    def create(cls, function_name, arg_nodes, location=None, parent=None):
+        aggregate = AGGREGATES[function_name]()
+        data = AggFunctionData(function_name=function_name, aggregate=aggregate)
+        return cls(data=data, children=arg_nodes, location=location, parent=parent)
+
+    @property
+    def function_name(self):
+        return self.data.function_name
+
+    @property
+    def aggregate(self):
+        return self.data.aggregate
 
     @property
     def function(self):
@@ -1137,23 +1206,28 @@ class AggFunctionNode(FunctionNode):
 
 
 class AndNode(Node):
-    def __init__(self, left_node, right_node):
-        self.left_node = left_node
-        self.right_node = right_node
-        super(AndNode, self).__init__(children=[self.left_node, self.right_node])
+    def __new__(cls, *args, **kwargs):
+        return super(AndNode, cls).__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def create(cls, left_node, right_node, location=None, parent=None):
+        return cls(children=[left_node, right_node], location=location, parent=None)
+
+    @property
+    def left_node(self):
+        return self.children[0]
+
+    @property
+    def right_node(self):
+        return self.children[1]
 
     def get_value(self, context):
         return all(arg_node.get_value(context)
                    for arg_node in [self.left_node, self.right_node])
 
 
-# TODO(aershov182): DRY it up with AndNode
-class OrNode(Node):
-    def __init__(self, left_node, right_node):
-        self.left_node = left_node
-        self.right_node = right_node
-        super(OrNode, self).__init__(children=[left_node, right_node])
-
+# TODO(aershov182): make a common class BinaryNode that'll be heir of AndNode and orNode
+class OrNode(AndNode):
     def get_value(self, context):
         return any(arg_node.get_value(context)
                    for arg_node in [self.left_node, self.right_node])

@@ -155,7 +155,7 @@ class Parser(object):
 
         self.expect(EndQueryToken)
 
-        return ast.QueryNode(
+        return ast.QueryNode.create(
             select_node=select_node,
             from_node=from_node,
             where_node=where_node,
@@ -359,7 +359,7 @@ class BetweenToken(KeywordToken):
         first = parser.expr(left_bp=self.right_bp)
         parser.skip(AndToken)
         last = parser.expr()
-        return ast.BetweenNode(left, first, last)
+        return ast.BetweenNode.create(left, first, last)
 
 
 class CaseToken(NotImplementedToken, KeywordToken):
@@ -381,11 +381,11 @@ class CountToken(KeywordToken):
         parser.skip(OpeningParenToken)
         if isinstance(parser.token, MulToken):
             parser.advance()
-            arg_node = ast.ValueNode(1)
+            arg_node = ast.ValueNode.create(1)
         else:
             arg_node = parser.expr()
         parser.skip(ClosingParenToken)
-        return ast.FunctionNode('count', arg_nodes=[arg_node])
+        return ast.FunctionNode.create('count', arg_nodes=[arg_node])
 
 
 class DeleteToken(NotImplementedToken, KeywordToken):
@@ -420,7 +420,7 @@ class GroupToken(KeywordToken):
 
     def clause(self, parser):
         parser.skip(ByToken)
-        return ast.GroupNode(parser.parse_delimited_exprs(CommaToken))
+        return ast.GroupNode.create(parser.parse_delimited_exprs(CommaToken))
 
 
 class HavingToken(KeywordToken):
@@ -450,14 +450,14 @@ class AndToken(KeywordToken):
     keyword = 'and'
 
     def suffix(self, left, parser):
-        return ast.AndNode(left, parser.expr(self.right_bp))
+        return ast.AndNode.create(left, parser.expr(self.right_bp))
 
 
 class OrToken(KeywordToken):
     keyword = 'or'
 
     def suffix(self, left, parser):
-        return ast.OrNode(left, parser.expr(self.right_bp))
+        return ast.OrNode.create(left, parser.expr(self.right_bp))
 
 
 class OperatorToken(Token):
@@ -465,7 +465,7 @@ class OperatorToken(Token):
 
     def suffix(self, left, parser):
         right = parser.expr(self.right_bp)
-        return ast.FunctionNode(self.operator_name, [left, right])
+        return ast.FunctionNode.create(self.operator_name, [left, right])
 
 
 class InToken(OperatorToken, KeywordToken):
@@ -476,7 +476,7 @@ class InToken(OperatorToken, KeywordToken):
         parser.skip(OpeningParenToken)
         nodes = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return ast.FunctionNode(self.operator_name, [left, ast.ArrayNode(nodes)])
+        return ast.FunctionNode.create(self.operator_name, [left, ast.ArrayNode.create(nodes)])
 
 
 class LikeToken(NotImplementedToken, OperatorToken, KeywordToken):
@@ -515,7 +515,7 @@ class NullToken(KeywordToken):
     keyword = 'null'
 
     def prefix(self, parser):
-        return ast.ValueNode(ast.NULL)
+        return ast.ValueNode.create(ast.NULL)
 
 
 class OffsetToken(KeywordToken):
@@ -534,7 +534,7 @@ class OrderToken(KeywordToken):
             CommaToken,
             parse_fn=partial(_parse_one_order_by_clause, parser=parser)
         )
-        return ast.OrderNode(sub_nodes)
+        return ast.OrderNode.create(sub_nodes)
 
 
 def _parse_one_order_by_clause(parser):
@@ -544,7 +544,7 @@ def _parse_one_order_by_clause(parser):
         parser.advance()
     else:
         direction = ast.ASC
-    return ast.OrderByPartNode(part_node, direction)
+    return ast.OrderByPartNode.create(part_node, direction)
 
 
 class OuterToken(NotImplementedToken, KeywordToken):
@@ -565,10 +565,10 @@ class SelectToken(KeywordToken):
 
     def clause(self, parser):
         if isinstance(parser.token, MulToken):
-            select_node = ast.SelectStarNode()
+            select_node = ast.SelectStarNode.create()
             parser.advance()
         else:
-            select_node = ast.SelectNode(children=parser.parse_delimited_exprs(CommaToken))
+            select_node = ast.SelectNode.create(children=parser.parse_delimited_exprs(CommaToken))
         return select_node
 
 
@@ -593,7 +593,7 @@ class WhitespaceToken(Token):
 
 class NumberToken(Token):
     def prefix(self, parser):
-        return ast.ValueNode(self.value)
+        return ast.ValueNode.create(self.value)
 
     @property
     def value(self):
@@ -621,12 +621,12 @@ class NumberToken(Token):
 
 class StringToken(Token):
     def prefix(self, parser):
-        return ast.ValueNode(self.match.group('string'))
+        return ast.ValueNode.create(self.match.group('string'))
 
 
 class NameToken(Token):
     def prefix(self, parser):
-        return ast.NameNode(self.text)
+        return ast.NameNode.create(self.text)
 
 
 class EqToken(OperatorToken):
@@ -662,7 +662,7 @@ class MinusToken(OperatorToken):
 
     # handles unary minus
     def prefix(self, parser):
-        return ast.FunctionNode('negate', [parser.expr(left_bp=self.left_bp)])
+        return ast.FunctionNode.create('negate', [parser.expr(left_bp=self.left_bp)])
 
 
 class PlusToken(OperatorToken):
@@ -717,7 +717,7 @@ class OpeningParenToken(SpecialToken):
         else:
             args = parser.parse_delimited_exprs(CommaToken)
         parser.skip(ClosingParenToken)
-        return ast.FunctionNode(left.name, args)
+        return ast.FunctionNode.create(left.name, args)
 
 
 class ClosingParenToken(SpecialToken):

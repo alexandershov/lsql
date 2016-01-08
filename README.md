@@ -39,8 +39,6 @@ lsql "WHERE ext = 'py'"
 ```
  
 ## Limitation
-* OR conditions are not supported YET. 
-* Basic arithmetic is not supported YET.
 * SQL support is limited YET.
  
 ## Columns
