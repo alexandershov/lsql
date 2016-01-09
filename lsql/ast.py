@@ -164,11 +164,6 @@ class NodeTransformer(NodeVisitor):
 class AggFunctionsTransformer(NodeTransformer):
     # TODO: refactor it. Maybe move logic to Node.transform?
     def visit(self, node):
-        node = self.simple_visit(node)
-        children = tuple(self.visit(child)._replace(parent=node) for child in node.children)
-        return node._replace(children=children)
-
-    def simple_visit(self, node):
         if isinstance(node, FunctionNode):
             if node.function_name in AGGREGATES:
                 return AggFunctionNode.create(node.function_name, arg_nodes=node.children)
@@ -699,9 +694,7 @@ class Node(namedtuple('Node', ['data', 'children', 'location', 'parent'])):
     def __new__(cls, data=None, children=None, location=None, parent=None):
         if children is None:
             children = []
-        result = super(Node, cls).__new__(cls, data=data, children=children, location=location, parent=parent)
-        result_children = tuple(child._replace(parent=result) for child in children)
-        return result._replace(children=result_children)
+        return super(Node, cls).__new__(cls, data=data, children=children, location=location, parent=parent)
 
     @classmethod
     def create(cls, children=None, location=None, parent=None):
@@ -713,11 +706,13 @@ class Node(namedtuple('Node', ['data', 'children', 'location', 'parent'])):
 
     def walk(self, visitor):
         for child in self.children:
+            child = child._replace(parent=self)
             child.walk(visitor)
         visitor.visit(self)
 
     def transform(self, transformer):
-        return transformer.visit(self)
+        transformed_children = [child.transform(transformer) for child in self.children]
+        return transformer.visit(self)._replace(children=transformed_children)
 
     def get_value(self, context):
         raise NotImplementedError
