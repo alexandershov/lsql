@@ -113,6 +113,18 @@ class ValueExpectedError(ParserError):
         self.token = token
 
 
+def location_from_match(match):
+    return ast.Location(text=match.group(), start=match.start(), end=match.end())
+
+
+def location_from_tokens(*tokens):
+    assert tokens
+    start = tokens[0].start
+    end = tokens[-1].end
+    text = tokens[0].text[start:end]
+    return ast.Location(text=text, start=start, end=end)
+
+
 class Parser(object):
     def __init__(self, tokens):
         self._tokens = list(tokens)

@@ -166,7 +166,8 @@ class AggFunctionsTransformer(NodeTransformer):
     def visit(self, node):
         if isinstance(node, FunctionNode):
             if node.function_name in AGGREGATES:
-                return AggFunctionNode.create(node.function_name, arg_nodes=node.children)
+                return AggFunctionNode.create(
+                    function_name=node.function_name, arg_nodes=node.children, location=node.location)
         return node
 
 
@@ -680,12 +681,7 @@ class DirectoryDoesNotExistError(LsqlEvalError):
         self.path = path
 
 
-class Location(namedtuple('Location', ['text', 'start', 'end'])):
-    __slots__ = ()
-
-    @classmethod
-    def from_match(cls, match):
-        return cls(text=match.group(), start=match.start(), end=match.end())
+Location = namedtuple('Location', ['text', 'start', 'end'])
 
 
 # TODO: Node object should contain a reference to its location in the string (and the string itself)
@@ -831,14 +827,15 @@ class QueryNode(Node):
         if from_node is None:
             from_node = NameNode.create('cwd')
         if isinstance(from_node, (NameNode, ValueNode)):
-            from_node = FunctionNode.create('files', [from_node])
+            from_node = FunctionNode.create('files', [from_node], location=from_node.location)
         from_type = from_node.get_type(BUILTIN_CONTEXT)
         if isinstance(select_node, SelectStarNode):
             if hasattr(from_type, 'star_columns'):
                 select_node = SelectNode.create(
                     [
                         NameNode.create(column) for column in from_type.star_columns
-                        ])
+                        ],
+                )
             else:
                 select_node = SelectNode.create(
                     [
