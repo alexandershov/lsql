@@ -35,7 +35,7 @@ FAILURE_CODE = 1
 # TODO: split this class into 2. One should be about errors/warnings/messages, another - about colored_column()
 class Printer(object):
     def __init__(self, width=WIDTH):
-        self._width = 80
+        self._width = width
 
     def colored(self, color, text, start=0, end=None):
         return text
@@ -83,6 +83,7 @@ class ColoredPrinter(Printer):
         return self.colored(color=Fore.RED, text=text, start=start, end=end)
 
     def colored_column(self, column_value):
+        # TODO: how to do it without isinstance?
         if isinstance(column_value, TaggedStr):
             for tag, color in self._tag_colors.viewitems():
                 if tag in column_value.tags:
@@ -90,6 +91,7 @@ class ColoredPrinter(Printer):
         return column_value
 
 
+# TODO: what? NoColored is inherited from Colored?
 class NoColoredColumnPrinter(ColoredPrinter):
     def colored_column(self, column_value):
         return column_value
@@ -111,7 +113,7 @@ def _get_printer(stdout, color):
 
 
 def main(argv=None):
-    args = _get_arg_parser().parse_args(argv)
+    args = _get_args_parser().parse_args(argv)
     printer = _get_printer(sys.stdout, args.color)
     try:
         table = run_query(args.query_string, args.directory)
@@ -183,11 +185,12 @@ def suggest_to_create_issue_or_pull_request(printer):
     printer.new_line()
     printer.show_message("If you think that's a bug, then you're absolutely wrong!")
     printer.show_message('Just kidding. It can be a bug.')
+    # TODO: better wording
     printer.show_message('Please create an issue (or pull request!): {}'.format(GITHUB_ISSUES))
     printer.show_message('Thank you.')
 
 
-def _get_arg_parser():
+def _get_args_parser():
     arg_parser = argparse.ArgumentParser(
         description="It's like /usr/bin/find but with SQL",
     )

@@ -259,6 +259,7 @@ def get_dir_size(path):
 
 class Timestamp(int):
     def __str__(self):
+        # TODO: not utc?
         return datetime.fromtimestamp(self).isoformat()
 
 
@@ -266,6 +267,7 @@ class Mode(object):
     def __init__(self, mode):
         self.mode = mode
 
+    # TODO: better __str__
     def __str__(self):
         return oct(self.mode)
 

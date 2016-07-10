@@ -20,19 +20,20 @@ from pyparsing import (
     Forward, Suppress,
 )
 
-
 __version__ = '0.1.0'
+
 
 def get_version():
     return __version__
 
+
+# TODO: hide inside of the class
 CURRENT_TIME = datetime.datetime.utcnow()
 CURRENT_DATE = CURRENT_TIME.date()
 
 KILO = 1024
 MEGA = KILO * 1024
 GIGA = MEGA * 1024
-
 
 # unit -> num of bytes in 1 unit
 SIZE_SUFFIXES = {
@@ -44,13 +45,15 @@ SIZE_SUFFIXES = {
     'gb': GIGA,
 }
 
+SECONDS_IN_MINUTE = 60
+SECONDS_IN_HOUR = 3600
 SECONDS_IN_DAY = 86400
 # unit -> num of seconds in 1 unit
 TIME_SUFFIXES = {
-    'minute': 60,
-    'minutes': 60,
-    'hour': 3600,
-    'hours': 3600,
+    'minute': SECONDS_IN_MINUTE,
+    'minutes': SECONDS_IN_MINUTE,
+    'hour': SECONDS_IN_HOUR,
+    'hours': SECONDS_IN_HOUR,
     'day': SECONDS_IN_DAY,
     'days': SECONDS_IN_DAY,
     'week': SECONDS_IN_DAY * 7,
@@ -106,12 +109,14 @@ def rlike(string, re_pattern):
 
 
 def match(string, regex):
+    # TODO: why we need isinstance check?
     if not isinstance(string, list):
         string = [string]
     return any(regex.match(line) for line in string)
 
 
 def ilike(string, pattern):
+    # TODO: maybe use re.I flag? what about non-ascii files where lower() will return some garbage?
     return like(string.lower(), pattern.lower())
 
 
@@ -154,10 +159,16 @@ def age(ts):
 class Interval(int):
     @classmethod
     def from_range(cls, start, end):
+        # TODO: maybe convert total_seconds() to int? because it returns a float.
         return cls((end - start).total_seconds())
 
     def __str__(self):
-        parts = [(86400, 'day'), (3600, 'hour'), (60, 'minute'), (1, 'second')]
+        parts = [
+            (SECONDS_IN_DAY, 'day'),
+            (SECONDS_IN_HOUR, 'hour'),
+            (SECONDS_IN_MINUTE, 'minute'),
+            (1, 'second')
+        ]
         human_parts = []
         total_seconds = int(self)
         for n, name in parts:
@@ -186,6 +197,7 @@ def btrim(string, chars=None):
 
 
 def propagate_null(fn):
+    # TODO: how to do it without getattr?
     if getattr(fn, 'accepts_nulls', False):
         return fn
 
@@ -199,7 +211,10 @@ def propagate_null(fn):
 
 
 def map_values(function, dictionary):
-    return {key: function(value) for key, value in dictionary.viewitems()}
+    return {
+        key: function(value)
+        for key, value in dictionary.viewitems()
+        }
 
 
 OPERATORS = map_values(propagate_null, {
@@ -236,6 +251,7 @@ CONSTANTS = {
 
 class Timestamp(int):
     def __str__(self):
+        # TODO: not utc?
         return datetime.datetime.fromtimestamp(self).isoformat()
 
 
@@ -243,6 +259,7 @@ class Mode(object):
     def __init__(self, mode):
         self.mode = mode
 
+    # TODO: better __str__
     def __str__(self):
         return oct(self.mode)
 
@@ -384,6 +401,7 @@ class Stat(object):
             tags.add('exec')
         tags.add(self.type)
         return tags
+
 
 # matches strings of form 'digits:suffix'. e.g '30kb'
 SIZE_RE = re.compile(r'(?P<value>\d+)(?P<suffix>[a-z]+)?$', re.I)
