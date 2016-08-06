@@ -52,4 +52,4 @@ def run_query(query, directory=None):
     if directory is None:
         directory = BASE_DIR
     # TODO: handle str/unicode insanity
-    return main(argv=[query, str(directory)])
+    return main(argv=['--color', 'always', query, str(directory)])

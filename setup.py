@@ -11,7 +11,7 @@ setup(
     version=lsql.get_version(),
     entry_points={
         'console_scripts': [
-            'lsql = lsql:main'
+            'lsql = lsql.main:main'
         ],
     },
     packages=find_packages(),

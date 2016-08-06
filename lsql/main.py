@@ -87,7 +87,8 @@ class ColoredPrinter(Printer):
         if isinstance(column_value, TaggedStr):
             for tag, color in self._tag_colors.viewitems():
                 if tag in column_value.tags:
-                    return self.colored(color, column_value)
+                    # TODO: don't hardcode utf-8, figure out encodings
+                    return self.colored(color, column_value.decode('utf-8'))
         return column_value
 
 
